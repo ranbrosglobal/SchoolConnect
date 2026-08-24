@@ -1,0 +1,131 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "field:school_name",
+  "creation": "Link",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "school_name",
+    "column_break_1",
+    "abbr",
+    "section_break_address",
+    "address",
+    "city",
+    "state",
+    "country",
+    "section_break_contact",
+    "phone",
+    "email",
+    "website",
+    "section_break_other",
+    "disabled"
+  ],
+  "fields": [
+    {
+      "fieldname": "school_name",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "School Name",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "abbr",
+      "fieldtype": "Data",
+      "label": "Abbreviation"
+    },
+    {
+      "fieldname": "section_break_address",
+      "fieldtype": "Section Break",
+      "label": "Address"
+    },
+    {
+      "fieldname": "address",
+      "fieldtype": "Small Text",
+      "label": "Address"
+    },
+    {
+      "fieldname": "city",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "City"
+    },
+    {
+      "fieldname": "state",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "State"
+    },
+    {
+      "fieldname": "country",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "Country",
+      "options": "Country"
+    },
+    {
+      "fieldname": "section_break_contact",
+      "fieldtype": "Section Break",
+      "label": "Contact Information"
+    },
+    {
+      "fieldname": "phone",
+      "fieldtype": "Phone",
+      "label": "Phone"
+    },
+    {
+      "fieldname": "email",
+      "fieldtype": "Data",
+      "label": "Email",
+      "options": "Email"
+    },
+    {
+      "fieldname": "website",
+      "fieldtype": "Data",
+      "label": "Website",
+      "options": "URL"
+    },
+    {
+      "fieldname": "section_break_other",
+      "fieldtype": "Section Break",
+      "label": "Other"
+    },
+    {
+      "fieldname": "disabled",
+      "fieldtype": "Check",
+      "label": "Disabled"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2024-01-01 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "School Connect",
+  "name": "School",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "School Admin",
+      "read": 1,
+      "write": 1,
+      "create": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "title_field": "school_name",
+  "track_changes": 1
+}

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>School Connect - Admin Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Kalam:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-high": "#e7e8eb",
+                    "error-container": "#ffdad6",
+                    "primary": "#3145bb",
+                    "on-secondary-fixed": "#291800",
+                    "on-background": "#191c1e",
+                    "surface-variant": "#e1e2e5",
+                    "surface-bright": "#f8f9fc",
+                    "secondary-fixed": "#ffddb1",
+                    "primary-fixed": "#dee0ff",
+                    "surface-container-low": "#f2f3f6",
+                    "on-surface-variant": "#454653",
+                    "on-primary-container": "#eaeaff",
+                    "surface-container": "#edeef1",
+                    "primary-container": "#4c5fd5",
+                    "surface-dim": "#d9dadd",
+                    "tertiary": "#005f40",
+                    "on-error-container": "#93000a",
+                    "background": "#f8f9fc",
+                    "secondary-container": "#fdaf1e",
+                    "surface-tint": "#3f52c8",
+                    "on-tertiary-fixed-variant": "#005236",
+                    "on-surface": "#191c1e",
+                    "on-primary-fixed-variant": "#2338af",
+                    "tertiary-fixed-dim": "#61dca6",
+                    "secondary": "#815600",
+                    "tertiary-container": "#007a53",
+                    "outline-variant": "#c5c5d6",
+                    "on-secondary-container": "#6a4600",
+                    "error": "#ba1a1a",
+                    "on-tertiary-container": "#a3ffd0",
+                    "on-tertiary-fixed": "#002113",
+                    "inverse-on-surface": "#f0f1f4",
+                    "inverse-primary": "#bbc3ff",
+                    "on-error": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "outline": "#757685",
+                    "surface-container-highest": "#e1e2e5",
+                    "secondary-fixed-dim": "#ffba4b",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-surface": "#2e3133",
+                    "on-primary-fixed": "#000e5e",
+                    "tertiary-fixed": "#7ff9c1",
+                    "primary-fixed-dim": "#bbc3ff",
+                    "surface": "#f8f9fc",
+                    "on-secondary-fixed-variant": "#624000",
+                    "on-primary": "#ffffff",
+                    "on-secondary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "sm": "16px",
+                    "md": "24px",
+                    "margin-mobile": "16px",
+                    "base": "4px",
+                    "lg": "32px",
+                    "xs": "8px",
+                    "gutter": "16px",
+                    "margin-desktop": "32px",
+                    "xl": "48px"
+            },
+            "fontFamily": {
+                    "body-lg": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "headline-lg-mobile": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "body-sm": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "headline-lg": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "doodle-note": [
+                            "Kalam"
+                    ],
+                    "label-caps": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "headline-md": [
+                            "Plus Jakarta Sans"
+                    ]
+            },
+            "fontSize": {
+                    "body-lg": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-lg-mobile": [
+                            "24px",
+                            {
+                                    "lineHeight": "30px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-sm": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "doodle-note": [
+                            "16px",
+                            {
+                                    "lineHeight": "18px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-caps": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-md": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+        }
+        }
+      }
+    </script>
+<style>
+        body {
+            background-color: #F8F9FC;
+            color: #191c1e;
+        }
+        .hairline-border {
+            border: 1px solid #E2E8F0;
+        }
+        .notebook-shadow {
+            box-shadow: 0px 4px 12px rgba(35, 38, 53, 0.05);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="antialiased pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="bg-primary dark:bg-primary-container docked full-width top-0 shadow-sm bg-gradient-to-r from-primary to-primary-container dark:from-primary-container dark:to-primary">
+<div class="flex justify-between items-center w-full px-margin-mobile py-sm max-w-7xl mx-auto">
+<div class="flex items-center gap-xs">
+<img class="w-10 h-10 rounded-full object-cover border-2 border-on-primary" data-alt="A professional looking male high school administrator in his 40s wearing a light blue button down shirt, smiling gently in a brightly lit modern school hallway. The lighting is soft and natural, emphasizing a welcoming and authoritative presence." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJ8x2BsBBgfsXbc9e6DET7XkTcL_ccsHXBf6BdCTyS0UoysHg1xpNyKojWZGwhzeGX4GEvDyNognOc2UvBjQ07ZuSy9X1HGBaitSB9fq81ZyVDvHIi_pHP-bJ4H_jrosNd2l-0THrjlZw9gMGwknHgQV0e9epsJwLoqdkbbJJiBUfPgqTClLnKbNAJ6ksxjt8Cv_KkZ6qUw_smdQInC7uJCjxd6fqfSWvne_dwXjtdjIh2rk-w9itv"/>
+<h1 class="text-headline-md font-headline-md font-bold text-on-primary dark:text-on-primary-container">School Connect</h1>
+</div>
+<button class="text-on-primary dark:text-on-primary-container hover:opacity-90 transition-opacity scale-95 transition-transform duration-150 p-2">
+<span class="material-symbols-outlined text-2xl">settings</span>
+</button>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop py-lg">
+<!-- Header Section -->
+<div class="mb-lg">
+<h2 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg-mobile md:font-headline-lg text-primary mb-xs">Admin Panel</h2>
+<p class="text-body-lg font-body-lg text-on-surface-variant">School-wide overview and management.</p>
+</div>
+<!-- School-wide Overview Bento Grid -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-sm md:gap-md mb-xl">
+<div class="bg-surface-container-lowest hairline-border rounded-xl p-md notebook-shadow flex flex-col justify-between">
+<div>
+<p class="text-label-caps font-label-caps text-on-surface-variant mb-xs">Total Attendance</p>
+<div class="flex items-baseline gap-xs">
+<span class="text-headline-lg-mobile font-headline-lg-mobile text-primary">94.2%</span>
+<span class="text-body-sm font-body-sm text-tertiary-container flex items-center"><span class="material-symbols-outlined text-sm mr-1">trending_up</span>+1.2%</span>
+</div>
+</div>
+<div class="mt-md w-full bg-surface-variant rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 94.2%"></div>
+</div>
+</div>
+<div class="bg-surface-container-lowest hairline-border rounded-xl p-md notebook-shadow flex flex-col justify-between relative overflow-hidden">
+<div class="absolute top-0 right-0 w-24 h-24 bg-error-container rounded-bl-full opacity-20 -mr-8 -mt-8 pointer-events-none"></div>
+<div>
+<p class="text-label-caps font-label-caps text-on-surface-variant mb-xs">New Alerts</p>
+<div class="flex items-baseline gap-xs">
+<span class="text-headline-lg-mobile font-headline-lg-mobile text-error">12</span>
+<span class="text-body-sm font-body-sm text-on-surface-variant">Requires attention</span>
+</div>
+</div>
+<button class="mt-md self-start text-label-caps font-label-caps text-primary hover:text-primary-container flex items-center">
+                    Review Alerts <span class="material-symbols-outlined text-sm ml-1">arrow_forward</span>
+</button>
+</div>
+<div class="bg-surface-container-lowest hairline-border rounded-xl p-md notebook-shadow flex flex-col justify-between">
+<div>
+<p class="text-label-caps font-label-caps text-on-surface-variant mb-xs">Teacher Check-ins</p>
+<div class="flex items-baseline gap-xs">
+<span class="text-headline-lg-mobile font-headline-lg-mobile text-on-surface">118<span class="text-headline-md text-on-surface-variant">/125</span></span>
+</div>
+</div>
+<div class="mt-md flex -space-x-2">
+<img class="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover z-30" data-alt="A portrait of a female teacher in her 30s with glasses, looking professional." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCv6CPbpXChprvVU32hFtSPNI9G90JMWJgmeROWQ5V8d1_pbCtZ7vxgCHc1vn1t0gnmizy2WZ5wh6GKgJWWF82IoxE6Qy_hA-fDQmpOSE8ZEtGOL3jUGdh8g8xoDASFOWMm9PchG51jn46j-MqChsVYFN9sUs-AH1LtYzUwBos8xhGuPVD5Vds_lB0uOMczgCVg1srL5UX0Qr3trOI2yscEHDJ7jQa8LNzRvsdKMqjN4OuI9-kPxs0J"/>
+<img class="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover z-20" data-alt="A portrait of a male physical education teacher in his 20s, wearing a whistle." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDv1bWNmmrVk0uOGOY6DsKd65rLtbXWLXawOhb0qP0YADboBK1Q3DThvjJmerfa5TexakzTs0H4aW5Ync-6-yTDXlYEAQ29GqAOja-xZDpeg40LWbFuW2nfHEAHjGOGGAK7UktsiWqs3vOAAn8ozn6GscRVPpsuH7wadh8kAVV9bWw__wHGKqswtvddoQQD0MOqrFpuIdg3zFitWpMVFNrpphc-PzFoTgCkeybRRRab57jZjg_S57gL"/>
+<img class="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover z-10" data-alt="A portrait of a senior female art teacher with colorful scarf." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBCeTqcyQFhstzlV3m9ApvocfbVb0-xhb48dWzBdaXE7lp7LXeD4Sll7uyyb3X1AseZqwyOwlpbdEILLnk9Ko1dbCY4PrrHiN8ZXzaNcs4FRyhKRWoxc0LKTMjL1Re37i-4HeUayoxF-ii7us1ZymE9YOaJa5B55UAjITuy9MhB8AVXXMC1PYITaomWcRdtS9R3LDT1cygSHV6DqkRfnyMQJ4nU4e9W4zOCGgI7N4vJPQ0UVO_bIbz4"/>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-surface-variant flex items-center justify-center text-label-caps font-label-caps z-0">+4</div>
+</div>
+</div>
+</section>
+<!-- Doodle Divider -->
+<div class="flex justify-center mb-xl opacity-30 text-primary">
+<svg fill="none" height="20" viewbox="0 0 200 20" width="200" xmlns="http://www.w3.org/2000/svg">
+<path d="M2 10C20 2 40 18 60 10C80 2 100 18 120 10C140 2 160 18 180 10C190 6 198 10 198 10" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path>
+</svg>
+</div>
+<!-- Management Cards -->
+<section class="mb-xl">
+<h3 class="text-headline-md font-headline-md text-on-surface mb-sm">Management</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-sm md:gap-md">
+<a class="group block bg-surface-container-lowest hairline-border rounded-xl p-md notebook-shadow hover:border-primary transition-colors relative" href="#">
+<div class="w-12 h-12 rounded-lg bg-surface-variant text-primary flex items-center justify-center mb-sm group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">groups</span>
+</div>
+<h4 class="text-body-lg font-body-lg font-bold text-on-surface mb-xs">Staff Directory</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Manage teacher profiles, schedules, and departmental assignments.</p>
+</a>
+<a class="group block bg-surface-container-lowest hairline-border rounded-xl p-md notebook-shadow hover:border-primary transition-colors relative" href="#">
+<div class="absolute -top-4 -right-2 text-secondary-container transform rotate-12">
+<svg fill="none" height="40" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="40">
+<path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+<path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+</svg>
+</div>
+<div class="w-12 h-12 rounded-lg bg-surface-variant text-primary flex items-center justify-center mb-sm group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">badge</span>
+</div>
+<h4 class="text-body-lg font-body-lg font-bold text-on-surface mb-xs">Student Records</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Access academic history, attendance logs, and disciplinary reports.</p>
+</a>
+<a class="group block bg-surface-container-lowest hairline-border rounded-xl p-md notebook-shadow hover:border-primary transition-colors relative" href="#">
+<div class="w-12 h-12 rounded-lg bg-surface-variant text-primary flex items-center justify-center mb-sm group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<h4 class="text-body-lg font-body-lg font-bold text-on-surface mb-xs">System Alerts</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Configure school-wide notifications, emergency broadcasts, and triggers.</p>
+</a>
+</div>
+</section>
+<!-- Recent Activity -->
+<section class="mb-xl">
+<div class="flex justify-between items-end mb-sm">
+<h3 class="text-headline-md font-headline-md text-on-surface">Recent Activity</h3>
+<button class="text-label-caps font-label-caps text-primary hover:underline">View All</button>
+</div>
+<div class="bg-surface-container-lowest hairline-border rounded-xl notebook-shadow overflow-hidden">
+<div class="divide-y divide-outline-variant">
+<div class="p-md flex items-start gap-sm hover:bg-surface transition-colors cursor-pointer relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-sm">campaign</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<p class="text-body-lg font-body-lg font-semibold text-on-surface">Assembly Schedule Change</p>
+<span class="text-label-caps font-label-caps text-on-surface-variant">10 MIN AGO</span>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant mt-1">Friday's morning assembly has been moved to 9:30 AM in the Main Auditorium.</p>
+</div>
+</div>
+<div class="p-md flex items-start gap-sm hover:bg-surface transition-colors cursor-pointer relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary-container"></div>
+<div class="w-10 h-10 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-container flex-shrink-0">
+<span class="material-symbols-outlined text-sm">sick</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<p class="text-body-lg font-body-lg font-semibold text-on-surface">High Absence Rate: Grade 10</p>
+<span class="text-label-caps font-label-caps text-on-surface-variant">1 HR AGO</span>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant mt-1">Grade 10 reporting a 15% absence rate today. Triggered health protocol review.</p>
+</div>
+</div>
+<div class="p-md flex items-start gap-sm hover:bg-surface transition-colors cursor-pointer relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-sm">event</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<p class="text-body-lg font-body-lg font-semibold text-on-surface">Term 2 Grades Published</p>
+<span class="text-label-caps font-label-caps text-on-surface-variant">3 HRS AGO</span>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant mt-1">System automated publishing of Term 2 preliminary grades to student portals.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl border-t border-outline-variant dark:border-none bg-surface-container-lowest dark:bg-inverse-surface shadow-[0px_-4px_12px_rgba(35,38,53,0.05)]">
+<div class="flex justify-around items-center px-4 py-2 bg-surface-container-lowest dark:bg-inverse-surface w-full">
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim relative after:content-[''] after:absolute after:-bottom-1 after:w-2 after:h-2 after:bg-secondary-container after:rounded-full scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 200;">dashboard</span>
+<span class="text-label-caps font-label-caps mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 200;">event_available</span>
+<span class="text-label-caps font-label-caps mt-1">Attendance</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 200;">menu_book</span>
+<span class="text-label-caps font-label-caps mt-1">Classes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 200;">notifications</span>
+<span class="text-label-caps font-label-caps mt-1">Alerts</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 200;">more_horiz</span>
+<span class="text-label-caps font-label-caps mt-1">Menu</span>
+</a>
+</div>
+</nav>
+</body></html>

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Student Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Kalam:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error-container": "#ffdad6",
+                        "on-background": "#191c1e",
+                        "surface-container": "#edeef1",
+                        "inverse-surface": "#2e3133",
+                        "surface-container-low": "#f2f3f6",
+                        "secondary-fixed": "#ffddb1",
+                        "on-tertiary-container": "#a3ffd0",
+                        "inverse-on-surface": "#f0f1f4",
+                        "primary-fixed": "#dee0ff",
+                        "outline": "#757685",
+                        "surface-dim": "#d9dadd",
+                        "on-primary": "#ffffff",
+                        "tertiary-container": "#007a53",
+                        "tertiary-fixed-dim": "#61dca6",
+                        "primary-container": "#4c5fd5",
+                        "tertiary": "#005f40",
+                        "on-error": "#ffffff",
+                        "on-surface-variant": "#454653",
+                        "on-primary-fixed-variant": "#2338af",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-container": "#fdaf1e",
+                        "on-primary-container": "#eaeaff",
+                        "outline-variant": "#c5c5d6",
+                        "surface-tint": "#3f52c8",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "on-secondary-fixed": "#291800",
+                        "inverse-primary": "#bbc3ff",
+                        "primary": "#3145bb",
+                        "surface": "#f8f9fc",
+                        "background": "#f8f9fc",
+                        "secondary": "#815600",
+                        "surface-container-high": "#e7e8eb",
+                        "on-secondary-fixed-variant": "#624000",
+                        "surface-bright": "#f8f9fc",
+                        "on-primary-fixed": "#000e5e",
+                        "on-secondary-container": "#6a4600",
+                        "tertiary-fixed": "#7ff9c1",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#e1e2e5",
+                        "surface-container-highest": "#e1e2e5",
+                        "secondary-fixed-dim": "#ffba4b",
+                        "on-tertiary-fixed": "#002113",
+                        "error": "#ba1a1a",
+                        "on-surface": "#191c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "margin-desktop": "32px",
+                        "base": "4px",
+                        "xl": "48px",
+                        "lg": "32px",
+                        "xs": "8px",
+                        "sm": "16px",
+                        "md": "24px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "body-sm": ["Plus Jakarta Sans"],
+                        "label-caps": ["Plus Jakarta Sans"],
+                        "doodle-note": ["Kalam"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "doodle-note": ["16px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill-1 {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hairline-border {
+            border: 1px solid #E2E8F0;
+        }
+        .doodle-border {
+            border: 2px dashed #3145bb;
+            border-radius: 12px;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid #E2E8F0;
+            box-shadow: 0px 4px 12px rgba(35, 38, 53, 0.05);
+        }
+        
+        /* Toggle Switch Styles */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #3145bb;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #3145bb;
+        }
+        .toggle-checkbox:checked + .toggle-label:after {
+            transform: translateX(100%);
+            border-color: white;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-lg min-h-screen flex flex-col pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="bg-primary dark:bg-primary-container text-on-primary dark:text-on-primary-container shadow-sm docked full-width top-0 w-full z-40 hidden md:flex">
+<div class="flex justify-between items-center w-full px-margin-desktop py-sm bg-gradient-to-r from-primary to-primary-container dark:from-primary-container dark:to-primary">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed font-headline-md">
+                    JD
+                </div>
+<h1 class="text-headline-md font-headline-md font-bold text-on-primary dark:text-on-primary-container tracking-tight">School Connect</h1>
+</div>
+<nav class="hidden md:flex gap-8">
+<!-- Assuming standard nav items for desktop to match BottomNav -->
+<a class="text-on-primary/70 hover:opacity-90 transition-opacity font-label-caps text-label-caps flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span> Home
+                </a>
+<a class="text-on-primary/70 hover:opacity-90 transition-opacity font-label-caps text-label-caps flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="event_available">event_available</span> Attendance
+                </a>
+<a class="text-on-primary/70 hover:opacity-90 transition-opacity font-label-caps text-label-caps flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="menu_book">menu_book</span> Classes
+                </a>
+<a class="text-on-primary/70 hover:opacity-90 transition-opacity font-label-caps text-label-caps flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="notifications">notifications</span> Alerts
+                </a>
+<a class="text-on-primary font-bold hover:opacity-90 transition-opacity font-label-caps text-label-caps flex items-center gap-2 relative after:content-[''] after:absolute after:-bottom-2 after:left-1/2 after:-translate-x-1/2 after:w-1.5 after:h-1.5 after:bg-secondary-container after:rounded-full" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="person">person</span> Profile
+                </a>
+</nav>
+<button class="w-10 h-10 rounded-full flex items-center justify-center hover:opacity-90 transition-opacity scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</header>
+<!-- Mobile Header (Simplified) -->
+<header class="md:hidden flex justify-between items-center w-full px-margin-mobile py-sm bg-surface-container-lowest sticky top-0 z-40 shadow-[0px_4px_12px_rgba(35,38,53,0.02)]">
+<h1 class="text-headline-md font-headline-md font-bold text-primary tracking-tight">Profile</h1>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="flex-grow container mx-auto px-margin-mobile md:px-margin-desktop py-md md:py-xl max-w-3xl">
+<!-- Profile Header Section -->
+<section class="flex flex-col items-center mb-12 relative">
+<!-- Avatar -->
+<div class="relative mb-6">
+<div class="w-28 h-28 md:w-32 md:h-32 rounded-full bg-primary-fixed flex items-center justify-center text-primary text-[40px] font-headline-lg shadow-sm hairline-border">
+                    JD
+                </div>
+<!-- Doodle Pencil Badge -->
+<button class="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center shadow-sm hover:scale-110 transition-transform cursor-pointer border-2 border-surface-container-lowest">
+<span class="material-symbols-outlined text-[16px]" data-icon="edit">edit</span>
+</button>
+<!-- Hand-drawn accent -->
+<svg class="absolute -right-6 -top-4 w-8 h-8 text-secondary" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1 3-6z"></path>
+</svg>
+</div>
+<!-- Name & Details -->
+<h2 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg-mobile md:font-headline-lg text-on-background mb-1 text-center">Jane Doe</h2>
+<p class="text-body-sm font-body-sm text-on-surface-variant mb-4 text-center">jane.doe@student.edu</p>
+<!-- Role Badge -->
+<div class="bg-primary/10 px-4 py-1.5 rounded-full flex items-center gap-2 mb-6">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+<span class="text-label-caps font-label-caps text-primary uppercase">Student</span>
+</div>
+<!-- School Tile -->
+<div class="glass-card rounded-xl p-4 w-full flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined icon-fill-1" data-icon="school">school</span>
+</div>
+<div>
+<h3 class="text-body-lg font-body-lg font-semibold text-on-background">Lincoln High School</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Class of 2025</p>
+</div>
+</div>
+</section>
+<!-- Settings List Card -->
+<section class="glass-card rounded-xl overflow-hidden mb-8">
+<div class="flex flex-col">
+<!-- Change Password -->
+<button class="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors border-b border-outline-variant/30 group">
+<div class="flex items-center gap-4 text-on-background group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="lock">lock</span>
+<span class="text-body-lg font-body-lg font-medium">Change Password</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Notifications -->
+<button class="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors border-b border-outline-variant/30 group">
+<div class="flex items-center gap-4 text-on-background group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="notifications">notifications</span>
+<span class="text-body-lg font-body-lg font-medium">Notifications</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Dark Mode Toggle -->
+<div class="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors border-b border-outline-variant/30 group">
+<div class="flex items-center gap-4 text-on-background">
+<span class="material-symbols-outlined text-outline" data-icon="dark_mode">dark_mode</span>
+<span class="text-body-lg font-body-lg font-medium">Dark Mode</span>
+</div>
+<div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer border-outline-variant z-10 transition-transform duration-200" id="dark-mode-toggle" name="toggle" style="top: -2px; left: -2px;" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-surface-variant cursor-pointer transition-colors duration-200" for="dark-mode-toggle"></label>
+</div>
+</div>
+<!-- Help & Support -->
+<button class="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors border-b border-outline-variant/30 group">
+<div class="flex items-center gap-4 text-on-background group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="help">help</span>
+<span class="text-body-lg font-body-lg font-medium">Help &amp; Support</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
+</button>
+<!-- Logout -->
+<button class="w-full flex items-center justify-between p-4 hover:bg-error-container/30 transition-colors group">
+<div class="flex items-center gap-4 text-error">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="text-body-lg font-body-lg font-medium">Logout</span>
+</div>
+</button>
+</div>
+</section>
+<!-- Doodle Note -->
+<div class="flex items-center justify-center gap-2 text-on-surface-variant/70 font-doodle-note text-doodle-note mb-8 md:mb-0">
+<span class="material-symbols-outlined text-[18px]" data-icon="draw">draw</span>
+<p>Keep your profile up to date!</p>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-surface-container-lowest dark:bg-inverse-surface border-t border-outline-variant dark:border-none shadow-[0px_-4px_12px_rgba(35,38,53,0.05)] rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed w-16 group" href="#">
+<span class="material-symbols-outlined mb-1 group-hover:scale-110 transition-transform duration-200 text-[24px]" data-icon="dashboard">dashboard</span>
+<span class="text-label-caps font-label-caps">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed w-16 group" href="#">
+<span class="material-symbols-outlined mb-1 group-hover:scale-110 transition-transform duration-200 text-[24px]" data-icon="event_available">event_available</span>
+<span class="text-label-caps font-label-caps">Attendance</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed w-16 group" href="#">
+<span class="material-symbols-outlined mb-1 group-hover:scale-110 transition-transform duration-200 text-[24px]" data-icon="menu_book">menu_book</span>
+<span class="text-label-caps font-label-caps">Classes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed w-16 group" href="#">
+<span class="material-symbols-outlined mb-1 group-hover:scale-110 transition-transform duration-200 text-[24px]" data-icon="notifications">notifications</span>
+<span class="text-label-caps font-label-caps">Alerts</span>
+</a>
+<!-- Active State for Profile (mapping 'Menu' slot to 'Profile' intent based on prompt) -->
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim relative after:content-[''] after:absolute after:-bottom-1 after:w-2 after:h-2 after:bg-secondary-container after:rounded-full w-16 scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined mb-1 icon-fill-1 text-[24px]" data-icon="person">person</span>
+<span class="text-label-caps font-label-caps">Profile</span>
+</a>
+</nav>
+<script>
+        // Simple JS for toggle interaction visualization (non-functional for actual dark mode without logic)
+        document.getElementById('dark-mode-toggle').addEventListener('change', function() {
+            if(this.checked) {
+                // In a real app, this would toggle the 'dark' class on HTML
+                console.log("Dark mode toggled on");
+            } else {
+                console.log("Dark mode toggled off");
+            }
+        });
+    </script>
+</body></html>

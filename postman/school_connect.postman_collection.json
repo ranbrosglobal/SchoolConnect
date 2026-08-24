@@ -1,0 +1,283 @@
+{
+  "info": {
+    "name": "School Connect — FastAPI bridge + Frappe Education",
+    "_postman_id": "7f8e9a0b-school-connect-collection",
+    "description": "End-to-end API tests for the local stack:\n\n  Flutter app → FastAPI bridge (:8080) → Frappe Education (:8000) → MariaDB\n\n1. Set the environment variables (email/password) in 'School Connect — Local'.\n2. Run 'Auth → 1. Login' first — its test script saves the JWT into {{token}} automatically.\n3. All other requests use Authorization: Bearer {{token}}.\n\nBase URLs: localhost:8080 (desktop/emulator on host) · Android emulator: http://10.0.2.2:8080 · physical device: http://192.168.1.81:8080",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0. Health checks",
+      "item": [
+        {
+          "name": "FastAPI health (pings Frappe)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('bridge is ok and frappe reachable', () => {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.status).to.eql('ok');",
+                  "  pm.expect(b.frappe).to.eql('ok');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Frappe ping (direct, no auth)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{frappeUrl}}/api/method/ping", "host": ["{{frappeUrl}}"], "path": ["api", "method", "ping"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Auth (run Login first — saves the token)",
+      "item": [
+        {
+          "name": "1. Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('login succeeds', () => pm.expect(res.message.token).to.be.a('string'));",
+                  "pm.environment.set('token', res.message.token);",
+                  "pm.environment.set('student', res.message.student_id || '');",
+                  "console.log('Logged in as', res.message.full_name, '| role:', res.message.role, '| student_id:', res.message.student_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Me (current profile)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "me"] }
+          }
+        },
+        {
+          "name": "3. Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Academics",
+      "item": [
+        {
+          "name": "Programs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/programs", "host": ["{{baseUrl}}"], "path": ["api", "v1", "programs"] }
+          }
+        },
+        {
+          "name": "Courses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/courses", "host": ["{{baseUrl}}"], "path": ["api", "v1", "courses"] }
+          }
+        },
+        {
+          "name": "Student groups (classes)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/student-groups", "host": ["{{baseUrl}}"], "path": ["api", "v1", "student-groups"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.message && res.message.length) {",
+                  "  pm.environment.set('studentGroup', res.message[0].name);",
+                  "  console.log('First class:', res.message[0].name);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Course schedules (this week)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/course-schedules?start=2026-08-10&end=2026-08-16",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "course-schedules"],
+              "query": [
+                { "key": "start", "value": "2026-08-10" },
+                { "key": "end", "value": "2026-08-16" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Students & Instructors",
+      "item": [
+        {
+          "name": "Students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/students", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students"] }
+          }
+        },
+        {
+          "name": "Student attendance (needs studentGroup)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/students/{{student}}/attendance?student_group={{studentGroup}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "students", "{{student}}", "attendance"],
+              "query": [{ "key": "student_group", "value": "{{studentGroup}}" }]
+            }
+          }
+        },
+        {
+          "name": "Instructors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/instructors", "host": ["{{baseUrl}}"], "path": ["api", "v1", "instructors"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Attendance",
+      "item": [
+        {
+          "name": "Check records exist",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/attendance/records?student_group={{studentGroup}}&date=2026-08-12",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "attendance", "records"],
+              "query": [
+                { "key": "student_group", "value": "{{studentGroup}}" },
+                { "key": "date", "value": "2026-08-12" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark attendance (POST)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_group\": \"{{studentGroup}}\",\n  \"date\": \"2026-08-12\",\n  \"students_present\": [],\n  \"students_absent\": []\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/attendance/mark", "host": ["{{baseUrl}}"], "path": ["api", "v1", "attendance", "mark"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Assessments",
+      "item": [
+        {
+          "name": "Assessment plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/assessment-plans", "host": ["{{baseUrl}}"], "path": ["api", "v1", "assessment-plans"] }
+          }
+        },
+        {
+          "name": "Assessment results",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/assessment-results", "host": ["{{baseUrl}}"], "path": ["api", "v1", "assessment-results"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Portal & passthrough",
+      "item": [
+        {
+          "name": "Portal user-info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/portal/user-info", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portal", "user-info"] }
+          }
+        },
+        {
+          "name": "Portal student-info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/portal/student-info", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portal", "student-info"] }
+          }
+        },
+        {
+          "name": "Frappe passthrough: Course doctype",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/frappe/api/resource/Course", "host": ["{{baseUrl}}"], "path": ["frappe", "api", "resource", "Course"] }
+          }
+        },
+        {
+          "name": "Frappe passthrough: get_user_info",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/frappe/api/method/education.education.api.get_user_info", "host": ["{{baseUrl}}"], "path": ["frappe", "api", "method", "education.education.api.get_user_info"] }
+          }
+        }
+      ]
+    }
+  ]
+}

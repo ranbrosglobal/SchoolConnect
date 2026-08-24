@@ -1,0 +1,148 @@
+{
+  "actions": [],
+  "autoname": "format:ASG-{course}-{##}",
+  "creation": "Link",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "title",
+    "course",
+    "student_group",
+    "column_break_1",
+    "instructor",
+    "due_date",
+    "section_break_description",
+    "description",
+    "section_break_attachment",
+    "attachment",
+    "attachment_name",
+    "section_break_other",
+    "school"
+  ],
+  "fields": [
+    {
+      "fieldname": "title",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "label": "Title",
+      "reqd": 1
+    },
+    {
+      "fieldname": "course",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "label": "Course",
+      "options": "Course",
+      "reqd": 1
+    },
+    {
+      "fieldname": "student_group",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "label": "Student Group",
+      "options": "Student Group",
+      "reqd": 1
+    },
+    {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "instructor",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "Instructor",
+      "options": "Instructor",
+      "reqd": 1
+    },
+    {
+      "fieldname": "due_date",
+      "fieldtype": "Date",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "label": "Due Date",
+      "reqd": 1
+    },
+    {
+      "fieldname": "section_break_description",
+      "fieldtype": "Section Break",
+      "label": "Description"
+    },
+    {
+      "fieldname": "description",
+      "fieldtype": "Text Editor",
+      "label": "Description"
+    },
+    {
+      "fieldname": "section_break_attachment",
+      "fieldtype": "Section Break",
+      "label": "Attachment"
+    },
+    {
+      "fieldname": "attachment",
+      "fieldtype": "Attach",
+      "label": "Attachment"
+    },
+    {
+      "fieldname": "attachment_name",
+      "fieldtype": "Data",
+      "label": "Attachment Name"
+    },
+    {
+      "fieldname": "section_break_other",
+      "fieldtype": "Section Break",
+      "label": "Other"
+    },
+    {
+      "fieldname": "school",
+      "fieldtype": "Link",
+      "in_standard_filter": 1,
+      "label": "School",
+      "options": "School"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "links": [
+    {
+      "link_doctype": "Assignment Submission",
+      "link_fieldname": "assignment"
+    }
+  ],
+  "modified": "2024-01-01 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "School Connect",
+  "name": "Assignment",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "School Admin",
+      "read": 1,
+      "write": 1,
+      "create": 1
+    },
+    {
+      "role": "Instructor",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "submit": 0,
+      "cancel": 0
+    }
+  ],
+  "search_fields": "title,course,student_group",
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "title_field": "title",
+  "track_changes": 1
+}

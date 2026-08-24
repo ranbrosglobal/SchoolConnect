@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create Assignment - School Connect</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Kalam:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#000e5e",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "inverse-surface": "#2e3133",
+                        "tertiary-fixed-dim": "#61dca6",
+                        "surface-container": "#edeef1",
+                        "primary": "#3145bb",
+                        "tertiary-fixed": "#7ff9c1",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "inverse-primary": "#bbc3ff",
+                        "on-tertiary-container": "#a3ffd0",
+                        "surface-dim": "#d9dadd",
+                        "error": "#ba1a1a",
+                        "secondary-fixed": "#ffddb1",
+                        "secondary": "#815600",
+                        "outline-variant": "#c5c5d6",
+                        "surface": "#f8f9fc",
+                        "inverse-on-surface": "#f0f1f4",
+                        "surface-container-high": "#e7e8eb",
+                        "secondary-container": "#fdaf1e",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface-variant": "#454653",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#eaeaff",
+                        "secondary-fixed-dim": "#ffba4b",
+                        "surface-tint": "#3f52c8",
+                        "on-primary-fixed-variant": "#2338af",
+                        "surface-container-highest": "#e1e2e5",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#4c5fd5",
+                        "background": "#f8f9fc",
+                        "surface-bright": "#f8f9fc",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "primary-fixed": "#dee0ff",
+                        "surface-container-low": "#f2f3f6",
+                        "on-secondary-fixed": "#291800",
+                        "tertiary-container": "#007a53",
+                        "tertiary": "#005f40",
+                        "surface-variant": "#e1e2e5",
+                        "on-background": "#191c1e",
+                        "on-tertiary-fixed": "#002113",
+                        "on-surface": "#191c1e",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#757685",
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#6a4600",
+                        "on-secondary-fixed-variant": "#624000"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "xs": "8px",
+                        "margin-mobile": "16px",
+                        "md": "24px",
+                        "sm": "16px",
+                        "lg": "32px",
+                        "xl": "48px",
+                        "margin-desktop": "32px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "body-sm": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "doodle-note": ["Kalam"],
+                        "label-caps": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "doodle-note": ["16px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f8f9fc;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c5c5d6;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #757685;
+        }
+        
+        /* Subtle notebook line pattern for the background */
+        .notebook-lines {
+            background-image: repeating-linear-gradient(transparent, transparent 31px, #e1e2e5 31px, #e1e2e5 32px);
+            background-position: 0 -1px;
+        }
+        
+        /* Input focus glow */
+        .input-glow:focus {
+            box-shadow: 0 0 0 2px rgba(49, 69, 187, 0.2);
+            border-color: #3145bb;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-lg h-full flex flex-col antialiased">
+<!-- TopAppBar -->
+<header class="bg-primary dark:bg-primary-container docked full-width top-0 shadow-sm bg-gradient-to-r from-primary to-primary-container dark:from-primary-container dark:to-primary flex justify-between items-center w-full px-margin-mobile py-sm shrink-0 z-10 relative">
+<div class="flex items-center gap-sm">
+<button class="text-on-primary dark:text-on-primary-container hover:opacity-90 transition-opacity scale-95 transition-transform duration-150 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-on-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<h1 class="text-headline-md font-headline-md font-bold text-on-primary dark:text-on-primary-container">Create Assignment</h1>
+</div>
+<div class="flex items-center gap-sm">
+<button class="text-on-primary dark:text-on-primary-container hover:opacity-90 transition-opacity scale-95 transition-transform duration-150 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-on-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">more_vert</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 overflow-y-auto custom-scrollbar p-margin-mobile md:p-margin-desktop bg-background flex justify-center">
+<!-- Assignment Form Card (Notebook Sheet) -->
+<div class="w-full max-w-3xl bg-surface-container-lowest rounded-xl border border-surface-container-highest shadow-[0px_4px_12px_rgba(35,38,53,0.05)] relative overflow-hidden">
+<!-- Left binding accent (desktop only) -->
+<div class="hidden md:block absolute left-0 top-0 bottom-0 w-8 border-r border-surface-container-highest bg-surface-container-low flex flex-col justify-evenly py-8">
+<!-- Binding holes -->
+<div class="w-3 h-3 rounded-full bg-background border border-surface-container-highest mx-auto shadow-inner"></div>
+<div class="w-3 h-3 rounded-full bg-background border border-surface-container-highest mx-auto shadow-inner"></div>
+<div class="w-3 h-3 rounded-full bg-background border border-surface-container-highest mx-auto shadow-inner"></div>
+<div class="w-3 h-3 rounded-full bg-background border border-surface-container-highest mx-auto shadow-inner"></div>
+<div class="w-3 h-3 rounded-full bg-background border border-surface-container-highest mx-auto shadow-inner"></div>
+</div>
+<div class="p-margin-mobile md:p-xl md:pl-16 relative">
+<!-- Doodle Star -->
+<div class="absolute top-6 right-6 md:top-8 md:right-8 text-secondary-container pointer-events-none opacity-80">
+<svg class="transform rotate-12" fill="none" height="40" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" viewbox="0 0 24 24" width="40">
+<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+</svg>
+</div>
+<form class="space-y-md">
+<!-- Title Field -->
+<div class="space-y-xs">
+<label class="block text-label-caps font-label-caps text-on-surface-variant" for="assignment-title">Assignment Title</label>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3 text-body-lg font-body-lg text-on-surface placeholder:text-outline focus:outline-none input-glow transition-all duration-200" id="assignment-title" placeholder="e.g., Chapter 4 Reading Reflection" type="text"/>
+</div>
+<!-- Grid for Course, Class, Due Date -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-sm md:gap-md">
+<!-- Course Dropdown -->
+<div class="space-y-xs">
+<label class="block text-label-caps font-label-caps text-on-surface-variant" for="course-select">Course</label>
+<div class="relative">
+<select class="appearance-none w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3 text-body-lg font-body-lg text-on-surface focus:outline-none input-glow transition-all duration-200 pr-10" id="course-select">
+<option disabled="" selected="" value="">Select Course</option>
+<option value="math">Mathematics 101</option>
+<option value="sci">General Science</option>
+<option value="eng">English Literature</option>
+<option value="hist">World History</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-on-surface-variant">
+<span class="material-symbols-outlined" style="font-size: 20px;">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Class Dropdown -->
+<div class="space-y-xs">
+<label class="block text-label-caps font-label-caps text-on-surface-variant" for="class-select">Class / Section</label>
+<div class="relative">
+<select class="appearance-none w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3 text-body-lg font-body-lg text-on-surface focus:outline-none input-glow transition-all duration-200 pr-10" id="class-select">
+<option disabled="" selected="" value="">Select Class</option>
+<option value="a">Section A</option>
+<option value="b">Section B</option>
+<option value="c">Section C</option>
+<option value="all">All Sections</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-on-surface-variant">
+<span class="material-symbols-outlined" style="font-size: 20px;">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Due Date Picker -->
+<div class="space-y-xs">
+<label class="block text-label-caps font-label-caps text-on-surface-variant" for="due-date">Due Date &amp; Time</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3 text-body-lg font-body-lg text-on-surface focus:outline-none input-glow transition-all duration-200 [&amp;::-webkit-calendar-picker-indicator]:opacity-50 [&amp;::-webkit-calendar-picker-indicator]:cursor-pointer" id="due-date" type="datetime-local"/>
+</div>
+</div>
+</div>
+<!-- Description Field (Notebook Lined) -->
+<div class="space-y-xs pt-sm relative">
+<!-- Doodle Arrow pointing to description -->
+<div class="hidden md:block absolute -left-12 top-10 text-primary opacity-60">
+<svg fill="none" height="30" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 40 30" width="40">
+<path d="M5 15 Q 15 5, 35 15 M 25 5 L 35 15 L 25 25"></path>
+</svg>
+</div>
+<label class="block text-label-caps font-label-caps text-on-surface-variant flex justify-between items-end" for="assignment-description">
+<span>Instructions / Description</span>
+<span class="text-body-sm text-outline font-normal">Optional</span>
+</label>
+<div class="relative rounded-lg border border-outline-variant overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200">
+<textarea class="w-full bg-transparent p-4 text-body-lg font-body-lg text-on-surface placeholder:text-outline focus:outline-none resize-y min-h-[120px] notebook-lines leading-[32px]" id="assignment-description" placeholder="Provide detailed instructions for the students here..." rows="5"></textarea>
+</div>
+</div>
+<!-- Attachment Zone -->
+<div class="space-y-xs pt-sm">
+<div class="flex items-center gap-2 mb-2">
+<label class="block text-label-caps font-label-caps text-on-surface-variant">Materials &amp; Attachments</label>
+<!-- Hand-drawn paperclip doodle -->
+<svg class="text-secondary opacity-80" fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="20">
+<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+</svg>
+<span class="text-doodle-note font-doodle-note text-secondary-container ml-2 transform -rotate-3 text-sm">Add files here!</span>
+</div>
+<div class="border-2 border-dashed border-outline-variant hover:border-primary bg-surface-container-low hover:bg-surface-container rounded-xl p-md flex flex-col items-center justify-center gap-sm cursor-pointer transition-colors duration-200 group">
+<div class="flex gap-4 text-outline group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined" style="font-size: 32px; font-variation-settings: 'FILL' 0, 'wght' 200;">picture_as_pdf</span>
+<span class="material-symbols-outlined" style="font-size: 32px; font-variation-settings: 'FILL' 0, 'wght' 200;">description</span>
+<span class="material-symbols-outlined" style="font-size: 32px; font-variation-settings: 'FILL' 0, 'wght' 200;">image</span>
+</div>
+<div class="text-center">
+<p class="text-body-lg font-body-lg text-on-surface-variant font-semibold">Click to browse or drag files here</p>
+<p class="text-body-sm font-body-sm text-outline">Supports PDF, DOCX, PNG, JPG (Max 25MB)</p>
+</div>
+<button class="mt-2 px-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg text-body-sm font-body-sm text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors flex items-center gap-2" type="button">
+<span class="material-symbols-outlined" style="font-size: 18px;">upload</span>
+                                Browse Files
+                            </button>
+</div>
+<!-- Example Attached File (Hidden by default, shown for UI completeness) -->
+<div class="mt-4 p-3 bg-surface-container border border-surface-container-highest rounded-lg flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="bg-error-container text-on-error-container p-2 rounded-md flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-size: 20px;">picture_as_pdf</span>
+</div>
+<div>
+<p class="text-body-sm font-body-sm font-semibold text-on-surface line-clamp-1">Chapter_4_Reading_Materials.pdf</p>
+<p class="text-label-caps font-label-caps text-outline">1.2 MB</p>
+</div>
+</div>
+<button class="text-outline hover:text-error p-1 rounded-full hover:bg-error-container/20 transition-colors focus:outline-none" type="button">
+<span class="material-symbols-outlined" style="font-size: 20px;">close</span>
+</button>
+</div>
+</div>
+<!-- Divider -->
+<hr class="border-surface-container-highest my-lg"/>
+<!-- Actions -->
+<div class="flex flex-col-reverse md:flex-row justify-end items-center gap-4 pt-sm">
+<button class="w-full md:w-auto px-6 py-3 bg-surface-container-lowest border border-primary text-primary rounded-xl text-body-lg font-body-lg font-semibold hover:bg-primary-fixed/20 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2" type="button">
+                            Save as Draft
+                        </button>
+<button class="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-primary to-primary-container text-on-primary rounded-xl text-body-lg font-body-lg font-bold shadow-[0px_4px_12px_rgba(49,69,187,0.2)] hover:opacity-90 hover:shadow-[0px_6px_16px_rgba(49,69,187,0.3)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 flex items-center justify-center gap-2" type="submit">
+<span class="material-symbols-outlined" style="font-size: 20px;">send</span>
+                            Post Assignment
+                        </button>
+</div>
+</form>
+</div>
+</div>
+<!-- Bottom spacing for mobile nav -->
+<div class="h-24 md:h-8"></div>
+</main>
+<!-- BottomNavBar (Hidden on MD+, visible on mobile) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl bg-surface-container-lowest dark:bg-inverse-surface border-t border-outline-variant dark:border-none shadow-[0px_-4px_12px_rgba(35,38,53,0.05)] flex justify-around items-center px-4 py-2">
+<!-- Assuming Home/Dashboard context since creating an assignment usually originates there or Classes -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">dashboard</span>
+<span class="text-label-caps font-label-caps mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">event_available</span>
+<span class="text-label-caps font-label-caps mt-1">Attendance</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim relative after:content-[''] after:absolute after:-bottom-1 after:w-2 after:h-2 after:bg-secondary-container after:rounded-full scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 400, 'FILL' 1;">menu_book</span>
+<span class="text-label-caps font-label-caps mt-1 font-bold">Classes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">notifications</span>
+<span class="text-label-caps font-label-caps mt-1">Alerts</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">more_horiz</span>
+<span class="text-label-caps font-label-caps mt-1">Menu</span>
+</a>
+</nav>
+</body></html>

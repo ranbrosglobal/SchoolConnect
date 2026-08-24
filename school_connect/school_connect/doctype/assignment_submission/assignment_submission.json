@@ -1,0 +1,139 @@
+{
+  "actions": [],
+  "autoname": "format:SUB-{assignment}-{##}",
+  "creation": "Link",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "assignment",
+    "student",
+    "column_break_1",
+    "submitted_at",
+    "section_break_file",
+    "file",
+    "file_name",
+    "section_break_grading",
+    "grade",
+    "feedback",
+    "column_break_2",
+    "status"
+  ],
+  "fields": [
+    {
+      "fieldname": "assignment",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "label": "Assignment",
+      "options": "Assignment",
+      "reqd": 1
+    },
+    {
+      "fieldname": "student",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "label": "Student",
+      "options": "Student",
+      "reqd": 1
+    },
+    {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "submitted_at",
+      "fieldtype": "Datetime",
+      "in_list_view": 1,
+      "label": "Submitted At"
+    },
+    {
+      "fieldname": "section_break_file",
+      "fieldtype": "Section Break",
+      "label": "Submission File"
+    },
+    {
+      "fieldname": "file",
+      "fieldtype": "Attach",
+      "in_list_view": 1,
+      "label": "File",
+      "reqd": 1
+    },
+    {
+      "fieldname": "file_name",
+      "fieldtype": "Data",
+      "label": "File Name"
+    },
+    {
+      "fieldname": "section_break_grading",
+      "fieldtype": "Section Break",
+      "label": "Grading"
+    },
+    {
+      "fieldname": "grade",
+      "fieldtype": "Float",
+      "in_list_view": 1,
+      "label": "Grade",
+      "max_value": 100,
+      "min_value": 0
+    },
+    {
+      "fieldname": "feedback",
+      "fieldtype": "Text Editor",
+      "label": "Feedback"
+    },
+    {
+      "fieldname": "column_break_2",
+      "fieldtype": "Column Break"
+    },
+    {
+      "default": "Submitted",
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "label": "Status",
+      "options": "Submitted\nGraded\nReturned"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2024-01-01 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "School Connect",
+  "name": "Assignment Submission",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "School Admin",
+      "read": 1,
+      "write": 1,
+      "create": 1
+    },
+    {
+      "role": "Instructor",
+      "read": 1,
+      "write": 1,
+      "create": 0
+    },
+    {
+      "role": "Student",
+      "read": 1,
+      "write": 0,
+      "create": 1
+    }
+  ],
+  "search_fields": "assignment,student",
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "title_field": "assignment",
+  "track_changes": 1
+}

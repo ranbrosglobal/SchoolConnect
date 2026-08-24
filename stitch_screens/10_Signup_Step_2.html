@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>School Connect - Find Your School</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Kalam:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-container": "#6a4600",
+                        "on-background": "#191c1e",
+                        "outline": "#757685",
+                        "on-error": "#ffffff",
+                        "tertiary-container": "#007a53",
+                        "error": "#ba1a1a",
+                        "primary": "#3145bb",
+                        "inverse-on-surface": "#f0f1f4",
+                        "on-surface": "#191c1e",
+                        "on-surface-variant": "#454653",
+                        "surface-variant": "#e1e2e5",
+                        "surface-container-highest": "#e1e2e5",
+                        "inverse-surface": "#2e3133",
+                        "surface-tint": "#3f52c8",
+                        "surface-container-high": "#e7e8eb",
+                        "on-tertiary-container": "#a3ffd0",
+                        "secondary": "#815600",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#ffddb1",
+                        "outline-variant": "#c5c5d6",
+                        "inverse-primary": "#bbc3ff",
+                        "surface-bright": "#f8f9fc",
+                        "secondary-container": "#fdaf1e",
+                        "on-secondary-fixed-variant": "#624000",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "on-secondary-fixed": "#291800",
+                        "surface": "#f8f9fc",
+                        "primary-fixed": "#dee0ff",
+                        "surface-container-low": "#f2f3f6",
+                        "tertiary": "#005f40",
+                        "tertiary-fixed-dim": "#61dca6",
+                        "on-primary-fixed": "#000e5e",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#2338af",
+                        "tertiary-fixed": "#7ff9c1",
+                        "on-secondary": "#ffffff",
+                        "background": "#f8f9fc",
+                        "on-error-container": "#93000a",
+                        "secondary-fixed-dim": "#ffba4b",
+                        "surface-container": "#edeef1",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "surface-dim": "#d9dadd",
+                        "on-tertiary-fixed": "#002113",
+                        "primary-container": "#4c5fd5",
+                        "error-container": "#ffdad6",
+                        "on-primary-container": "#eaeaff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px",
+                        "card": "18px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "32px",
+                        "margin-mobile": "16px",
+                        "gutter": "16px",
+                        "lg": "32px",
+                        "xs": "8px",
+                        "xl": "48px",
+                        "sm": "16px",
+                        "base": "4px",
+                        "md": "24px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "doodle-note": ["Kalam"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-sm": ["Plus Jakarta Sans"],
+                        "label-caps": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "doodle-note": ["16px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "30px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #F8F9FC; }
+        .hairline-border { border: 1px solid #E2E8F0; }
+        .soft-shadow { box-shadow: 0px 4px 12px rgba(35, 38, 53, 0.05); }
+        .glow-focus:focus-within { border-color: #3145bb; box-shadow: 0 0 0 2px rgba(49, 69, 187, 0.2); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-lg text-on-background min-h-screen flex flex-col items-center justify-start p-margin-mobile md:p-margin-desktop">
+<!-- Progress Bar -->
+<div class="w-full max-w-md mt-lg mb-xl flex items-center justify-between gap-2 relative">
+<div class="h-2 flex-1 bg-primary rounded-full relative">
+<span class="material-symbols-outlined absolute -top-4 -right-2 text-primary font-bold text-[16px] rotate-12">check</span>
+</div>
+<div class="h-2 flex-1 bg-primary rounded-full"></div>
+<div class="h-2 flex-1 bg-surface-variant rounded-full"></div>
+<div class="h-2 flex-1 bg-surface-variant rounded-full"></div>
+</div>
+<!-- Header Section -->
+<div class="w-full max-w-md mb-md relative">
+<h1 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg-mobile md:font-headline-lg text-on-background flex items-center gap-2">
+            Find your school
+            <span class="material-symbols-outlined text-secondary-container">auto_awesome</span>
+</h1>
+<p class="text-body-sm font-body-sm text-on-surface-variant mt-xs">Step 2 of 4</p>
+</div>
+<!-- Search Input -->
+<div class="w-full max-w-md mb-xl">
+<div class="relative flex items-center w-full h-14 bg-surface-container-lowest rounded-xl hairline-border glow-focus transition-all duration-200">
+<span class="material-symbols-outlined absolute left-4 text-outline">search</span>
+<input class="w-full h-full pl-12 pr-4 bg-transparent border-none rounded-xl text-body-lg font-body-lg text-on-surface focus:ring-0 focus:outline-none placeholder:text-outline-variant" placeholder="Search by school name..." type="text"/>
+</div>
+</div>
+<!-- Empty State (Initially Hidden, but included in DOM for structure) -->
+<div class="hidden w-full max-w-md flex-col items-center justify-center py-xl opacity-70">
+<span class="material-symbols-outlined text-[64px] text-outline-variant font-light mb-sm">school</span>
+<div class="relative">
+<svg class="absolute -top-6 -left-8 w-8 h-8 text-secondary-container rotate-45" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<p class="text-doodle-note font-doodle-note text-on-surface-variant text-center rotate-[-2deg]">Start typing to find your school</p>
+</div>
+</div>
+<!-- Result List -->
+<div class="w-full max-w-md flex flex-col gap-sm mb-24">
+<!-- Unselected Card -->
+<div class="bg-surface-container-lowest rounded-card hairline-border soft-shadow p-sm flex items-center gap-sm cursor-pointer hover:bg-surface-container-low transition-colors duration-150">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center shrink-0 text-primary">
+<span class="material-symbols-outlined text-[24px]">school</span>
+</div>
+<div class="flex-1">
+<h3 class="text-body-lg font-headline-md text-on-surface font-semibold">Oakwood High School</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Springfield, IL</p>
+</div>
+</div>
+<!-- Selected Card -->
+<div class="bg-surface-container-lowest rounded-card border-2 border-primary-container soft-shadow p-sm flex items-center gap-sm relative cursor-pointer shadow-[0_0_15px_rgba(76,95,213,0.15)] bg-primary-fixed/10">
+<!-- Doodle Checkmark -->
+<svg class="absolute -top-2 -right-2 w-6 h-6 text-primary-container z-10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewbox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+<div class="w-12 h-12 rounded-full bg-primary flex items-center justify-center shrink-0 text-on-primary">
+<span class="material-symbols-outlined text-[24px]">school</span>
+</div>
+<div class="flex-1">
+<h3 class="text-body-lg font-headline-md text-primary font-bold">Lincoln Academy</h3>
+<p class="text-body-sm font-body-sm text-primary/80">Chicago, IL</p>
+</div>
+</div>
+<!-- Unselected Card -->
+<div class="bg-surface-container-lowest rounded-card hairline-border soft-shadow p-sm flex items-center gap-sm cursor-pointer hover:bg-surface-container-low transition-colors duration-150">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center shrink-0 text-primary">
+<span class="material-symbols-outlined text-[24px]">school</span>
+</div>
+<div class="flex-1">
+<h3 class="text-body-lg font-headline-md text-on-surface font-semibold">Westside Elementary</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Evanston, IL</p>
+</div>
+</div>
+</div>
+<!-- Fixed Bottom Button -->
+<div class="fixed bottom-0 left-0 w-full p-margin-mobile bg-gradient-to-t from-background via-background to-transparent pb-lg pt-12 flex justify-center z-10">
+<button class="w-full max-w-md bg-gradient-to-r from-primary to-primary-container text-on-primary rounded-full py-4 text-headline-md font-headline-md shadow-md hover:opacity-90 transition-opacity flex justify-center items-center gap-2">
+            Continue
+            <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+</div>
+</body></html>

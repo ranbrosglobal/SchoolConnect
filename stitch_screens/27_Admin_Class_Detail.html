@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>School Connect - Class Detail</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Kalam:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed-variant": "#624000",
+                        "background": "#f8f9fc",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f2f3f6",
+                        "surface-variant": "#e1e2e5",
+                        "on-primary-container": "#eaeaff",
+                        "inverse-on-surface": "#f0f1f4",
+                        "outline-variant": "#c5c5d6",
+                        "inverse-primary": "#bbc3ff",
+                        "secondary-fixed-dim": "#ffba4b",
+                        "on-tertiary-container": "#a3ffd0",
+                        "surface-dim": "#d9dadd",
+                        "tertiary-container": "#007a53",
+                        "on-surface": "#191c1e",
+                        "on-primary-fixed": "#000e5e",
+                        "secondary": "#815600",
+                        "secondary-fixed": "#ffddb1",
+                        "tertiary-fixed-dim": "#61dca6",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "error-container": "#ffdad6",
+                        "on-background": "#191c1e",
+                        "on-primary": "#ffffff",
+                        "secondary-container": "#fdaf1e",
+                        "surface": "#f8f9fc",
+                        "surface-container-high": "#e7e8eb",
+                        "on-primary-fixed-variant": "#2338af",
+                        "on-surface-variant": "#454653",
+                        "on-error": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#757685",
+                        "on-secondary-container": "#6a4600",
+                        "surface-container": "#edeef1",
+                        "surface-tint": "#3f52c8",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "on-error-container": "#93000a",
+                        "primary-container": "#4c5fd5",
+                        "surface-container-highest": "#e1e2e5",
+                        "tertiary": "#005f40",
+                        "surface-bright": "#f8f9fc",
+                        "tertiary-fixed": "#7ff9c1",
+                        "on-secondary-fixed": "#291800",
+                        "inverse-surface": "#2e3133",
+                        "on-tertiary-fixed": "#002113",
+                        "on-tertiary": "#ffffff",
+                        "primary": "#3145bb",
+                        "primary-fixed": "#dee0ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "48px",
+                        "gutter": "16px",
+                        "md": "24px",
+                        "margin-mobile": "16px",
+                        "xs": "8px",
+                        "sm": "16px",
+                        "margin-desktop": "32px",
+                        "base": "4px",
+                        "lg": "32px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "label-caps": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "body-sm": ["Plus Jakarta Sans"],
+                        "doodle-note": ["Kalam"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "doodle-note": ["16px", { "lineHeight": "18px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .scribble-border {
+            border: 2px dashed var(--tw-colors-outline-variant);
+            border-radius: var(--tw-border-radius-lg);
+        }
+        .doodle-arrow::after {
+            content: '↗';
+            font-family: 'Kalam', cursive;
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            color: var(--tw-colors-secondary-container);
+            font-size: 24px;
+            transform: rotate(45deg);
+        }
+        .doodle-underline {
+            position: relative;
+        }
+        .doodle-underline::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'%3E%3Cpath d='M0,5 Q25,0 50,5 T100,5' fill='none' stroke='%23fdaf1e' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-size: 100% 100%;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-lg font-body-lg min-h-screen pb-24 md:pb-0 pt-16 md:pt-20">
+<!-- TopAppBar JSON Component -->
+<header class="fixed docked full-width top-0 w-full z-50 bg-primary dark:bg-primary-container text-on-primary dark:text-on-primary-container shadow-sm bg-gradient-to-r from-primary to-primary-container dark:from-primary-container dark:to-primary">
+<div class="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop py-sm">
+<div class="flex items-center gap-xs">
+<!-- Fallback to back button since this is a detail screen, suppressing shell logic for destination nav -->
+<button class="p-2 hover:opacity-90 transition-opacity scale-95 transition-transform duration-150 flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<div class="flex flex-col">
+<h1 class="text-headline-md font-headline-md font-bold text-on-primary dark:text-on-primary-container">School Connect</h1>
+</div>
+</div>
+<nav class="hidden md:flex gap-md items-center">
+<a class="text-on-primary/70 hover:opacity-90 transition-opacity flex flex-col items-center" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="dashboard">dashboard</span>
+<span class="text-label-caps font-label-caps">Home</span>
+</a>
+<a class="text-on-primary/70 hover:opacity-90 transition-opacity flex flex-col items-center" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="event_available">event_available</span>
+<span class="text-label-caps font-label-caps">Attendance</span>
+</a>
+<a class="text-on-primary font-bold hover:opacity-90 transition-opacity flex flex-col items-center relative after:content-[''] after:absolute after:-bottom-2 after:w-2 after:h-2 after:bg-secondary-container after:rounded-full doodle-underline" href="#">
+<span class="material-symbols-outlined mb-1 fill" data-icon="menu_book">menu_book</span>
+<span class="text-label-caps font-label-caps">Classes</span>
+</a>
+<a class="text-on-primary/70 hover:opacity-90 transition-opacity flex flex-col items-center" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="notifications">notifications</span>
+<span class="text-label-caps font-label-caps">Alerts</span>
+</a>
+</nav>
+<div class="flex items-center gap-xs">
+<button class="p-2 hover:opacity-90 transition-opacity scale-95 transition-transform duration-150 flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop py-lg">
+<!-- Header Section -->
+<section class="mb-xl">
+<div class="bg-gradient-to-br from-primary-container to-primary rounded-xl p-md md:p-lg text-on-primary relative overflow-hidden shadow-sm">
+<!-- Doodle Background Accent -->
+<div class="absolute -top-10 -right-10 opacity-20 transform rotate-12">
+<svg fill="none" height="150" viewbox="0 0 100 100" width="150" xmlns="http://www.w3.org/2000/svg">
+<path d="M50 10 L60 40 L90 50 L60 60 L50 90 L40 60 L10 50 L40 40 Z" stroke="white" stroke-dasharray="4 4" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<div class="relative z-10">
+<div class="flex items-center gap-xs mb-xs">
+<span class="material-symbols-outlined fill text-secondary-container" data-icon="school">school</span>
+<span class="text-label-caps font-label-caps tracking-wider opacity-90 uppercase">High School Diploma</span>
+</div>
+<h2 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg-mobile md:font-headline-lg mb-sm doodle-underline inline-block">Grade 10 - A</h2>
+<div class="flex flex-wrap gap-sm mt-xs">
+<div class="flex items-center gap-xs bg-white/20 rounded-full px-sm py-xs backdrop-blur-sm border border-white/30">
+<span class="material-symbols-outlined text-[18px]" data-icon="group">group</span>
+<span class="text-body-sm font-body-sm font-bold">32 Students</span>
+</div>
+<div class="flex items-center gap-xs bg-white/20 rounded-full px-sm py-xs backdrop-blur-sm border border-white/30">
+<span class="material-symbols-outlined text-[18px]" data-icon="person_play">person_play</span>
+<span class="text-body-sm font-body-sm">Mr. Anderson</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Actions & Filters -->
+<section class="flex justify-between items-center mb-md">
+<h3 class="text-headline-md font-headline-md text-on-surface">Student Roster</h3>
+<div class="flex gap-xs">
+<button class="w-10 h-10 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center hover:bg-surface-variant transition-colors border border-outline-variant/30">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center hover:bg-surface-variant transition-colors border border-outline-variant/30 relative">
+<span class="material-symbols-outlined" data-icon="filter_list">filter_list</span>
+<span class="absolute top-0 right-0 w-3 h-3 bg-secondary-container rounded-full border-2 border-surface-container-high"></span>
+</button>
+</div>
+</section>
+<!-- Roster List -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+<!-- Student Row (Card representation for better density handling) -->
+<button class="group w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-sm shadow-[0px_4px_12px_rgba(35,38,53,0.05)] hover:border-primary hover:shadow-md transition-all text-left flex items-center gap-sm relative overflow-hidden">
+<!-- Hover indicator -->
+<div class="absolute left-0 top-0 h-full w-1 bg-primary transform scale-y-0 group-hover:scale-y-100 transition-transform origin-center"></div>
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center shrink-0 border border-outline-variant text-on-surface font-bold text-headline-md font-headline-md">
+                    01
+                </div>
+<div class="flex-grow min-w-0">
+<h4 class="text-body-lg font-body-lg font-bold text-on-surface truncate group-hover:text-primary transition-colors">Alice Johnson</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant truncate">alice.j@school.edu</p>
+</div>
+<div class="shrink-0 text-outline group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="female">female</span>
+</div>
+<div class="shrink-0 text-outline-variant opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</div>
+</button>
+<!-- Student Row -->
+<button class="group w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-sm shadow-[0px_4px_12px_rgba(35,38,53,0.05)] hover:border-primary hover:shadow-md transition-all text-left flex items-center gap-sm relative overflow-hidden">
+<div class="absolute left-0 top-0 h-full w-1 bg-primary transform scale-y-0 group-hover:scale-y-100 transition-transform origin-center"></div>
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center shrink-0 border border-outline-variant text-on-surface font-bold text-headline-md font-headline-md">
+                    02
+                </div>
+<div class="flex-grow min-w-0">
+<h4 class="text-body-lg font-body-lg font-bold text-on-surface truncate group-hover:text-primary transition-colors">Ben Smith</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant truncate">ben.s@school.edu</p>
+</div>
+<div class="shrink-0 text-outline group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="male">male</span>
+</div>
+<div class="shrink-0 text-outline-variant opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</div>
+</button>
+<!-- Student Row -->
+<button class="group w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-sm shadow-[0px_4px_12px_rgba(35,38,53,0.05)] hover:border-primary hover:shadow-md transition-all text-left flex items-center gap-sm relative overflow-hidden">
+<div class="absolute left-0 top-0 h-full w-1 bg-primary transform scale-y-0 group-hover:scale-y-100 transition-transform origin-center"></div>
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center shrink-0 border border-outline-variant text-on-surface font-bold text-headline-md font-headline-md">
+                    03
+                </div>
+<div class="flex-grow min-w-0">
+<h4 class="text-body-lg font-body-lg font-bold text-on-surface truncate group-hover:text-primary transition-colors">Charlie Davis</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant truncate">charlie.d@school.edu</p>
+</div>
+<div class="shrink-0 text-outline group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="male">male</span>
+</div>
+<div class="shrink-0 text-outline-variant opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</div>
+</button>
+<!-- Student Row (Absent Example - subtle styling) -->
+<button class="group w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-sm shadow-[0px_4px_12px_rgba(35,38,53,0.05)] hover:border-error hover:shadow-md transition-all text-left flex items-center gap-sm relative overflow-hidden">
+<div class="absolute left-0 top-0 h-full w-1 bg-error transform scale-y-0 group-hover:scale-y-100 transition-transform origin-center"></div>
+<div class="w-12 h-12 rounded-full bg-error/10 flex items-center justify-center shrink-0 border border-error/20 text-error font-bold text-headline-md font-headline-md relative">
+                    04
+                     <!-- Small absent dot -->
+<span class="absolute top-0 right-0 w-3 h-3 bg-error rounded-full border-2 border-surface-container-lowest"></span>
+</div>
+<div class="flex-grow min-w-0">
+<h4 class="text-body-lg font-body-lg font-bold text-on-surface truncate group-hover:text-error transition-colors">Diana Evans</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant truncate">diana.e@school.edu</p>
+</div>
+<div class="shrink-0 text-outline group-hover:text-error transition-colors">
+<span class="material-symbols-outlined" data-icon="female">female</span>
+</div>
+<div class="shrink-0 text-outline-variant opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</div>
+</button>
+<!-- Student Row -->
+<button class="group w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-sm shadow-[0px_4px_12px_rgba(35,38,53,0.05)] hover:border-primary hover:shadow-md transition-all text-left flex items-center gap-sm relative overflow-hidden">
+<div class="absolute left-0 top-0 h-full w-1 bg-primary transform scale-y-0 group-hover:scale-y-100 transition-transform origin-center"></div>
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center shrink-0 border border-outline-variant text-on-surface font-bold text-headline-md font-headline-md">
+                    05
+                </div>
+<div class="flex-grow min-w-0">
+<h4 class="text-body-lg font-body-lg font-bold text-on-surface truncate group-hover:text-primary transition-colors">Ethan Foster</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant truncate">ethan.f@school.edu</p>
+</div>
+<div class="shrink-0 text-outline group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="male">male</span>
+</div>
+<div class="shrink-0 text-outline-variant opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</div>
+</button>
+<!-- Add New Student Slot (Scribble Style) -->
+<button class="w-full h-full min-h-[72px] bg-transparent scribble-border flex items-center justify-center text-outline-variant hover:text-primary hover:border-primary transition-colors hover:bg-primary/5 rounded-lg">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+<span class="text-body-sm font-body-sm font-bold font-doodle-note">Add Student</span>
+</div>
+</button>
+</section>
+</main>
+<!-- BottomNavBar JSON Component (Hidden on md+, visible on mobile for destination screen structure) -->
+<!-- Note: Though instructions say suppress shell for task/linear flows, a Class Detail in many admin apps acts as a primary hub for that class, so keeping bottom nav allows lateral movement. However, it's context dependent. I'll include it per JSON instructions for destination count. -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl bg-surface-container-lowest dark:bg-inverse-surface border-t border-outline-variant dark:border-none shadow-[0px_-4px_12px_rgba(35,38,53,0.05)]">
+<div class="flex justify-around items-center px-4 py-2 bg-surface-container-lowest dark:bg-inverse-surface">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="dashboard">dashboard</span>
+<span class="text-label-caps font-label-caps">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="event_available">event_available</span>
+<span class="text-label-caps font-label-caps">Attendance</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim relative after:content-[''] after:absolute after:-bottom-1 after:w-2 after:h-2 after:bg-secondary-container after:rounded-full Active: scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined mb-1 fill" data-icon="menu_book">menu_book</span>
+<span class="text-label-caps font-label-caps">Classes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="notifications">notifications</span>
+<span class="text-label-caps font-label-caps">Alerts</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="more_horiz">more_horiz</span>
+<span class="text-label-caps font-label-caps">Menu</span>
+</a>
+</div>
+</nav>
+</body></html>

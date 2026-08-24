@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>School Connect - Student Detail</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&amp;family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed-variant": "#624000",
+                    "background": "#f8f9fc",
+                    "error": "#ba1a1a",
+                    "surface-container-low": "#f2f3f6",
+                    "surface-variant": "#e1e2e5",
+                    "on-primary-container": "#eaeaff",
+                    "inverse-on-surface": "#f0f1f4",
+                    "outline-variant": "#c5c5d6",
+                    "inverse-primary": "#bbc3ff",
+                    "secondary-fixed-dim": "#ffba4b",
+                    "on-tertiary-container": "#a3ffd0",
+                    "surface-dim": "#d9dadd",
+                    "tertiary-container": "#007a53",
+                    "on-surface": "#191c1e",
+                    "on-primary-fixed": "#000e5e",
+                    "secondary": "#815600",
+                    "secondary-fixed": "#ffddb1",
+                    "tertiary-fixed-dim": "#61dca6",
+                    "on-tertiary-fixed-variant": "#005236",
+                    "error-container": "#ffdad6",
+                    "on-background": "#191c1e",
+                    "on-primary": "#ffffff",
+                    "secondary-container": "#fdaf1e",
+                    "surface": "#f8f9fc",
+                    "surface-container-high": "#e7e8eb",
+                    "on-primary-fixed-variant": "#2338af",
+                    "on-surface-variant": "#454653",
+                    "on-error": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "outline": "#757685",
+                    "on-secondary-container": "#6a4600",
+                    "surface-container": "#edeef1",
+                    "surface-tint": "#3f52c8",
+                    "primary-fixed-dim": "#bbc3ff",
+                    "on-error-container": "#93000a",
+                    "primary-container": "#4c5fd5",
+                    "surface-container-highest": "#e1e2e5",
+                    "tertiary": "#005f40",
+                    "surface-bright": "#f8f9fc",
+                    "tertiary-fixed": "#7ff9c1",
+                    "on-secondary-fixed": "#291800",
+                    "inverse-surface": "#2e3133",
+                    "on-tertiary-fixed": "#002113",
+                    "on-tertiary": "#ffffff",
+                    "primary": "#3145bb",
+                    "primary-fixed": "#dee0ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px",
+                    "card-lg": "18px"
+            },
+            "spacing": {
+                    "xl": "48px",
+                    "gutter": "16px",
+                    "md": "24px",
+                    "margin-mobile": "16px",
+                    "xs": "8px",
+                    "sm": "16px",
+                    "margin-desktop": "32px",
+                    "base": "4px",
+                    "lg": "32px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Plus Jakarta Sans"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "label-caps": ["Plus Jakarta Sans"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "body-sm": ["Plus Jakarta Sans"],
+                    "doodle-note": ["Kalam"]
+            },
+            "fontSize": {
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "30px", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "doodle-note": ["16px", {"lineHeight": "18px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        /* Notebook Background Texture */
+        body {
+            background-color: theme('colors.background');
+            background-image: linear-gradient(theme('colors.surface-variant') 1px, transparent 1px);
+            background-size: 100% 32px; /* Line spacing */
+            background-position: 0 40px; /* Offset from top */
+        }
+        
+        /* Inner glow for interactive cards */
+        .card-interactive:hover {
+            box-shadow: inset 0 0 0 1px theme('colors.primary'), 0 4px 12px rgba(35, 38, 53, 0.05);
+            transition: all 0.2s ease-in-out;
+        }
+
+        /* Material Symbols Base Setup */
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px; /* Default size, override with utilities */
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-surface antialiased min-h-screen flex flex-col">
+<!-- TopAppBar (from JSON) -->
+<!-- Applying exact styles from style_* keys -->
+<header class="bg-primary shadow-sm docked full-width top-0 flex justify-between items-center w-full px-margin-mobile py-sm z-50 sticky">
+<div class="flex items-center gap-3">
+<!-- Leading Avatar -->
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-on-primary/30">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A macro, well-lit professional headshot of a confident mid-30s school administrator smiling warmly. The lighting is soft and studio-quality, emphasizing approachability. The background is a clean, neutral white to ensure focus remains strictly on the subject's face." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjHuySCFHhGGjC8If4ubbGYLLAsuQ9fwV_nIQLuORSvYh7pwS7xUHhZofMIQ7urA9akV8F78PuZa8dJtIf0PJDz3wPivQxN6d_B2ElLEuKCwiPRISKCRiJQtmPlzfcr8a6IYBxGA1ZXdLCe-kWWmT2KO174stQHVQT8mMbEPFEd2pXMRjBl70e7aQkZ1-VhYoYHg2NGOAyY0LwY8mdjQBtzSl-yNLOGoMoGI3w2m7mHtcITxEJniSa"/>
+</div>
+<!-- Headline -->
+<h1 class="text-headline-md font-headline-md font-bold text-on-primary tracking-tight">School Connect</h1>
+</div>
+<!-- Trailing Icon -->
+<button class="w-10 h-10 flex items-center justify-center text-on-primary/70 hover:opacity-90 transition-opacity scale-95 transition-transform duration-150 rounded-full hover:bg-on-primary/10">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 w-full max-w-5xl mx-auto px-4 md:px-margin-desktop py-lg space-y-md relative z-10">
+<!-- Contextual Back Action (Task-focused page pattern) -->
+<div class="flex items-center gap-2 mb-sm">
+<button class="flex items-center gap-1 text-primary hover:text-primary-container transition-colors group">
+<span class="material-symbols-outlined text-[20px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+<span class="font-label-caps text-label-caps uppercase">Back to Class Roster</span>
+</button>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Profile Header Card (Spans 12 cols, top row) -->
+<section class="lg:col-span-12 bg-surface-container-lowest border border-outline-variant rounded-card-lg shadow-[0px_4px_12px_rgba(35,38,53,0.05)] p-6 relative overflow-hidden">
+<!-- Decorative notebook binder rings (visual flair) -->
+<div class="absolute top-0 left-4 bottom-0 w-2 flex flex-col justify-between py-6 opacity-20 pointer-events-none">
+<div class="w-2 h-4 rounded-full bg-outline-variant"></div>
+<div class="w-2 h-4 rounded-full bg-outline-variant"></div>
+<div class="w-2 h-4 rounded-full bg-outline-variant"></div>
+<div class="w-2 h-4 rounded-full bg-outline-variant"></div>
+</div>
+<div class="flex flex-col md:flex-row items-center md:items-start gap-6 pl-md">
+<!-- Avatar - Initials with Hand-drawn Accent -->
+<div class="relative group cursor-pointer">
+<div class="w-24 h-24 rounded-full bg-primary-fixed flex items-center justify-center border-[2px] border-dashed border-primary shadow-inner">
+<span class="font-headline-lg text-headline-lg text-on-primary-fixed">SW</span>
+</div>
+<!-- Status Badge (Present) -->
+<div class="absolute bottom-0 right-0 bg-tertiary-container/10 border border-tertiary/20 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1 shadow-sm">
+<div class="w-2 h-2 rounded-full bg-tertiary"></div>
+<span class="font-label-caps text-[10px] text-tertiary uppercase font-bold leading-none">In Class</span>
+</div>
+</div>
+<!-- Core Info -->
+<div class="flex-1 text-center md:text-left space-y-1">
+<h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface">Samantha Weaver</h2>
+<div class="flex flex-col md:flex-row items-center md:items-start gap-2 md:gap-4 text-on-surface-variant font-body-sm text-body-sm">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">school</span> Grade 10 - Science Stream</span>
+<span class="hidden md:inline text-outline-variant">•</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">mail</span> s.weaver@student.edu</span>
+</div>
+<!-- Parent Contact Pill -->
+<div class="mt-xs inline-flex items-center gap-2 bg-surface-container border border-outline-variant rounded-full px-3 py-1 text-on-surface-variant font-body-sm text-[12px] hover:bg-surface-variant transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-[14px]">call</span>
+<span>Guardian: Mrs. Weaver (Primary)</span>
+</div>
+</div>
+<!-- Roll No Badge -->
+<div class="flex-shrink-0 mt-4 md:mt-0">
+<div class="bg-secondary text-on-secondary rounded-lg px-4 py-3 shadow-md border-b-4 border-on-secondary-fixed-variant flex flex-col items-center justify-center transform rotate-2 hover:rotate-0 transition-transform">
+<span class="font-label-caps text-[10px] text-secondary-fixed uppercase tracking-wider opacity-90">Roll No.</span>
+<span class="font-headline-lg text-headline-lg text-on-secondary leading-none mt-1">1042</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Attendance Section (Spans 4 cols on Desktop) -->
+<section class="lg:col-span-4 flex flex-col gap-4">
+<h3 class="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">event_available</span>
+                    Attendance
+                </h3>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-card-lg p-5 shadow-[0px_4px_12px_rgba(35,38,53,0.05)] flex-1 flex flex-col justify-center relative">
+<!-- Doodle Accent -->
+<div class="absolute top-4 right-4 text-secondary-fixed-dim rotate-12 opacity-60">
+<svg fill="none" height="40" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="40">
+<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+</svg>
+</div>
+<div class="flex flex-col items-center justify-center gap-4">
+<!-- Circular Progress Ring -->
+<div class="relative w-32 h-32">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<!-- Background Circle -->
+<circle class="text-surface-container-high" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-width="8"></circle>
+<!-- Progress Circle (92%) -->
+<circle class="text-tertiary-container drop-shadow-sm stroke-round" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="251.2" stroke-dashoffset="20.1" stroke-width="8"></circle>
+</svg>
+<!-- Center Text -->
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-headline-lg text-headline-lg-mobile text-tertiary-fixed-variant leading-none">92%</span>
+<span class="font-label-caps text-[10px] text-on-surface-variant uppercase mt-1">Present</span>
+</div>
+</div>
+<!-- Mini Stats -->
+<div class="w-full grid grid-cols-2 gap-2 mt-2">
+<div class="bg-surface-container rounded-md p-2 text-center">
+<div class="font-label-caps text-[10px] text-on-surface-variant">Absences</div>
+<div class="font-headline-md text-body-lg text-error font-bold">3</div>
+</div>
+<div class="bg-surface-container rounded-md p-2 text-center">
+<div class="font-label-caps text-[10px] text-on-surface-variant">Lates</div>
+<div class="font-headline-md text-body-lg text-secondary font-bold">1</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Assignment Grades Section (Spans 8 cols on Desktop) -->
+<section class="lg:col-span-8 flex flex-col gap-4">
+<div class="flex justify-between items-end">
+<h3 class="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">menu_book</span>
+                        Recent Assignments
+                    </h3>
+<button class="font-label-caps text-label-caps text-primary hover:underline">View All</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+<!-- Grade Card 1 -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-sm card-interactive relative flex flex-col h-full group">
+<!-- Top Row: Course & Grade Chip -->
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-headline-md text-[16px] leading-tight text-on-surface font-bold">Advanced Physics: Kinematics</h4>
+<span class="font-body-sm text-[12px] text-on-surface-variant flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span> Oct 12, 2023
+                                </span>
+</div>
+<div class="bg-tertiary-container/10 border border-tertiary/20 text-tertiary font-bold px-2 py-1 rounded-full text-sm flex items-center gap-1 whitespace-nowrap shadow-[inset_0_1px_2px_rgba(255,255,255,0.8)]">
+                                95.5 / 100
+                            </div>
+</div>
+<!-- Feedback Box with Doodle Font -->
+<div class="mt-auto bg-surface-container-low rounded-lg p-3 relative mt-4">
+<!-- Small doodle quote mark -->
+<span class="absolute -top-3 -left-1 font-doodle-note text-4xl text-primary/30">"</span>
+<p class="font-doodle-note text-doodle-note text-on-surface-variant leading-tight pl-2">
+                                Excellent grasp of vector concepts. Your derivation for projectile motion was flawless! Keep it up.
+                            </p>
+</div>
+</article>
+<!-- Grade Card 2 -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-sm card-interactive relative flex flex-col h-full group">
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-headline-md text-[16px] leading-tight text-on-surface font-bold">World Lit: Essay Draft 1</h4>
+<span class="font-body-sm text-[12px] text-on-surface-variant flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span> Oct 08, 2023
+                                </span>
+</div>
+<div class="bg-secondary-container/10 border border-secondary/20 text-secondary-fixed-variant font-bold px-2 py-1 rounded-full text-sm flex items-center gap-1 whitespace-nowrap">
+                                82.0 / 100
+                            </div>
+</div>
+<div class="mt-auto bg-surface-container-low rounded-lg p-3 relative mt-4 border-l-2 border-dashed border-secondary/40">
+<p class="font-doodle-note text-doodle-note text-on-surface-variant leading-tight pl-2">
+                                Strong thesis, but needs more textual evidence in paragraph 3. Let's review during office hours.
+                            </p>
+</div>
+</article>
+<!-- Grade Card 3 -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-sm card-interactive relative flex flex-col h-full group">
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-headline-md text-[16px] leading-tight text-on-surface font-bold">AP Calculus: Integration Quiz</h4>
+<span class="font-body-sm text-[12px] text-on-surface-variant flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span> Oct 05, 2023
+                                </span>
+</div>
+<div class="bg-tertiary-container/10 border border-tertiary/20 text-tertiary font-bold px-2 py-1 rounded-full text-sm flex items-center gap-1 whitespace-nowrap">
+                                100 / 100
+                            </div>
+</div>
+<div class="mt-auto bg-surface-container-low rounded-lg p-3 relative mt-4">
+<!-- Star doodle -->
+<svg class="absolute -top-3 -right-2 w-6 h-6 text-secondary-fixed-dim" fill="currentColor" viewbox="0 0 24 24">
+<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+</svg>
+<p class="font-doodle-note text-doodle-note text-on-surface-variant leading-tight pl-2">
+                                Perfect score! No notes.
+                            </p>
+</div>
+</article>
+<!-- Empty State / Action Card for Teachers -->
+<article class="border-2 border-dashed border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-surface-container-low hover:border-primary/50 transition-colors h-full min-h-[140px]">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary mb-2">
+<span class="material-symbols-outlined">add</span>
+</div>
+<h4 class="font-headline-md text-[14px] text-on-surface">Record New Grade</h4>
+<p class="font-body-sm text-[12px] text-on-surface-variant mt-1">Add assignment for Samantha</p>
+</article>
+</div>
+</section>
+</div>
+</main>
+</body></html>

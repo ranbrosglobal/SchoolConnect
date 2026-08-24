@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>School Connect - Teacher Directory</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Kalam:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary": "#ffffff",
+                      "on-secondary-fixed-variant": "#624000",
+                      "background": "#f8f9fc",
+                      "error": "#ba1a1a",
+                      "surface-container-low": "#f2f3f6",
+                      "surface-variant": "#e1e2e5",
+                      "on-primary-container": "#eaeaff",
+                      "inverse-on-surface": "#f0f1f4",
+                      "outline-variant": "#c5c5d6",
+                      "inverse-primary": "#bbc3ff",
+                      "secondary-fixed-dim": "#ffba4b",
+                      "on-tertiary-container": "#a3ffd0",
+                      "surface-dim": "#d9dadd",
+                      "tertiary-container": "#007a53",
+                      "on-surface": "#191c1e",
+                      "on-primary-fixed": "#000e5e",
+                      "secondary": "#815600",
+                      "secondary-fixed": "#ffddb1",
+                      "tertiary-fixed-dim": "#61dca6",
+                      "on-tertiary-fixed-variant": "#005236",
+                      "error-container": "#ffdad6",
+                      "on-background": "#191c1e",
+                      "on-primary": "#ffffff",
+                      "secondary-container": "#fdaf1e",
+                      "surface": "#f8f9fc",
+                      "surface-container-high": "#e7e8eb",
+                      "on-primary-fixed-variant": "#2338af",
+                      "on-surface-variant": "#454653",
+                      "on-error": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "outline": "#757685",
+                      "on-secondary-container": "#6a4600",
+                      "surface-container": "#edeef1",
+                      "surface-tint": "#3f52c8",
+                      "primary-fixed-dim": "#bbc3ff",
+                      "on-error-container": "#93000a",
+                      "primary-container": "#4c5fd5",
+                      "surface-container-highest": "#e1e2e5",
+                      "tertiary": "#005f40",
+                      "surface-bright": "#f8f9fc",
+                      "tertiary-fixed": "#7ff9c1",
+                      "on-secondary-fixed": "#291800",
+                      "inverse-surface": "#2e3133",
+                      "on-tertiary-fixed": "#002113",
+                      "on-tertiary": "#ffffff",
+                      "primary": "#3145bb",
+                      "primary-fixed": "#dee0ff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xl": "48px",
+                      "gutter": "16px",
+                      "md": "24px",
+                      "margin-mobile": "16px",
+                      "xs": "8px",
+                      "sm": "16px",
+                      "margin-desktop": "32px",
+                      "base": "4px",
+                      "lg": "32px"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "headline-lg": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "label-caps": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "headline-lg-mobile": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "headline-md": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "body-sm": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "doodle-note": [
+                              "Kalam"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "30px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "doodle-note": [
+                              "16px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background h-full flex flex-col antialiased">
+<!-- TopAppBar -->
+<header class="bg-primary text-on-primary docked full-width top-0 shadow-sm flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop py-sm relative z-40 bg-gradient-to-r from-primary to-primary-container">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-surface-container-lowest overflow-hidden flex items-center justify-center shrink-0 border border-outline-variant/30">
+<img alt="User Profile Picture" class="w-full h-full object-cover" data-alt="A small, high-quality, professional headshot photo of an optimistic school administrator, smiling warmly. Crisp lighting, white background, modern educational aesthetic, high resolution portrait." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwIfgIorUX5H52EbHzqoeX65bO5KpH6vXcQJ9uSsaM7RmvSVXylEraO_nkLjMdZ99-ixsc-DGnqTWtj3L2S4yFreooD-pSbrX0eNRFbubv1xThgGcEJsTRmSs2OcHU3Z5Hp4g7t94wbwBZzdYJ8N_krIbc3Xj04dfIcLWZK5owoTQk4RjQJgjkokZ6sjT1I3ZVPVHff446lNBrUfbA_uMhKa2viPHtZqcX489vTOMdR0brltTD_uZh"/>
+</div>
+<h1 class="text-headline-md font-headline-md font-bold text-on-primary">School Connect</h1>
+</div>
+<!-- Desktop Nav -->
+<nav class="hidden md:flex gap-md items-center">
+<a class="text-on-primary/70 font-body-lg text-body-lg hover:opacity-90 transition-opacity" href="#">Home</a>
+<a class="text-on-primary font-bold font-body-lg text-body-lg flex flex-col items-center" href="#">Staff <span class="block w-1.5 h-1.5 rounded-full bg-secondary-container mt-1"></span></a>
+<a class="text-on-primary/70 font-body-lg text-body-lg hover:opacity-90 transition-opacity" href="#">Classes</a>
+<a class="text-on-primary/70 font-body-lg text-body-lg hover:opacity-90 transition-opacity" href="#">Alerts</a>
+</nav>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-primary hover:opacity-90 transition-opacity scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto pb-24 md:pb-8 pt-md px-margin-mobile md:px-margin-desktop">
+<div class="max-w-5xl mx-auto space-y-lg">
+<!-- Page Header & Search -->
+<section class="flex flex-col gap-md md:flex-row md:items-end md:justify-between">
+<div>
+<h2 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg-mobile md:font-headline-lg text-on-background">Teacher Directory</h2>
+<p class="text-body-lg font-body-lg text-on-surface-variant mt-xs">Manage and view teaching staff assignments.</p>
+</div>
+<div class="flex flex-col sm:flex-row gap-xs w-full md:w-auto relative">
+<!-- Doodle Arrow -->
+<div class="hidden md:block absolute -top-8 -left-12 text-secondary-container transform -rotate-12 opacity-80 pointer-events-none">
+<svg fill="none" height="40" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="40">
+<path d="M12 19V5M5 12l7-7 7 7"></path>
+<path class="stroke-secondary-container" d="M5 20c3.5-2 6-5 6-9" stroke-dasharray="2 4"></path>
+</svg>
+</div>
+<div class="relative flex-1 min-w-[280px]">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full pl-10 pr-sm py-2.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-body-lg font-body-lg text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all placeholder:text-outline/70" placeholder="Search name, email, or department..." type="text"/>
+</div>
+<button class="bg-surface-container-lowest border border-outline-variant text-on-surface px-sm py-2.5 rounded-lg flex items-center justify-center gap-xs text-body-sm font-body-sm font-semibold hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                        Filters
+                    </button>
+<button class="bg-primary text-on-primary px-sm py-2.5 rounded-xl flex items-center justify-center gap-xs text-body-sm font-body-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                        New
+                    </button>
+</div>
+</section>
+<!-- Teacher List Bento Grid -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+<!-- Teacher Card 1 (Expanded Example) -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-[18px] p-sm shadow-[0px_4px_12px_rgba(35,38,53,0.05)] flex flex-col gap-sm relative overflow-hidden group">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-sm">
+<div class="w-12 h-12 rounded-full overflow-hidden bg-surface-container border border-outline-variant/30 shrink-0">
+<img alt="Sarah Jenkins" class="w-full h-full object-cover" data-alt="Professional headshot of a female mathematics teacher in her 30s, wearing glasses and a smart casual blazer. Crisp, bright classroom background, high resolution, modern educational style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUBF1z29WXu7plrvJm5kmtPv5zZxrl_kLl_eNfNlnPYTTpIcO1k2pZSbHLeMJ3E6YrGOdESk0V5vWGieWknngy1XXn230vtdb3yTHyuqqnDFx_o2p6WfUujFQW9Kckbw15UDD5Q6dDDbAhf2_vWyZPOZrZprKJ_jtaftGZaRyCFIWxIt2RiPLZXNOhVk_JDmUY_nbHfgBF9LFPd7AJjVT3a9-BMKn-GMObgaIysTDwcI_2KWPLJlac"/>
+</div>
+<div>
+<h3 class="text-headline-md font-headline-md text-on-surface text-[18px]">Sarah Jenkins</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">calculate</span>
+                                    Mathematics
+                                </p>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-outline hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+<div class="pt-sm border-t border-outline-variant/50 border-dashed">
+<p class="text-label-caps font-label-caps text-on-surface-variant mb-xs">Assigned Classes</p>
+<div class="flex flex-wrap gap-xs">
+<span class="px-2 py-1 rounded-md bg-primary-fixed text-on-primary-fixed text-[11px] font-semibold flex items-center gap-1">
+                                Algebra I • Grade 9-A
+                            </span>
+<span class="px-2 py-1 rounded-md bg-secondary-fixed text-on-secondary-fixed text-[11px] font-semibold flex items-center gap-1">
+                                Geometry • Grade 10-B
+                            </span>
+</div>
+<div class="mt-sm flex gap-xs text-body-sm font-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-outline">mail</span>
+                             sarah.j@schoolconnect.edu
+                        </div>
+</div>
+<!-- Doodle Collapse Indicator -->
+<div class="absolute bottom-1 right-2 text-outline-variant group-hover:text-primary transition-colors cursor-pointer opacity-70">
+<svg class="transform rotate-180" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24">
+<path d="M6 9l6 6 6-6"></path>
+</svg>
+</div>
+</article>
+<!-- Teacher Card 2 (Collapsed Example) -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-[18px] p-sm shadow-[0px_4px_12px_rgba(35,38,53,0.05)] flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:border-primary/50 transition-colors h-[90px]">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-sm">
+<div class="w-12 h-12 rounded-full overflow-hidden bg-surface-container border border-outline-variant/30 shrink-0">
+<img alt="Dr. Robert Chen" class="w-full h-full object-cover" data-alt="Professional headshot of a male science teacher in his 40s, wearing a lab coat and smiling. Bright laboratory background, high resolution, modern educational photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqgW3cb89FbtOl9ObWv0m1G0wNDRzpcV104nZNz1ZqAGYxn5qAyyw9LfhtW-rMghp7hr6zkuzTlt-WsMO_uaoPZVp8xBfVWFgX1b3Q9nDepQ039Zr33xltOoddJ2to_PYTZc1AJifWwFp0aIH8_m0aWX4_IE-jq0TIE-WigEniQ8rQQ3h_q-aWZ9OEyMOF3tQaWLifQRr8tkqUNQH5fGY77jBBkLxj4U1xBfKrFAZ-w9rhWgoShy-9"/>
+</div>
+<div>
+<h3 class="text-headline-md font-headline-md text-on-surface text-[18px]">Dr. Robert Chen</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">science</span>
+                                    Science Dept.
+                                </p>
+</div>
+</div>
+</div>
+<!-- Doodle Expand Indicator -->
+<div class="absolute bottom-1 right-2 text-outline-variant group-hover:text-primary transition-colors opacity-70">
+<svg fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="font-family: 'Kalam', cursive;" viewbox="0 0 24 24" width="24">
+<path class="animate-bounce" d="M6 9l6 6 6-6" style="animation-duration: 2s;"></path>
+</svg>
+</div>
+</article>
+<!-- Teacher Card 3 (Collapsed Example) -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-[18px] p-sm shadow-[0px_4px_12px_rgba(35,38,53,0.05)] flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:border-primary/50 transition-colors h-[90px]">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-sm">
+<div class="w-12 h-12 rounded-full overflow-hidden bg-surface-container border border-outline-variant/30 shrink-0 flex items-center justify-center bg-tertiary-container text-on-tertiary-container text-headline-md font-bold">
+                                EL
+                            </div>
+<div>
+<h3 class="text-headline-md font-headline-md text-on-surface text-[18px]">Emily Lawson</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">history_edu</span>
+                                    Literature
+                                </p>
+</div>
+</div>
+</div>
+<!-- Doodle Expand Indicator -->
+<div class="absolute bottom-1 right-2 text-outline-variant group-hover:text-primary transition-colors opacity-70">
+<svg fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24">
+<path d="M6 9l6 6 6-6"></path>
+</svg>
+</div>
+</article>
+</section>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-surface-container-lowest border-t border-outline-variant shadow-[0px_-4px_12px_rgba(35,38,53,0.05)] rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-container transition-colors group" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="dashboard">dashboard</span>
+<span class="text-label-caps font-label-caps">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-container transition-colors group" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="event_available">event_available</span>
+<span class="text-label-caps font-label-caps">Attendance</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary relative after:content-[''] after:absolute after:-bottom-1 after:w-2 after:h-2 after:bg-secondary-container after:rounded-full scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="menu_book" data-weight="fill" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="text-label-caps font-label-caps">Classes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-container transition-colors group" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="notifications">notifications</span>
+<span class="text-label-caps font-label-caps">Alerts</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-container transition-colors group" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="more_horiz">more_horiz</span>
+<span class="text-label-caps font-label-caps">Menu</span>
+</a>
+</nav>
+</body></html>

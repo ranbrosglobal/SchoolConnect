@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="#EDE7F6"/>
+  
+  <!-- Admin body -->
+  <ellipse cx="100" cy="140" rx="40" ry="50" fill="#5C6BC0"/>
+  
+  <!-- Admin head -->
+  <circle cx="100" cy="70" r="35" fill="#FFCC80"/>
+  
+  <!-- Hair -->
+  <path d="M65 65 Q65 35 100 35 Q135 35 135 65" fill="#455A64"/>
+  
+  <!-- Glasses -->
+  <circle cx="85" cy="70" r="8" fill="none" stroke="#333" stroke-width="2"/>
+  <circle cx="115" cy="70" r="8" fill="none" stroke="#333" stroke-width="2"/>
+  <line x1="93" y1="70" x2="107" y2="70" stroke="#333" stroke-width="2"/>
+  
+  <!-- Eyes -->
+  <circle cx="85" cy="70" r="3" fill="#333"/>
+  <circle cx="115" cy="70" r="3" fill="#333"/>
+  
+  <!-- Smile -->
+  <path d="M85 85 Q100 95 115 85" fill="none" stroke="#333" stroke-width="2"/>
+  
+  <!-- Laptop -->
+  <rect x="65" y="115" width="70" height="45" rx="5" fill="#37474F"/>
+  <rect x="70" y="120" width="60" height="30" rx="3" fill="#B2EBF2"/>
+  
+  <!-- Laptop screen content -->
+  <rect x="75" y="125" width="50" height="20" rx="2" fill="#FFF"/>
+  <line x1="80" y1="132" x2="120" y2="132" stroke="#DDD" stroke-width="2"/>
+  <line x1="80" y1="138" x2="120" y2="138" stroke="#DDD" stroke-width="2"/>
+  
+  <!-- Arms -->
+  <path d="M60 130 Q40 120 35 100" fill="none" stroke="#5C6BC0" stroke-width="8" stroke-linecap="round"/>
+  <path d="M140 130 Q160 120 165 100" fill="none" stroke="#5C6BC0" stroke-width="8" stroke-linecap="round"/>
+  
+  <!-- Hands -->
+  <circle cx="35" cy="100" r="8" fill="#FFCC80"/>
+  <circle cx="165" cy="100" r="8" fill="#FFCC80"/>
+  
+  <!-- Badge -->
+  <circle cx="145" cy="60" r="12" fill="#FFC107"/>
+  <text x="145" y="65" text-anchor="middle" fill="#333" font-size="12" font-weight="bold">A</text>
+</svg>

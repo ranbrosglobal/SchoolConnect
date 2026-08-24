@@ -1,0 +1,24 @@
+{
+  "name": "ranbros-school-connect",
+  "private": true,
+  "description": "Root runner for the School Connect web consoles (schooladmin + superadmin)",
+  "scripts": {
+    "dev:schooladmin": "npm --prefix schooladmin run dev -- --mode mock",
+    "dev:superadmin": "npm --prefix superadmin run dev -- --mode mock --port 5175",
+    "dev:all": "concurrently -n schooladmin,superadmin -c blue,magenta \"npm:dev:schooladmin\" \"npm:dev:superadmin\"",
+    "dev:db": "node sc_backend/src/index.js",
+    "dev:schooladmin:live": "npm --prefix schooladmin run dev -- --mode live",
+    "dev:superadmin:live": "npm --prefix superadmin run dev -- --mode live --port 5175",
+    "dev:all:live": "concurrently -n schooladmin,superadmin -c blue,magenta \"npm:dev:schooladmin:live\" \"npm:dev:superadmin:live\"",
+    "dev:live": "concurrently -n db,schooladmin,superadmin -c yellow,blue,magenta \"npm:dev:db\" \"npm:dev:schooladmin:live\" \"npm:dev:superadmin:live\"",
+    "info": "echo 'Backend: localhost:3000 | SuperAdmin: localhost:3001 | SchoolAdmin UI: localhost:5173 | SuperAdmin UI: localhost:5175'",
+    "db:reset": "npm --prefix sc_backend run reset",
+    "lint:schooladmin": "npm --prefix schooladmin run lint",
+    "lint:superadmin": "npm --prefix superadmin run lint",
+    "build:schooladmin": "npm --prefix schooladmin run build",
+    "build:superadmin": "npm --prefix superadmin run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

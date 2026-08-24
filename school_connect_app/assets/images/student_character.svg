@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="#E8F5E9"/>
+  
+  <!-- Student body -->
+  <ellipse cx="100" cy="140" rx="35" ry="45" fill="#4CAF50"/>
+  
+  <!-- Student head -->
+  <circle cx="100" cy="70" r="32" fill="#FFCC80"/>
+  
+  <!-- Hair -->
+  <path d="M68 60 Q68 38 100 38 Q132 38 132 60" fill="#333"/>
+  
+  <!-- Eyes -->
+  <circle cx="85" cy="68" r="4" fill="#333"/>
+  <circle cx="115" cy="68" r="4" fill="#333"/>
+  
+  <!-- Eye shine -->
+  <circle cx="87" cy="66" r="1.5" fill="#FFF"/>
+  <circle cx="117" cy="66" r="1.5" fill="#FFF"/>
+  
+  <!-- Smile -->
+  <path d="M88 82 Q100 90 112 82" fill="none" stroke="#333" stroke-width="2"/>
+  
+  <!-- Backpack -->
+  <rect x="60" y="110" width="30" height="40" rx="8" fill="#FF9800"/>
+  <rect x="110" y="110" width="30" height="40" rx="8" fill="#FF9800"/>
+  
+  <!-- Backpack straps -->
+  <path d="M75 110 Q75 90 100 90 Q125 90 125 110" fill="none" stroke="#E65100" stroke-width="4"/>
+  
+  <!-- Arms -->
+  <path d="M65 130 Q45 120 40 100" fill="none" stroke="#4CAF50" stroke-width="8" stroke-linecap="round"/>
+  <path d="M135 130 Q155 120 160 100" fill="none" stroke="#4CAF50" stroke-width="8" stroke-linecap="round"/>
+  
+  <!-- Hands -->
+  <circle cx="40" cy="100" r="7" fill="#FFCC80"/>
+  <circle cx="160" cy="100" r="7" fill="#FFCC80"/>
+  
+  <!-- Pencil in hand -->
+  <rect x="155" y="85" width="4" height="25" rx="2" fill="#FDD835" transform="rotate(30 157 97)"/>
+  <polygon points="155,85 159,85 157,80" fill="#333" transform="rotate(30 157 82)"/>
+</svg>
