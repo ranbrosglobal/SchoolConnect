@@ -19,7 +19,8 @@ const MODE = import.meta.env.VITE_APP_MODE || 'sheets'
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
 export const isMockMode = MODE === 'mock'
-export const isSheetsMode = MODE === 'sheets' || MODE === 'live'
+const isLiveMode = MODE === 'live'
+export const isSheetsMode = MODE === 'sheets'
 
 // ─── Sheets mode helpers ─────────────────────────────────────────────
 
@@ -569,8 +570,8 @@ const SHEETS_HANDLERS = {
 
 export function request(path, opts = {}) {
   if (isMockMode) return mockRequestWrapper(path, opts)
-  if (isSheetsMode) return sheetsRequestWrapper(path, opts)
-  return liveRequest(path, opts)
+  if (isLiveMode) return liveRequest(path, opts)
+  return sheetsRequestWrapper(path, opts)
 }
 
 // ─── Exported Google Sheets helpers for direct use ────────────────────

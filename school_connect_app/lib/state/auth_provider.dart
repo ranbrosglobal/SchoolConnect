@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart' as fb;
 import '../models/user_model.dart';
 import '../services/google_sheets_service.dart';
 
@@ -36,7 +35,7 @@ class AuthState {
   }
 }
 
-// Auth notifier — Firebase Auth + Google Sheets.
+// Auth notifier - direct backend login (no Firebase Auth).
 class AuthNotifier extends StateNotifier<AuthState> {
   final GoogleSheetsService _sheetsService;
 
@@ -48,7 +47,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
 
     try {
-      // Firebase Auth handles session persistence automatically
       final restored = await _sheetsService.restoreSession();
       if (restored) {
         state = state.copyWith(
@@ -64,67 +62,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Google Sign-In via Firebase Auth.
-  Future<bool> signInWithGoogle() async {
-    state = state.copyWith(isLoading: true, error: null);
-
-    try {
-      final result = await _sheetsService.signInWithGoogle();
-
-      if (result.success && result.user != null) {
-        state = state.copyWith(
-          isLoading: false,
-          isAuthenticated: true,
-          user: result.user,
-        );
-        return true;
-      }
-
-      state = state.copyWith(
-        isLoading: false,
-        error: result.error ?? 'Google sign-in failed.',
-      );
-      return false;
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Sign-in failed: ${e.toString()}',
-      );
-      return false;
-    }
-  }
-
-  /// Sign in with Apple via Firebase Auth.
-  Future<bool> signInWithApple() async {
-    state = state.copyWith(isLoading: true, error: null);
-
-    try {
-      final result = await _sheetsService.signInWithApple();
-
-      if (result.success && result.user != null) {
-        state = state.copyWith(
-          isLoading: false,
-          isAuthenticated: true,
-          user: result.user,
-        );
-        return true;
-      }
-
-      state = state.copyWith(
-        isLoading: false,
-        error: result.error ?? 'Apple sign-in failed.',
-      );
-      return false;
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Apple sign-in failed: ${e.toString()}',
-      );
-      return false;
-    }
-  }
-
-  /// Email/password login via Firebase Auth.
+  /// Email/password login via backend.
   Future<bool> login(String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
 
@@ -159,7 +97,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return login(email, password);
   }
 
-  /// Sign up student — creates Firebase Auth user + spreadsheet row.
+  /// Sign up student.
   Future<bool> signupStudent({
     required String fullName,
     required String email,
@@ -209,7 +147,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Change password via Firebase Auth.
+  /// Change password via backend.
   Future<bool> changePassword({
     required String currentPassword,
     required String newPassword,
@@ -232,7 +170,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Sign out from Firebase + Google + clear local data.
+  /// Sign out and clear local data.
   Future<void> logout() async {
     state = AuthState();
     try {
@@ -250,9 +188,4 @@ final sheetsServiceProvider = Provider<GoogleSheetsService>((ref) => GoogleSheet
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(ref.watch(sheetsServiceProvider));
-});
-
-/// Stream of Firebase Auth state changes (for listening to auth events).
-final firebaseAuthStateProvider = StreamProvider<fb.User?>((ref) {
-  return fb.FirebaseAuth.instance.authStateChanges();
 });

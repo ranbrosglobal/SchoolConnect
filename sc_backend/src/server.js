@@ -82,16 +82,33 @@ export function createServer({ consoleName, port, seed, sync }) {
       req.on('end', () => {
         try {
           const creds = JSON.parse(body)
-          const result = handleRequest(consoleName, db, 'school_connect.api.auth.social_login', {
-            method: 'POST', params: {}, body: creds, headers: req.headers,
-            ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress, sid: null,
-          })
-          const respHeaders = { 'Content-Type': 'application/json' }
-          if (result._sid) {
-            respHeaders['Set-Cookie'] = `sid=${result._sid}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
+          // Try mobile login first (email+password), fall back to social login (email only)
+          let handlerPath = 'school_connect.api.mobile.login'
+          try {
+            const result = handleRequest(consoleName, db, handlerPath, {
+              method: 'POST', params: {}, body: creds, headers: req.headers,
+              ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress, sid: null,
+            })
+            const respHeaders = { 'Content-Type': 'application/json' }
+            if (result._sid) {
+              respHeaders['Set-Cookie'] = `sid=${result._sid}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
+            }
+            res.writeHead(200, respHeaders)
+            res.end(JSON.stringify({ message: result.data }))
+          } catch (loginErr) {
+            // Fall back to social login if mobile login fails
+            handlerPath = 'school_connect.api.auth.social_login'
+            const result = handleRequest(consoleName, db, handlerPath, {
+              method: 'POST', params: {}, body: creds, headers: req.headers,
+              ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress, sid: null,
+            })
+            const respHeaders = { 'Content-Type': 'application/json' }
+            if (result._sid) {
+              respHeaders['Set-Cookie'] = `sid=${result._sid}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
+            }
+            res.writeHead(200, respHeaders)
+            res.end(JSON.stringify({ message: result.data }))
           }
-          res.writeHead(200, respHeaders)
-          res.end(JSON.stringify({ message: result.data }))
         } catch (err) {
           const status = err.status || 500
           res.writeHead(status, { 'Content-Type': 'application/json' })

@@ -121,6 +121,87 @@ function schoolAdminLogin(db, params) {
   return { ...result, _sid: sid }
 }
 
+/**
+ * Mobile app login - accepts email and password for any user role (teacher, student, admin).
+ * This is used by the Flutter mobile app for direct login without Firebase Auth.
+ */
+function mobileLogin(db, params) {
+  const { email, password } = params
+  if (!email || !password) throw { status: 400, message: 'Email and password are required' }
+
+  const normalizedEmail = email.trim().toLowerCase()
+  
+  // First check users table (teachers, admins)
+  let user = getOne(db, 'users', 'email', normalizedEmail)
+  
+  if (user) {
+    // Verify password against the stored hash
+    if (!verifyPassword(password, user.password)) {
+      throw { status: 401, message: 'Invalid email or password' }
+    }
+    if (user.status === 'Inactive') {
+      throw { status: 403, message: 'This account is disabled. Contact your administrator.' }
+    }
+    if (user.school_id) {
+      const school = getById(db, 'schools', user.school_id)
+      if (school && school.status === 'Disabled') {
+        throw { status: 403, message: 'Your school has been disabled. Contact support.' }
+      }
+    }
+    
+    const sid = createSession(db, user.id)
+    const school = user.school_id ? getById(db, 'schools', user.school_id) : null
+    return { ...publicUser(user, school?.name), _sid: sid }
+  }
+  
+  // Check students table
+  const student = getOne(db, 'students', 'email', normalizedEmail)
+  if (student) {
+    // For students, we need to verify password. If student has no password set,
+    // we allow login with any password (backward compatibility).
+    // If student has a password, verify it.
+    if (student.password && !verifyPassword(password, student.password)) {
+      throw { status: 401, message: 'Invalid email or password' }
+    }
+    
+    if (student.status === 'Inactive') {
+      throw { status: 403, message: 'This student account is disabled.' }
+    }
+    
+    // Auto-create in users table if not exists, so session works
+    try {
+      insert(db, 'users', {
+        id: student.id,
+        email: student.email,
+        password: password ? hashPassword(password) : '',
+        full_name: student.name,
+        role: 'Student',
+        school_id: student.school_id || '',
+        class_ids: JSON.stringify(student.class_id ? [student.class_id] : []),
+        subjects: '[]',
+        status: student.status || 'Active',
+      })
+    } catch (_e) { /* already exists */ }
+    
+    const syntheticUser = {
+      id: student.id,
+      email: student.email,
+      full_name: student.name,
+      role: 'Student',
+      school_id: student.school_id,
+      class_ids: JSON.stringify(student.class_id ? [student.class_id] : []),
+      subjects: '[]',
+      status: student.status || 'Active',
+    }
+    
+    const sid = createSession(db, syntheticUser.id)
+    const school = syntheticUser.school_id ? getById(db, 'schools', syntheticUser.school_id) : null
+    return { ...publicUser(syntheticUser, school?.name), _sid: sid }
+  }
+  
+  throw { status: 404, message: 'No account found with this email. Contact your administrator.' }
+}
+
 function schoolAdminGetSession(db, _params, user, sid) {
   if (!user) return { message: 'Not logged in', isLoggedIn: false }
   const school = user.school_id ? getById(db, 'schools', user.school_id) : null
@@ -895,6 +976,7 @@ const SA_HANDLERS = {
   'school_connect.api.auth.logout': schoolAdminLogout,
   'school_connect.api.auth.update_profile': schoolAdminUpdateProfile,
   'school_connect.api.auth.change_password': schoolAdminChangePassword,
+  'school_connect.api.mobile.login': mobileLogin,
   'school_connect.api.admin.get_admin_dashboard': schoolAdminDashboard,
   'school_connect.api.admin.get_admin_teachers': schoolAdminTeachers,
   'school_connect.api.admin.create_teacher': schoolAdminCreateTeacher,

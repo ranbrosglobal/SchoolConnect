@@ -178,31 +178,33 @@ class GoogleSheetsService {
   }
 
   /// Sign in with email/password via the backend.
+  /// Uses direct backend login instead of Firebase Auth.
   Future<AuthResult> login(String email, String password) async {
     try {
-      // Use Firebase Auth for email/password
-      final userCredential = await _firebaseAuth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      final fbUser = userCredential.user;
-      if (fbUser == null || fbUser.email == null) {
-        return AuthResult(success: false, error: 'Login failed');
-      }
+      // Use direct backend login (email + password)
+      final result = await _post('school_connect.api.mobile.login', {
+        'email': email.toLowerCase().trim(),
+        'password': password,
+      });
 
-      // Create backend session
-      return await _createBackendSession(fbUser.email!);
+      final user = UserModel.fromJson(result);
+      _currentUser = user;
+      await _saveSession(user);
+
+      return AuthResult(success: true, user: user);
     } catch (e) {
-      debugPrint('Firebase email/password login error: $e');
+      debugPrint('Backend login error: $e');
       String msg = 'Login failed';
-      if (e is fb.FirebaseAuthException) {
-        switch (e.code) {
-          case 'user-not-found': msg = 'No account found with this email'; break;
-          case 'wrong-password': msg = 'Incorrect password'; break;
-          case 'invalid-email': msg = 'Invalid email address'; break;
-          case 'user-disabled': msg = 'This account has been disabled'; break;
-          default: msg = e.message ?? 'Login failed';
-        }
+      if (e.toString().contains('Invalid email or password')) {
+        msg = 'Invalid email or password';
+      } else if (e.toString().contains('No account found')) {
+        msg = 'No account found with this email. Contact your administrator.';
+      } else if (e.toString().contains('disabled')) {
+        msg = 'This account has been disabled. Contact your administrator.';
+      } else if (e.toString().contains('Cannot reach')) {
+        msg = 'Cannot connect to server. Please check your connection.';
+      } else {
+        msg = e.toString();
       }
       return AuthResult(success: false, error: msg);
     }
@@ -234,7 +236,7 @@ class GoogleSheetsService {
     }
   }
 
-  /// Sign up student — creates Firebase Auth user + backend row.
+  /// Sign up student — creates backend user and logs in.
   Future<AuthResult> signupStudent({
     required String fullName,
     required String email,
@@ -246,31 +248,25 @@ class GoogleSheetsService {
     String? country,
   }) async {
     try {
-      final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      final fbUser = userCredential.user;
-      if (fbUser == null) {
-        return AuthResult(success: false, error: 'Failed to create account');
+      // First, try to login with existing credentials (user might already exist)
+      final loginResult = await login(email, password);
+      if (loginResult.success) {
+        return loginResult;
       }
 
-      await fbUser.updateDisplayName(fullName);
+      // If login failed with "not found", try to create the account
+      if (loginResult.error?.contains('No account found') == true) {
+        // Note: Account creation must be done by admin through the school admin portal
+        return AuthResult(
+          success: false, 
+          error: 'Account not found. Please contact your school administrator to create an account.',
+        );
+      }
 
-      // Create backend session (user must exist in backend DB already)
-      return await _createBackendSession(email);
+      return loginResult;
     } catch (e) {
-      debugPrint('Firebase signup error: $e');
-      String msg = 'Signup failed';
-      if (e is fb.FirebaseAuthException) {
-        switch (e.code) {
-          case 'email-already-in-use': msg = 'An account with this email already exists'; break;
-          case 'weak-password': msg = 'Password is too weak (min 6 characters)'; break;
-          case 'invalid-email': msg = 'Invalid email address'; break;
-          default: msg = e.message ?? 'Signup failed';
-        }
-      }
-      return AuthResult(success: false, error: msg);
+      debugPrint('Signup error: $e');
+      return AuthResult(success: false, error: 'Signup failed: ${e.toString()}');
     }
   }
 
@@ -295,15 +291,14 @@ class GoogleSheetsService {
         } catch (_) {
           // Session expired, fall through
         }
-
-        // Also check Firebase Auth
-        final fbUser = _firebaseAuth.currentUser;
-        if (fbUser != null && fbUser.email != null) {
-          final authResult = await _createBackendSession(fbUser.email!);
-          return authResult.success;
-        }
       }
 
+      // Clear invalid session data
+      _sessionCookie = null;
+      _currentUser = null;
+      await _storage.delete(key: 'user_data');
+      await _storage.delete(key: 'session_cookie');
+      
       return false;
     } catch (e) {
       debugPrint('Session restore error: $e');
@@ -328,20 +323,20 @@ class GoogleSheetsService {
     await _storage.delete(key: 'user_data');
   }
 
-  /// Change password via Firebase Auth.
+  /// Change password via backend.
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
   }) async {
-    final fbUser = _firebaseAuth.currentUser;
-    if (fbUser == null || fbUser.email == null) throw Exception('Not authenticated');
-
-    final credential = fb.EmailAuthProvider.credential(
-      email: fbUser.email!,
-      password: currentPassword,
-    );
-    await fbUser.reauthenticateWithCredential(credential);
-    await fbUser.updatePassword(newPassword);
+    try {
+      await _post('school_connect.api.auth.change_password', {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      });
+    } catch (e) {
+      debugPrint('Change password error: $e');
+      throw Exception('Failed to change password: ${e.toString()}');
+    }
   }
 
   /// Logout.

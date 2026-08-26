@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,17 +19,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   bool _isTeacherSelected = false;
   bool _obscurePassword = true;
   bool _isLoading = false;
-  bool _isGoogleLoading = false;
-  bool _isAppleLoading = false;
   bool _showDemoPanel = false;
   String? _errorMessage;
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
-
-  bool get _showAppleButton =>
-      Platform.isIOS || Platform.isMacOS;
 
   @override
   void initState() {
@@ -118,38 +112,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       _navigateToRole(ref.read(authProvider).user?.role);
     } else {
       _setError(ref.read(authProvider).error ?? 'Invalid credentials');
-    }
-  }
-
-  Future<void> _googleSignIn() async {
-    _setError(null);
-    setState(() => _isGoogleLoading = true);
-    HapticFeedback.lightImpact();
-
-    final success = await ref.read(authProvider.notifier).signInWithGoogle();
-    if (!mounted) return;
-    setState(() => _isGoogleLoading = false);
-
-    if (success) {
-      _navigateToRole(ref.read(authProvider).user?.role);
-    } else {
-      _setError(ref.read(authProvider).error ?? 'Google sign-in failed');
-    }
-  }
-
-  Future<void> _appleSignIn() async {
-    _setError(null);
-    setState(() => _isAppleLoading = true);
-    HapticFeedback.lightImpact();
-
-    final success = await ref.read(authProvider.notifier).signInWithApple();
-    if (!mounted) return;
-    setState(() => _isAppleLoading = false);
-
-    if (success) {
-      _navigateToRole(ref.read(authProvider).user?.role);
-    } else {
-      _setError(ref.read(authProvider).error ?? 'Apple sign-in failed');
     }
   }
 
@@ -398,14 +360,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             _buildLoginButton(),
             const SizedBox(height: 14),
 
-            // Divider
-            _buildDivider(),
-            const SizedBox(height: 14),
-
-            // Social buttons
-            _buildSocialButtons(),
-            const SizedBox(height: 14),
-
             // Sign up link
             _buildSignUpLink(),
             const SizedBox(height: 12),
@@ -652,108 +606,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   ),
                 ),
         ),
-      ),
-    );
-  }
-
-  // ─── Divider ────────────────────────────────────────────────────────
-  Widget _buildDivider() {
-    return Row(
-      children: [
-        Expanded(
-            child: Divider(color: Colors.grey.shade200, height: 1)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            'or continue with',
-            style: TextStyle(
-              color: Colors.grey.shade500,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        Expanded(
-            child: Divider(color: Colors.grey.shade200, height: 1)),
-      ],
-    );
-  }
-
-  // ─── Social Buttons ─────────────────────────────────────────────────
-  Widget _buildSocialButtons() {
-    final buttons = <Widget>[
-      // Google
-      _socialBtn(
-        icon: 'G',
-        color: const Color(0xFFDB4437),
-        bgColor: const Color(0xFFFEECEA),
-        onPressed: _isGoogleLoading ? null : _googleSignIn,
-        isLoading: _isGoogleLoading,
-      ),
-    ];
-
-    // Apple — only on iOS/macOS
-    if (_showAppleButton) {
-      buttons.add(const SizedBox(width: 12));
-      buttons.add(
-        _socialBtn(
-          iconData: Icons.apple,
-          color: const Color(0xFF1D1D1F),
-          bgColor: const Color(0xFFF5F5F5),
-          onPressed: _isAppleLoading ? null : _appleSignIn,
-          isLoading: _isAppleLoading,
-        ),
-      );
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: buttons,
-    );
-  }
-
-  Widget _socialBtn({
-    String? icon,
-    IconData? iconData,
-    required Color color,
-    required Color bgColor,
-    VoidCallback? onPressed,
-    bool isLoading = false,
-  }) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 52,
-        height: 44,
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: color.withValues(alpha: 0.15),
-            width: 1,
-          ),
-        ),
-        child: isLoading
-            ? Padding(
-                padding: const EdgeInsets.all(14),
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: color,
-                ),
-              )
-            : Center(
-                child: iconData != null
-                    ? Icon(iconData, color: color, size: 20)
-                    : Text(
-                        icon!,
-                        style: TextStyle(
-                          color: color,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-              ),
       ),
     );
   }
