@@ -746,7 +746,23 @@ class GoogleSheetsService {
       'location': site,
       'established': port,
     });
-    return SuperSchoolModel.fromJson(result);
+    final schoolId = result['id']?.toString();
+
+    // Create the school admin if credentials are provided
+    if (schoolId != null && adminName != null && adminName.isNotEmpty &&
+        adminEmail != null && adminEmail.isNotEmpty &&
+        adminPassword != null && adminPassword.isNotEmpty) {
+      try {
+        await _post('school_connect.api.admin.create_school_admin', {
+          'name': adminName,
+          'email': adminEmail,
+          'password': adminPassword,
+          'school': schoolId,
+        });
+      } catch (e) {
+        debugPrint('Warning: school created but admin creation failed: $e');
+      }
+    }    return SuperSchoolModel.fromJson(result);
   }
 
   Future<SuperSchoolModel> updateSuperSchool({
@@ -759,13 +775,34 @@ class GoogleSheetsService {
       if (schoolName != null) 'name': schoolName,
       if (site != null) 'location': site,
     });
+
     return SuperSchoolModel.fromJson(result);
   }
 
   Future<SuperSchoolModel> resetSuperAdminPassword({
     required String name, required String newPassword,
   }) async {
+    // Find the school admin for this school and update their password
+    final admins = await getSchoolAdmins();
+    for (final admin in admins) {
+      if (admin.schoolId == name) {
+        await _post('school_connect.api.admin.update_school_admin', {
+          'id': admin.id,
+          'name': admin.fullName,
+          'email': admin.email,
+          'school': name,
+          'password': newPassword,
+        });
+        break;
+      }
+    }
     return SuperSchoolModel.fromJson({'name': name});
+  }
+
+  Future<List<UserModel>> getSchoolAdmins() async {
+    final result = await _get('school_connect.api.admin.get_school_admins');
+    final list = result is List ? result : [];
+    return (list as List).map((a) => UserModel.fromJson(a)).toList();
   }
 
   Future<void> deleteSuperSchool(String name) async {

@@ -38,6 +38,7 @@ const ALLOWED_ORIGINS = [
 export function createServer({ consoleName, port, seed, sync }) {
   const { sa, su } = openDatabases()
   const db = consoleName === 'schooladmin' ? sa : su
+  const bothDbs = { sa, su }
 
   // Seed the database if requested
   if (seed) seed(db)
@@ -82,10 +83,9 @@ export function createServer({ consoleName, port, seed, sync }) {
       req.on('end', () => {
         try {
           const creds = JSON.parse(body)
-          // Try mobile login first (email+password), fall back to social login (email only)
-          let handlerPath = 'school_connect.api.mobile.login'
+          // Direct mobile login with email+password
           try {
-            const result = handleRequest(consoleName, db, handlerPath, {
+            const result = handleRequest(consoleName, bothDbs, 'school_connect.api.mobile.login', {
               method: 'POST', params: {}, body: creds, headers: req.headers,
               ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress, sid: null,
             })
@@ -96,18 +96,9 @@ export function createServer({ consoleName, port, seed, sync }) {
             res.writeHead(200, respHeaders)
             res.end(JSON.stringify({ message: result.data }))
           } catch (loginErr) {
-            // Fall back to social login if mobile login fails
-            handlerPath = 'school_connect.api.auth.social_login'
-            const result = handleRequest(consoleName, db, handlerPath, {
-              method: 'POST', params: {}, body: creds, headers: req.headers,
-              ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress, sid: null,
-            })
-            const respHeaders = { 'Content-Type': 'application/json' }
-            if (result._sid) {
-              respHeaders['Set-Cookie'] = `sid=${result._sid}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
-            }
-            res.writeHead(200, respHeaders)
-            res.end(JSON.stringify({ message: result.data }))
+            const status = loginErr.status || 500
+            res.writeHead(status, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ message: loginErr.message }))
           }
         } catch (err) {
           const status = err.status || 500
@@ -158,11 +149,11 @@ export function createServer({ consoleName, port, seed, sync }) {
       const params = Object.fromEntries(url.searchParams)
 
       if (req.method === 'GET') {
-        try {
-          const result = handleRequest(consoleName, db, apiPath, {
-            method: 'GET', params, body: {}, headers: req.headers,
-            ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress, sid,
-          })
+          try {
+            const result = handleRequest(consoleName, bothDbs, apiPath, {
+              method: 'GET', params, body: {}, headers: req.headers,
+              ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress, sid,
+            })
           const respHeaders = { 'Content-Type': 'application/json' }
           if (result._sid) {
             respHeaders['Set-Cookie'] = `sid=${result._sid}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
@@ -184,7 +175,7 @@ export function createServer({ consoleName, port, seed, sync }) {
           let bodyParams = {}
           try { bodyParams = body ? JSON.parse(body) : {} } catch {}
           try {
-            const result = handleRequest(consoleName, db, apiPath, {
+            const result = handleRequest(consoleName, bothDbs, apiPath, {
               method: 'POST', params, body: bodyParams, headers: req.headers,
               ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress, sid,
             })
@@ -207,6 +198,14 @@ export function createServer({ consoleName, port, seed, sync }) {
     // 404
     res.writeHead(404, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify({ message: 'Not found' }))
+  })
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[${consoleName}] Port ${port} is already in use. Is another instance running?`)
+    } else {
+      console.error(`[${consoleName}] Server error:`, err.message)
+    }
   })
 
   server.listen(port, () => {

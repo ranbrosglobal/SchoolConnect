@@ -37,11 +37,24 @@ class SuperSchoolModel {
   });
 
   factory SuperSchoolModel.fromJson(Map<String, dynamic> json) {
+    // Backend returns: { id, name, location, status, established, teacher_count, class_count, student_count, admin_names }
+    // Legacy format: { name, school_name, site, port, ... }
+    // Support both formats for compatibility
+    final schoolName = json['school_name']?.toString() ?? json['name']?.toString() ?? '';
+    final site = json['site']?.toString() ?? json['location']?.toString() ?? '';
+    final port = int.tryParse(json['port']?.toString() ?? '') ??
+                 int.tryParse(json['established']?.toString() ?? '') ?? 8000;
+    final adminNames = json['admin_names'];
+    String? adminName;
+    String? adminEmail;
+    if (adminNames is List && adminNames.isNotEmpty) {
+      adminName = adminNames.first?.toString();
+    }
     return SuperSchoolModel(
-      name: json['name']?.toString() ?? '',
-      schoolName: json['school_name']?.toString() ?? '',
-      site: json['site']?.toString() ?? '',
-      port: int.tryParse(json['port']?.toString() ?? '') ?? 8000,
+      name: json['id']?.toString() ?? json['name']?.toString() ?? '',
+      schoolName: schoolName,
+      site: site,
+      port: port,
       dbName: json['db_name']?.toString(),
       status: json['status']?.toString() ?? 'Active',
       logoUrl: json['logo_url']?.toString(),
@@ -50,8 +63,8 @@ class SuperSchoolModel {
       website: json['website']?.toString(),
       motto: json['motto']?.toString(),
       address: json['address']?.toString(),
-      adminName: json['school_admin_name']?.toString(),
-      adminEmail: json['school_admin_email']?.toString(),
+      adminName: adminName ?? json['school_admin_name']?.toString(),
+      adminEmail: adminEmail ?? json['school_admin_email']?.toString(),
       hasPassword: json['has_password'] == true,
     );
   }

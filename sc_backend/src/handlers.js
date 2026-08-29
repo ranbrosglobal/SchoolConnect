@@ -45,9 +45,9 @@ function publicUser(user, schoolName) {
 
 // ─── Lockout & Rate Limiter ────────────────────────────────────────
 
-const MAX_FAILURES = 10
-const LOCKOUT_MS = 15 * 60 * 1000 // 15 minutes
-const RATE_LIMIT = 5 // per window
+const MAX_FAILURES = 5
+const LOCKOUT_MS = 5 * 60 * 1000 // 5 minutes
+const RATE_LIMIT = 20 // per window (generous for multiple tabs/admin use)
 const RATE_WINDOW_MS = 60 * 1000 // 1 minute
 
 const failures = new Map() // email → { count, lockedUntil }
@@ -420,8 +420,9 @@ function schoolAdminCreateStudent(db, params) {
   const id = genId('stu-')
   const peers = getAll(db, 'students', 'class_id = ?', cls.id)
   const roll = Number(params.roll_number) || (peers.length ? Math.max(...peers.map(s => s.roll_number || 0)) + 1 : 1)
-  insert(db, 'students', { id, name, email: params.email || '', roll_number: roll,
-    class_id: cls.id, school_id: cls.school_id, attendance_pct: 0,
+  const hashedPw = params.password ? hashPassword(params.password) : ''
+  insert(db, 'students', { id, name, email: params.email || '', password: hashedPw,
+    roll_number: roll, class_id: cls.id, school_id: cls.school_id, attendance_pct: 0,
     status: params.status === 'Inactive' ? 'Inactive' : 'Active' })
   return { id, name, email: params.email || '', roll_number: roll, class_id: cls.id,
     school_id: cls.school_id, attendance_pct: 0, status: params.status || 'Active' }
@@ -656,7 +657,7 @@ function mobileGetStudentSchedule(db, params, user) {
     // Try by id
     const byId = getById(db, 'students', user.id)
     if (!byId) return { entries: [] }
-    const entries = getAll(db, 'timetable', 'class_id = byId.class_id')
+    const entries = getAll(db, 'timetable', 'class_id = ?', byId.class_id)
     return entries
   }
   const entries = getAll(db, 'timetable', 'class_id = ?', student.class_id)
@@ -850,42 +851,88 @@ function superAdminChangePassword(db, params, user) {
   return { message: 'Password updated successfully' }
 }
 
-function superAdminOverview(db) {
+function superAdminOverview(db, params, user, sid, bothDbs) {
   const schools = getAll(db, 'schools').map(s => ({
     ...s,
     admin_names: getAll(db, 'users', "role = 'School Admin' AND school_id = ?", s.id).map(a => a.full_name),
   }))
+
+  // Pull live counts from the schooladmin database if available
+  let totalTeachers = 0, totalClasses = 0, totalStudents = 0
+  if (bothDbs?.sa) {
+    try {
+      totalTeachers = count(bothDbs.sa, 'users', "role = 'Teacher'")
+      totalClasses = count(bothDbs.sa, 'classes')
+      totalStudents = count(bothDbs.sa, 'students')
+    } catch (_e) {
+      // Fall back to stored counts
+      totalTeachers = schools.reduce((a, s) => a + (s.teacher_count || 0), 0)
+      totalClasses = schools.reduce((a, s) => a + (s.class_count || 0), 0)
+      totalStudents = schools.reduce((a, s) => a + (s.student_count || 0), 0)
+    }
+  } else {
+    totalTeachers = schools.reduce((a, s) => a + (s.teacher_count || 0), 0)
+    totalClasses = schools.reduce((a, s) => a + (s.class_count || 0), 0)
+    totalStudents = schools.reduce((a, s) => a + (s.student_count || 0), 0)
+  }
+
   return {
     school_count: schools.filter(s => s.status === 'Active').length,
     disabled_school_count: schools.filter(s => s.status === 'Disabled').length,
     school_admin_count: count(db, 'users', "role = 'School Admin'"),
-    teacher_count: schools.reduce((a, s) => a + (s.teacher_count || 0), 0),
-    class_count: schools.reduce((a, s) => a + (s.class_count || 0), 0),
-    student_count: schools.reduce((a, s) => a + (s.student_count || 0), 0),
+    teacher_count: totalTeachers,
+    class_count: totalClasses,
+    student_count: totalStudents,
     recent_schools: schools.slice(0, 4),
   }
 }
 
-function superAdminSchools(db) {
-  return getAll(db, 'schools').map(s => ({
-    ...s,
-    admin_names: getAll(db, 'users', "role = 'School Admin' AND school_id = ?", s.id).map(a => a.full_name),
-  }))
+function superAdminSchools(db, params, user, sid, bothDbs) {
+  return getAll(db, 'schools').map(s => {
+    // Pull live counts from schooladmin.db if available
+    let teacherCount = s.teacher_count || 0
+    let classCount = s.class_count || 0
+    let studentCount = s.student_count || 0
+    if (bothDbs?.sa) {
+      try {
+        teacherCount = count(bothDbs.sa, 'users', "role = 'Teacher' AND school_id = ?", s.id)
+        classCount = count(bothDbs.sa, 'classes', 'school_id = ?', s.id)
+        studentCount = count(bothDbs.sa, 'students', 'school_id = ?', s.id)
+      } catch (_e) {}
+    }
+    return {
+      ...s,
+      teacher_count: teacherCount,
+      class_count: classCount,
+      student_count: studentCount,
+      admin_names: getAll(db, 'users', "role = 'School Admin' AND school_id = ?", s.id).map(a => a.full_name),
+    }
+  })
 }
 
-function superAdminCreateSchool(db, params) {
+function superAdminCreateSchool(db, params, user, sid, bothDbs) {
   const name = params.name?.trim()
   if (!name) throw { status: 400, message: 'School name is required' }
   const id = genId('s-')
   insert(db, 'schools', { id, name, location: params.location || '',
     status: params.status || 'Active', established: Number(params.established) || new Date().getFullYear(),
     teacher_count: 0, class_count: 0, student_count: 0 })
+
+  // Sync: also create the school in the schooladmin database
+  if (bothDbs?.sa) {
+    try {
+      insert(bothDbs.sa, 'schools', { id, name, location: params.location || '',
+        status: params.status || 'Active', established: Number(params.established) || new Date().getFullYear(),
+        periods: '[]' })
+    } catch (_e) { /* may already exist */ }
+  }
+
   return { id, name, location: params.location || '', status: params.status || 'Active',
-    established: Number(params.established) || new Date().getFullYear(),
-    teacher_count: 0, class_count: 0, student_count: 0, admin_names: [] }
+    established: Number(params.established) || new Date().getFullYear(), teacher_count: 0,
+    class_count: 0, student_count: 0, admin_names: [] }
 }
 
-function superAdminUpdateSchool(db, params) {
+function superAdminUpdateSchool(db, params, user, sid, bothDbs) {
   const s = getById(db, 'schools', params.id)
   if (!s) throw { status: 404, message: 'School not found' }
   const name = params.name?.trim()
@@ -895,24 +942,59 @@ function superAdminUpdateSchool(db, params) {
   if (params.established) updates.established = Number(params.established)
   if (params.status) updates.status = params.status
   updateById(db, 'schools', params.id, updates)
+
+  // Sync: also update in the schooladmin database
+  if (bothDbs?.sa) {
+    const saUpdates = { name }
+    if (params.location) saUpdates.location = params.location
+    if (params.established) saUpdates.established = Number(params.established)
+    if (params.status) saUpdates.status = params.status
+    try { updateById(bothDbs.sa, 'schools', params.id, saUpdates) } catch (_e) {}
+  }
+
   return { ...s, ...updates }
 }
 
-function superAdminSetSchoolStatus(db, params) {
+function superAdminSetSchoolStatus(db, params, user, sid, bothDbs) {
   const s = getById(db, 'schools', params.id)
   if (!s) throw { status: 404, message: 'School not found' }
   const status = params.status === 'Disabled' ? 'Disabled' : 'Active'
   updateById(db, 'schools', params.id, { status })
+
+  // Sync: also update in the schooladmin database
+  if (bothDbs?.sa) {
+    try { updateById(bothDbs.sa, 'schools', params.id, { status }) } catch (_e) {}
+  }
+
   return { ...s, status }
 }
 
-function superAdminDeleteSchool(db, params) {
+function superAdminDeleteSchool(db, params, user, sid, bothDbs) {
   const s = getById(db, 'schools', params.id)
   if (!s) throw { status: 404, message: 'School not found' }
-  // Cascade: remove school admins
+  // Cascade: remove school admins from superadmin db
   const admins = getAll(db, 'users', "role = 'School Admin' AND school_id = ?", params.id)
   for (const a of admins) deleteById(db, 'users', a.id)
   deleteById(db, 'schools', params.id)
+
+  // Sync: also remove from the schooladmin database
+  if (bothDbs?.sa) {
+    try {
+      const saAdmins = getAll(bothDbs.sa, 'users', "role = 'School Admin' AND school_id = ?", params.id)
+      for (const a of saAdmins) deleteById(bothDbs.sa, 'users', a.id)
+      // Also cascade: remove teachers, students, classes for this school
+      const teachers = getAll(bothDbs.sa, 'users', "role = 'Teacher' AND school_id = ?", params.id)
+      for (const t of teachers) deleteById(bothDbs.sa, 'users', t.id)
+      const classes = getAll(bothDbs.sa, 'classes', 'school_id = ?', params.id)
+      for (const c of classes) {
+        deleteWhere(bothDbs.sa, 'students', 'class_id', c.id)
+        deleteById(bothDbs.sa, 'classes', c.id)
+      }
+      deleteWhere(bothDbs.sa, 'students', 'school_id', params.id)
+      deleteById(bothDbs.sa, 'schools', params.id)
+    } catch (_e) {}
+  }
+
   return { message: 'School deleted', id: params.id }
 }
 
@@ -925,7 +1007,7 @@ function superAdminSchoolAdmins(db, params) {
   }))
 }
 
-function superAdminCreateSchoolAdmin(db, params) {
+function superAdminCreateSchoolAdmin(db, params, user, sid, bothDbs) {
   const name = params.name?.trim()
   const email = params.email?.trim().toLowerCase()
   if (!name) throw { status: 400, message: 'Name is required' }
@@ -935,12 +1017,22 @@ function superAdminCreateSchoolAdmin(db, params) {
   if (!getById(db, 'schools', params.school)) throw { status: 400, message: 'Unknown school' }
 
   const id = genId('u-')
-  insert(db, 'users', { id, email, password: hashPassword(params.password), full_name: name,
+  const hashedPw = hashPassword(params.password)
+  insert(db, 'users', { id, email, password: hashedPw, full_name: name,
     role: 'School Admin', school_id: params.school, status: 'Active' })
+
+  // Sync: also create the school admin in the schooladmin database
+  if (bothDbs?.sa) {
+    try {
+      insert(bothDbs.sa, 'users', { id, email, password: hashedPw, full_name: name,
+        role: 'School Admin', school_id: params.school, class_ids: '[]', subjects: '[]', status: 'Active' })
+    } catch (_e) { /* may already exist */ }
+  }
+
   return { id, name, email, role: 'School Admin', school_id: params.school, status: 'Active' }
 }
 
-function superAdminUpdateSchoolAdmin(db, params) {
+function superAdminUpdateSchoolAdmin(db, params, user, sid, bothDbs) {
   const u = getById(db, 'users', params.id)
   if (!u || u.role !== 'School Admin') throw { status: 404, message: 'School admin not found' }
   const name = params.name?.trim()
@@ -955,15 +1047,30 @@ function superAdminUpdateSchoolAdmin(db, params) {
   if (params.school) updates.school_id = params.school
   if (params.password) updates.password = hashPassword(params.password)
   updateById(db, 'users', params.id, updates)
+
+  // Sync: also update in the schooladmin database
+  if (bothDbs?.sa) {
+    const saUpdates = { full_name: name, email }
+    if (params.school) saUpdates.school_id = params.school
+    if (params.password) saUpdates.password = hashPassword(params.password)
+    try { updateById(bothDbs.sa, 'users', params.id, saUpdates) } catch (_e) {}
+  }
+
   return { id: params.id, name, email, role: 'School Admin',
     school_id: params.school || u.school_id, status: u.status }
 }
 
-function superAdminSetSchoolAdminStatus(db, params) {
+function superAdminSetSchoolAdminStatus(db, params, user, sid, bothDbs) {
   const u = getById(db, 'users', params.id)
   if (!u || u.role !== 'School Admin') throw { status: 404, message: 'School admin not found' }
   const status = params.status === 'Inactive' ? 'Inactive' : 'Active'
   updateById(db, 'users', params.id, { status })
+
+  // Sync: also update in the schooladmin database
+  if (bothDbs?.sa) {
+    try { updateById(bothDbs.sa, 'users', params.id, { status }) } catch (_e) {}
+  }
+
   return { id: params.id, name: u.full_name, email: u.email, role: 'School Admin',
     school_id: u.school_id, status }
 }
@@ -1045,15 +1152,16 @@ export function listEndpoints(consoleName) {
 /**
  * Handle an API request.
  * @param {'schooladmin'|'superadmin'} consoleName
- * @param {import('better-sqlite3').Database} db
+ * @param {{ sa: DatabaseSync, su: DatabaseSync }} bothDbs
  * @param {string} path — API method path
  * @param {object} req — { method, params, body, headers, ip }
  * @returns {{ data: any, _sid?: string }}
  */
-export function handleRequest(consoleName, db, path, req) {
+export function handleRequest(consoleName, bothDbs, path, req) {
   const handlers = consoleName === 'schooladmin' ? SA_HANDLERS : SU_HANDLERS
+  const db = consoleName === 'schooladmin' ? bothDbs.sa : bothDbs.su
   const handler = handlers[path]
-  if (!handler) throw { status: 404, message: `Endpoint not implemented: ${path}` }
+  if (!handler) throw { status: 404, message: 'Not found' }
 
   const allParams = { ...req.params, ...req.body }
 
@@ -1078,7 +1186,7 @@ export function handleRequest(consoleName, db, path, req) {
   }
 
   try {
-    const result = handler(db, allParams, user, sid)
+    const result = handler(db, allParams, user, sid, bothDbs)
     const sidOut = result?._sid
     if (sidOut) delete result._sid
 

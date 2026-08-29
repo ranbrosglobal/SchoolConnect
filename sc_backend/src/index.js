@@ -34,7 +34,67 @@ if (reset) {
   console.log('Databases reset.')
 }
 
-// Set up cross-backend sync
+// ─── Startup sync: reconcile data between the two databases ─────────
+// When the super admin creates a school + school admin, those live in superadmin.db.
+// The schooladmin server needs them too. This sync runs once at startup.
+function startupSync() {
+  const { sa, su } = openDatabases()
+  console.log('[sync] Running startup sync between databases...')
+
+  // 1. Mirror schools from superadmin.db → schooladmin.db
+  const suSchools = su.prepare('SELECT * FROM schools').all()
+  const upsertSchool = sa.prepare(`
+    INSERT OR REPLACE INTO schools (id, name, location, status, established, periods)
+    VALUES (?, ?, ?, ?, ?, COALESCE(
+      (SELECT periods FROM schools WHERE id = ?), '[]'
+    ))
+  `)
+  for (const s of suSchools) {
+    // Check if school exists in sa db
+    const existing = sa.prepare('SELECT id FROM schools WHERE id = ?').get(s.id)
+    if (existing) {
+      // Update existing school's name, location, status, established
+      sa.prepare('UPDATE schools SET name = ?, location = ?, status = ?, established = ? WHERE id = ?')
+        .run(s.name, s.location || '', s.status, s.established || new Date().getFullYear(), s.id)
+    } else {
+      // Insert new school
+      sa.prepare('INSERT INTO schools (id, name, location, status, established, periods) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(s.id, s.name, s.location || '', s.status, s.established || new Date().getFullYear(), '[]')
+    }
+  }
+
+  // 2. Mirror school admins from superadmin.db → schooladmin.db
+  const suAdmins = su.prepare("SELECT * FROM users WHERE role = 'School Admin'").all()
+  for (const a of suAdmins) {
+    const existing = sa.prepare('SELECT id FROM users WHERE id = ?').get(a.id)
+    if (existing) {
+      // Update existing admin
+      sa.prepare('UPDATE users SET email = ?, full_name = ?, school_id = ?, status = ? WHERE id = ?')
+        .run(a.email, a.full_name, a.school_id || '', a.status || 'Active', a.id)
+    } else {
+      // Insert new admin (with password hash from superadmin db)
+      try {
+        sa.prepare('INSERT INTO users (id, email, password, full_name, role, school_id, class_ids, subjects, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+          .run(a.id, a.email, a.password, a.full_name, 'School Admin', a.school_id || '', '[]', '[]', a.status || 'Active')
+      } catch (_e) { /* email unique constraint or other issue */ }
+    }
+  }
+
+  // 3. Sync counts from schooladmin.db → superadmin.db
+  for (const s of suSchools) {
+    try {
+      const tc = sa.prepare("SELECT COUNT(*) as n FROM users WHERE role = 'Teacher' AND school_id = ?").get(s.id)
+      const cc = sa.prepare('SELECT COUNT(*) as n FROM classes WHERE school_id = ?').get(s.id)
+      const sc = sa.prepare('SELECT COUNT(*) as n FROM students WHERE school_id = ?').get(s.id)
+      su.prepare('UPDATE schools SET teacher_count = ?, class_count = ?, student_count = ? WHERE id = ?')
+        .run(tc.n, cc.n, sc.n, s.id)
+    } catch (_e) {}
+  }
+
+  console.log(`[sync] Synced ${suSchools.length} schools, ${suAdmins.length} school admins.`)
+}
+
+// Set up cross-backend sync (sync moved to after servers start)
 const saOutbox = createOutbox({
   consoleName: 'schooladmin',
   peerUrl: `http://127.0.0.1:${SU_PORT}`,
@@ -60,6 +120,9 @@ const suServer = createServer({
   seed: seedSuperadmin,
   sync: { secret: process.env.SC_SYNC_SECRET || 'schoolconnect-sync', outbox: suOutbox, reconcile() {} },
 })
+
+// Run startup sync AFTER servers are created (seeding happens in createServer)
+try { startupSync() } catch (e) { console.error('[sync] Startup sync failed:', e.message) }
 
 console.log(`\nSchoolConnect backend ready!`)
 console.log(`  School Admin: http://localhost:${SA_PORT}`)

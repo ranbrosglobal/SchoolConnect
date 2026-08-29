@@ -77,6 +77,7 @@ function createSchooladminTables(db) {
     id             TEXT PRIMARY KEY,
     name           TEXT NOT NULL,
     email          TEXT,
+    password       TEXT NOT NULL DEFAULT '',
     roll_number    INTEGER,
     class_id       TEXT,
     school_id      TEXT,
