@@ -8,7 +8,6 @@ plugins {
 android {
     namespace = "com.schoolmanage.school_connect_app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

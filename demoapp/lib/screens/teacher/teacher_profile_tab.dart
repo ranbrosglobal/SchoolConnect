@@ -1,16 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../state/auth_provider.dart';
+import '../../state/teacher_provider.dart';
 import '../auth/login_screen.dart';
 import 'teacher_settings_screen.dart';
 
-class TeacherProfileTab extends ConsumerWidget {
+class TeacherProfileTab extends ConsumerStatefulWidget {
   const TeacherProfileTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TeacherProfileTab> createState() => _TeacherProfileTabState();
+}
+
+class _TeacherProfileTabState extends ConsumerState<TeacherProfileTab> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(teacherProvider.notifier).loadTeacherProfile();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
+    final teacherState = ref.watch(teacherProvider);
+    final profile = teacherState.teacherProfile;
+
+    final displayName = profile?.name ?? user?.fullName ?? 'Mr. Arjun Sharma';
+    final displayEmail = profile?.email ?? user?.email ?? 'arjun.sharma@school.com';
+    final displaySchool = profile?.schoolName ?? user?.schoolName ?? 'Springfield Elementary';
+    final displayDept = profile?.department ?? 'Mathematics';
+    final displayAddress = profile?.address ?? '';
+    final displaySchoolNumber = profile?.schoolNumber ?? '';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -36,7 +59,10 @@ class TeacherProfileTab extends ConsumerWidget {
         child: Column(
           children: [
             const SizedBox(height: 16),
-            _buildProfileHeader(context, user?.fullName ?? 'Mr. Arjun Sharma', user?.email ?? 'arjun.sharma@school.com'),
+            _buildProfileHeader(context, displayName, displayEmail, displayDept),
+            if (displaySchool.isNotEmpty) _buildInfoRow(Icons.school_outlined, 'School', displaySchool),
+            if (displaySchoolNumber.isNotEmpty) _buildInfoRow(Icons.numbers, 'School Number', displaySchoolNumber),
+            if (displayAddress.isNotEmpty) _buildInfoRow(Icons.location_on_outlined, 'Address', displayAddress),
             const SizedBox(height: 32),
             _buildMenuItems(context, ref),
           ],
@@ -45,7 +71,29 @@ class TeacherProfileTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context, String name, String email) {
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.grey.shade500),
+          const SizedBox(width: 12),
+          Text(
+            '$label: ',
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1E3A8A)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader(BuildContext context, String name, String email, String department) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -72,7 +120,7 @@ class TeacherProfileTab extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Mathematics Teacher',
+                  '$department Teacher',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade600,

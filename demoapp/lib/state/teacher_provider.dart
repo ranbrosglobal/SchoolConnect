@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/instructor_model.dart';
 import '../models/course_schedule_model.dart';
 import '../models/student_model.dart';
 import '../models/attendance_model.dart';
@@ -23,6 +24,16 @@ class TeacherState {
   final AssignmentModel? selectedAssignment;
   final bool isSubmitting;
 
+  // Teacher profile
+  final InstructorModel? teacherProfile;
+  final bool isSavingProfile;
+
+  // Attendance history
+  final List<AttendanceModel> attendanceHistory;
+  final List<DateTime> attendanceDates;
+  final DateTime? historyStartDate;
+  final DateTime? historyEndDate;
+
   TeacherState({
     this.isLoading = false,
     this.classes = const [],
@@ -34,6 +45,12 @@ class TeacherState {
     this.submissions = const [],
     this.selectedAssignment,
     this.isSubmitting = false,
+    this.teacherProfile,
+    this.isSavingProfile = false,
+    this.attendanceHistory = const [],
+    this.attendanceDates = const [],
+    this.historyStartDate,
+    this.historyEndDate,
   });
 
   TeacherState copyWith({
@@ -47,6 +64,12 @@ class TeacherState {
     List<AssignmentSubmissionModel>? submissions,
     AssignmentModel? selectedAssignment,
     bool? isSubmitting,
+    InstructorModel? teacherProfile,
+    bool? isSavingProfile,
+    List<AttendanceModel>? attendanceHistory,
+    List<DateTime>? attendanceDates,
+    DateTime? historyStartDate,
+    DateTime? historyEndDate,
   }) {
     return TeacherState(
       isLoading: isLoading ?? this.isLoading,
@@ -59,6 +82,12 @@ class TeacherState {
       submissions: submissions ?? this.submissions,
       selectedAssignment: selectedAssignment ?? this.selectedAssignment,
       isSubmitting: isSubmitting ?? this.isSubmitting,
+      teacherProfile: teacherProfile ?? this.teacherProfile,
+      isSavingProfile: isSavingProfile ?? this.isSavingProfile,
+      attendanceHistory: attendanceHistory ?? this.attendanceHistory,
+      attendanceDates: attendanceDates ?? this.attendanceDates,
+      historyStartDate: historyStartDate ?? this.historyStartDate,
+      historyEndDate: historyEndDate ?? this.historyEndDate,
     );
   }
 }
@@ -403,6 +432,100 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
       await loadSubmissions(selected);
     }
     await loadAssignments();
+  }
+
+  // Attendance history
+  Future<void> loadAttendanceHistory({
+    required String courseSchedule,
+    required String studentGroup,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      if (_isDemoMode) {
+        final history = _demoService.getAttendanceForCourse(
+          courseSchedule: courseSchedule,
+          studentGroup: studentGroup,
+          startDate: startDate,
+          endDate: endDate,
+        );
+        final dates = _demoService.getAttendanceDates(
+          courseSchedule: courseSchedule,
+          studentGroup: studentGroup,
+          startDate: startDate,
+          endDate: endDate,
+        );
+        state = state.copyWith(
+          isLoading: false,
+          attendanceHistory: history,
+          attendanceDates: dates,
+          historyStartDate: startDate,
+          historyEndDate: endDate,
+        );
+      } else {
+        // For live backend, load today's attendance as fallback
+        final students = await _apiService.getClassStudents(courseSchedule);
+        final attendance = await _apiService.getAttendanceReport(
+          courseSchedule: courseSchedule,
+          date: DateTime.now(),
+        );
+        state = state.copyWith(
+          isLoading: false,
+          currentClassStudents: students,
+          currentAttendance: attendance,
+          historyStartDate: startDate,
+          historyEndDate: endDate,
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  // Teacher profile management
+  Future<void> loadTeacherProfile() async {
+    if (_instructorId == null) return;
+    if (_isDemoMode) {
+      final profile = _demoService.getTeacherProfile(_instructorId);
+      state = state.copyWith(teacherProfile: profile);
+    }
+  }
+
+  Future<bool> updateTeacherProfile({
+    String? name,
+    String? email,
+    String? phone,
+    String? school,
+    String? schoolNumber,
+    String? address,
+  }) async {
+    if (_instructorId == null) return false;
+    state = state.copyWith(isSavingProfile: true, error: null);
+
+    try {
+      if (_isDemoMode) {
+        await Future.delayed(const Duration(milliseconds: 600));
+        _demoService.updateTeacherProfile(
+          instructorId: _instructorId,
+          name: name,
+          email: email,
+          phone: phone,
+          school: school,
+          schoolNumber: schoolNumber,
+          address: address,
+        );
+        await loadTeacherProfile();
+        return true;
+      }
+      return true;
+    } catch (e) {
+      state = state.copyWith(isSavingProfile: false, error: e.toString());
+      return false;
+    } finally {
+      state = state.copyWith(isSavingProfile: false);
+    }
   }
 
   void clearError() {

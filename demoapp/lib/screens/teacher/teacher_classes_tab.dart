@@ -25,17 +25,34 @@ class _TeacherClassesTabState extends ConsumerState<TeacherClassesTab> {
     setState(() => _loading = true);
     try {
       final service = ref.read(demoApiServiceProvider);
+      final demoService = ref.read(demoServiceProvider);
+      final auth = ref.read(authProvider);
       final groups = await service.getStudentGroups();
       final allStudents = await service.getAllStudents();
+      final instructorId = auth.user?.instructorId;
+
+      // Get the teacher's course schedules to map groups to course schedule IDs
+      final myClasses = instructorId != null
+          ? demoService.getMyClasses(instructorId)
+          : <dynamic>[];
 
       final result = <Map<String, dynamic>>[];
       for (final g in groups) {
         final count = allStudents.where((s) => s.studentGroup == g.id).length;
+        // Find a course schedule for this group belonging to this teacher
+        String? csId;
+        for (final cs in myClasses) {
+          if (cs.studentGroup == g.id) {
+            csId = cs.id;
+            break;
+          }
+        }
         result.add({
           'id': g.id,
           'name': g.name,
           'program': g.program ?? '',
           'studentCount': count,
+          'courseScheduleId': csId,
         });
       }
 
@@ -93,6 +110,8 @@ class _TeacherClassesTabState extends ConsumerState<TeacherClassesTab> {
                         className: cls['name'],
                         subject: cls['program'],
                         studentsCount: cls['studentCount'],
+                        courseScheduleId: cls['courseScheduleId'],
+                        studentGroupId: cls['id'],
                       );
                     },
                   ),
@@ -105,6 +124,8 @@ class _TeacherClassesTabState extends ConsumerState<TeacherClassesTab> {
     required String className,
     required String subject,
     required int studentsCount,
+    String? courseScheduleId,
+    String? studentGroupId,
   }) {
     // Pick a color based on the class name hash
     final colors = [
@@ -137,11 +158,12 @@ class _TeacherClassesTabState extends ConsumerState<TeacherClassesTab> {
           borderRadius: BorderRadius.circular(16),
           onTap: () {
             Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => TeacherClassDetailScreen(
-                  className: className,
-                  subject: subject,
-                ),
+              MaterialPageRoute(                        builder: (_) => TeacherClassDetailScreen(
+                          className: className,
+                          subject: subject,
+                          courseScheduleId: courseScheduleId,
+                          studentGroupId: studentGroupId,
+                        ),
               ),
             );
           },

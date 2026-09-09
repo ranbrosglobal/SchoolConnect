@@ -255,7 +255,9 @@ class DemoDataService {
       email: 'teacher@school.com',
       phone: '+1-555-0101',
       school: 'SCH-001',
+      schoolNumber: 'SCH-001',
       department: 'Mathematics',
+      address: '123 Oak Street, Springfield, IL 62701',
     ),
     InstructorModel(
       id: 'INS-002',
@@ -263,7 +265,9 @@ class DemoDataService {
       email: 'teacher2@school.com',
       phone: '+1-555-0102',
       school: 'SCH-001',
+      schoolNumber: 'SCH-001',
       department: 'Science',
+      address: '456 Maple Avenue, Springfield, IL 62702',
     ),
   ];
 
@@ -18554,8 +18558,152 @@ class DemoDataService {
     return demoCourseSchedules.where((cs) => cs.instructor == instructorId).toList();
   }
 
+  /// Returns the teacher profile (InstructorModel) for the given instructor ID.
+  InstructorModel? getTeacherProfile(String instructorId) {
+    final matches = demoTeachers.where((t) => t.id == instructorId).toList();
+    return matches.isEmpty ? null : matches.first;
+  }
+
+  /// Updates the teacher's profile info in demo mode (name, email, phone, school, school number, address).
+  void updateTeacherProfile({
+    required String instructorId,
+    String? name,
+    String? email,
+    String? phone,
+    String? school,
+    String? schoolNumber,
+    String? address,
+  }) {
+    final index = demoTeachers.indexWhere((t) => t.id == instructorId);
+    if (index < 0) return;
+    final old = demoTeachers[index];
+    demoTeachers[index] = old.copyWith(
+      name: name,
+      email: email,
+      phone: phone,
+      school: school,
+      schoolNumber: schoolNumber,
+      address: address,
+    );
+    // Also update instructor name/email in related demo data and user map
+    final teacherUserEntry = demoUsers.entries.where(
+      (e) => e.value['name'] == instructorId,
+    );
+    for (final entry in teacherUserEntry) {
+      demoUsers[entry.key] = {
+        ...entry.value,
+        if (name != null) 'full_name': name,
+        if (email != null) 'email': email,
+      };
+    }
+  }
+
   List<StudentModel> getClassStudents(String group) {
     return demoStudents.where((s) => s.studentGroup == group).toList();
+  }
+
+  /// Generates historical attendance records for a given student group and
+  /// course schedule over the past [days] days so the teacher can browse
+  /// attendance history even if no real records exist yet.
+  List<AttendanceModel> generateAttendanceHistory({
+    required String courseSchedule,
+    required String studentGroup,
+    int days = 90,
+  }) {
+    final students = getClassStudents(studentGroup);
+    if (students.isEmpty) return [];
+
+    final now = DateTime.now();
+    final records = <AttendanceModel>[];
+    for (var d = 1; d <= days; d++) {
+      final date = now.subtract(Duration(days: d));
+      // Skip weekends
+      if (date.weekday == DateTime.saturday || date.weekday == DateTime.sunday) continue;
+      for (var i = 0; i < students.length; i++) {
+        final student = students[i];
+        // Deterministic variety based on student index + day
+        AttendanceStatus status;
+        final seed = (i + d) % 20;
+        if (seed < 14) {
+          status = AttendanceStatus.present;
+        } else if (seed < 17) {
+          status = AttendanceStatus.absent;
+        } else if (seed < 19) {
+          status = AttendanceStatus.halfDay;
+        } else {
+          status = AttendanceStatus.leave;
+        }
+        records.add(AttendanceModel(
+          id: 'ATT-HIST-$courseSchedule-$d-${student.id}',
+          student: student.id,
+          studentName: student.name,
+          courseSchedule: courseSchedule,
+          studentGroup: studentGroup,
+          date: date,
+          status: status,
+        ));
+      }
+    }
+    return records;
+  }
+
+  /// Returns attendance for a specific course schedule filtered by date range.
+  /// Combines existing demo attendance records with generated historical data.
+  List<AttendanceModel> getAttendanceForCourse({
+    required String courseSchedule,
+    required String studentGroup,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) {
+    // Start with any existing attendance records for this course
+    final existing = demoAttendance.where((a) => a.courseSchedule == courseSchedule).toList();
+    // Add generated historical data
+    final generated = generateAttendanceHistory(
+      courseSchedule: courseSchedule,
+      studentGroup: studentGroup,
+      days: 90,
+    );
+    // Combine, dedup by id
+    final allIds = <String>{};
+    final combined = <AttendanceModel>[];
+    for (final a in [...generated, ...existing]) {
+      if (allIds.add(a.id)) combined.add(a);
+    }
+    // Apply date filter
+    var filtered = combined;
+    if (startDate != null) {
+      filtered = filtered.where((a) => a.date != null && !a.date!.isBefore(startDate)).toList();
+    }
+    if (endDate != null) {
+      final end = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59);
+      filtered = filtered.where((a) => a.date != null && !a.date!.isAfter(end)).toList();
+    }
+    // Sort by date descending
+    filtered.sort((a, b) => (b.date ?? DateTime(0)).compareTo(a.date ?? DateTime(0)));
+    return filtered;
+  }
+
+  /// Returns distinct dates that have attendance records for a course schedule.
+  List<DateTime> getAttendanceDates({
+    required String courseSchedule,
+    required String studentGroup,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) {
+    final records = getAttendanceForCourse(
+      courseSchedule: courseSchedule,
+      studentGroup: studentGroup,
+      startDate: startDate,
+      endDate: endDate,
+    );
+    final dates = <DateTime>{};
+    for (final r in records) {
+      if (r.date != null) {
+        dates.add(DateTime(r.date!.year, r.date!.month, r.date!.day));
+      }
+    }
+    final sorted = dates.toList()..sort((a, b) => b.compareTo(a));
+    return sorted;
   }
 
   AssignmentSubmissionModel? _findSubmission(String assignment, String studentId) {

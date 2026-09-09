@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../state/teacher_provider.dart';
 import 'teacher_manage_students_screen.dart';
 import 'teacher_manage_classes_screen.dart';
+import 'teacher_edit_profile_screen.dart';
 
 /// Teacher settings page. From here the teacher can manage the people in
 /// their classes — the "Edit Info" button opens the student editor where
 /// students can be added, edited or removed.
-class TeacherSettingsScreen extends StatelessWidget {
+class TeacherSettingsScreen extends ConsumerWidget {
   const TeacherSettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final teacherState = ref.watch(teacherProvider);
+    final profile = teacherState.teacherProfile;
+
+    // Load profile if not yet loaded
+    if (profile == null && !teacherState.isLoading) {
+      Future.microtask(() => ref.read(teacherProvider.notifier).loadTeacherProfile());
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -31,6 +42,10 @@ class TeacherSettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          _buildSectionLabel(context, 'My Profile'),
+          const SizedBox(height: 12),
+          _buildProfileCard(context, profile),
+          const SizedBox(height: 24),
           _buildSectionLabel(context, 'Class Management'),
           const SizedBox(height: 12),
           _buildStudentsCard(context),
@@ -218,6 +233,94 @@ class TeacherSettingsScreen extends StatelessWidget {
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF388E3C),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileCard(BuildContext context, dynamic profile) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFCE4EC),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.person_outline,
+                  color: Color(0xFFE91E63),
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'My Profile',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E3A8A),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      profile != null
+                          ? '${profile.name}  •  ${profile.school ?? "No school"}'
+                          : 'Edit your name, school, school number and address.',
+                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const TeacherEditProfileScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: const Text(
+                'Edit Profile',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE91E63),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
