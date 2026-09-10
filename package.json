@@ -3,6 +3,8 @@
   "private": true,
   "description": "Root runner for the School Connect web consoles (schooladmin + superadmin)",
   "scripts": {
+    "install": "npm install && npm --prefix schooladmin install && npm --prefix superadmin install && npm --prefix sc_backend install",
+    "start": "node sc_backend/src/index.js",
     "dev:schooladmin": "npm --prefix schooladmin run dev -- --mode mock",
     "dev:superadmin": "npm --prefix superadmin run dev -- --mode mock --port 5175",
     "dev:all": "concurrently -n schooladmin,superadmin -c blue,magenta \"npm:dev:schooladmin\" \"npm:dev:superadmin\"",

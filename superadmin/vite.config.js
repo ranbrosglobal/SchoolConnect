@@ -13,7 +13,7 @@ export default defineConfig({
       // The web app talks to the real backend only when VITE_APP_MODE=live;
       // otherwise it runs in mock mode (no server needed).
       '/api': {
-        target: `http://localhost:${process.env.SC_PROXY_PORT || 3001}`,
+        target: `http://13.205.212.64:${process.env.SC_PROXY_PORT || 3001}`,
         changeOrigin: true,
       },
     },

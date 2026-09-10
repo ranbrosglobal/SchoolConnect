@@ -16,14 +16,11 @@ import { handleRequest, listEndpoints } from './handlers.js'
 import { seedSchooladmin, seedSuperadmin } from './seed.js'
 
 const ALLOWED_ORIGINS = [
-  'http://localhost:5173',
-  'http://localhost:5175',
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://127.0.0.1:5173',
-  'http://127.0.0.1:5175',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:3001',
+  'http://13.205.212.64:5173',
+  'http://13.205.212.64:5175',
+  'http://13.205.212.64:3000',
+  'http://13.205.212.64:3001',
+  'http://13.205.212.64',
 ]
 
 /**
@@ -67,7 +64,7 @@ export function createServer({ consoleName, port, seed, sync }) {
     }
 
     // Parse URL
-    const url = new URL(req.url, `http://localhost:${port}`)
+    const url = new URL(req.url, `http://13.205.212.64:${port}`)
 
     // Health endpoint
     if (url.pathname === '/health') {
@@ -208,8 +205,8 @@ export function createServer({ consoleName, port, seed, sync }) {
     }
   })
 
-  server.listen(port, () => {
-    console.log(`[${consoleName}] Server running on http://localhost:${port}`)
+  server.listen(port, '0.0.0.0', () => {
+    console.log(`[${consoleName}] Server running on http://13.205.212.64:${port}`)
   })
 
   // Graceful shutdown
