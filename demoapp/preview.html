@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>School Connect – Demo Preview</title>
+<style>
+  :root {
+    --blue-primary: #1976D2;
+    --blue-dark: #1E3A8A;
+    --blue-light: #E3F2FD;
+    --green: #388E3C;
+    --green-light: #E8F5E9;
+    --bg: #F1F5F9;
+    --white: #ffffff;
+    --red: #E53935;
+    --text: #333;
+    --grey: #9CA3AF;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  body { background: var(--bg); color: var(--text); min-height:100vh; display:flex; justify-content:center; }
+  .phone { width:100%; max-width:420px; min-height:100vh; background:#fff; position:relative; overflow:hidden; }
+
+  /* AppBar */
+  .appbar { display:flex; align-items:center; padding:12px 16px; background:#fff; border-bottom:1px solid #eee; position:sticky; top:0; z-index:10; }
+  .appbar .back { background:none; border:none; cursor:pointer; padding:8px; font-size:18px; color:var(--blue-dark); }
+  .appbar .title { flex:1; text-align:center; font-weight:700; color:var(--blue-dark); font-size:17px; }
+  .appbar .action { background:none; border:none; cursor:pointer; padding:8px; font-size:20px; color:var(--blue-primary); }
+
+  /* Cards */
+  .content { padding:20px; }
+  .section-label { font-size:13px; font-weight:700; color:#9CA3AF; letter-spacing:0.4px; margin-bottom:10px; }
+  .card { background:#fff; border-radius:16px; border:1px solid #E5E7EB; padding:16px; margin-bottom:20px; box-shadow:0 4px 10px rgba(0,0,0,0.03); }
+  .card-row { display:flex; align-items:flex-start; gap:14px; }
+  .card-icon { padding:12px; border-radius:12px; font-size:24px; flex-shrink:0; }
+  .card-icon.blue { background:var(--blue-light); color:var(--blue-primary); }
+  .card-icon.green { background:var(--green-light); color:var(--green); }
+  .card-text h3 { font-size:16px; font-weight:700; color:var(--blue-dark); }
+  .card-text p { font-size:13px; color:var(--grey); margin-top:4px; line-height:1.4; }
+  .btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; border:none; border-radius:12px; font-size:15px; font-weight:700; cursor:pointer; margin-top:16px; color:#fff; }
+  .btn-blue { background:var(--blue-primary); }
+  .btn-green { background:var(--green); }
+  .btn-red { background:var(--red); }
+  .btn:hover { opacity:0.9; }
+  .btn:active { transform:scale(0.98); }
+  .about-card { background:#F8FAFF; border:1px solid var(--blue-light); border-radius:16px; padding:16px; display:flex; gap:12px; align-items:flex-start; }
+  .about-card .info-icon { color:var(--blue-primary); font-size:18px; flex-shrink:0; margin-top:2px; }
+  .about-card p { font-size:13px; line-height:1.4; color:#6B7280; }
+
+  /* Search bar */
+  .search-bar { padding:12px 20px 4px; }
+  .search-bar input { width:100%; padding:10px 14px 10px 38px; border-radius:14px; border:none; background:var(--bg); font-size:14px; outline:none; }
+  .search-bar input:focus { border:1.5px solid var(--blue-primary); }
+  .search-wrap { position:relative; }
+  .search-wrap .search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--grey); font-size:18px; }
+
+  /* Filter chips */
+  .filter-bar { display:flex; gap:8px; padding:8px 20px; overflow-x:auto; }
+  .chip { padding:6px 14px; border-radius:20px; font-size:13px; font-weight:600; cursor:pointer; border:none; white-space:nowrap; }
+  .chip.active { background:var(--blue-primary); color:#fff; }
+  .chip.inactive { background:var(--bg); color:#6B7280; }
+
+  /* Student row */
+  .student-row { display:flex; align-items:center; padding:10px 14px; border:1px solid #E5E7EB; border-radius:14px; margin-bottom:10px; background:#fff; }
+  .avatar { width:36px; height:36px; border-radius:50%; background:var(--blue-light); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--blue-primary); flex-shrink:0; }
+  .student-info { flex:1; margin-left:12px; overflow:hidden; }
+  .student-info .name { font-size:15px; font-weight:700; color:var(--blue-dark); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .student-info .meta { font-size:12px; color:#6B7280; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .icon-btn { background:none; border:none; cursor:pointer; padding:6px; font-size:18px; }
+  .icon-btn.blue { color:var(--blue-primary); }
+  .icon-btn.red { color:var(--red); }
+  .icon-btn.green { color:var(--green); }
+  .class-header { display:flex; align-items:center; gap:8px; padding:8px 0; }
+  .class-header .name { font-size:15px; font-weight:700; color:var(--blue-dark); }
+  .class-header .badge { background:var(--blue-light); color:var(--blue-primary); font-size:12px; font-weight:700; padding:2px 8px; border-radius:12px; }
+
+  /* FAB */
+  .fab { position:fixed; bottom:24px; right:calc(50% - 190px); display:flex; align-items:center; gap:8px; padding:14px 20px; background:var(--blue-primary); color:#fff; border:none; border-radius:16px; font-size:15px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(25,118,210,0.4); z-index:20; }
+  .fab.green-fab { background:var(--green); box-shadow:0 4px 12px rgba(56,142,60,0.4); }
+
+  /* Modal */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:100; justify-content:center; align-items:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:#fff; border-radius:16px; width:90%; max-width:380px; max-height:85vh; overflow-y:auto; padding:24px; }
+  .modal h2 { color:var(--blue-dark); font-weight:700; font-size:18px; margin-bottom:16px; }
+  .modal h2.green-title { color:var(--green); }
+  .field { margin-bottom:12px; }
+  .field label { display:block; font-size:12px; font-weight:600; color:#6B7280; margin-bottom:4px; }
+  .field input, .field select { width:100%; padding:10px 12px; border-radius:12px; border:1px solid #D1D5DB; background:#F8FAFF; font-size:14px; outline:none; }
+  .field input:focus, .field select:focus { border-color:var(--blue-primary); }
+  .modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
+  .modal-actions .cancel-btn { padding:10px 16px; border:none; background:none; font-size:14px; color:#6B7280; cursor:pointer; font-weight:600; }
+  .modal-actions .save-btn { padding:10px 18px; border:none; background:var(--blue-primary); color:#fff; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; }
+  .modal-actions .save-btn.green-btn { background:var(--green); }
+
+  /* Confirm dialog */
+  .confirm-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+
+  /* Subject row */
+  .subject-row { display:flex; align-items:center; padding:10px 14px; border:1px solid #E5E7EB; border-radius:14px; margin-bottom:10px; background:#fff; }
+  .subject-icon { width:36px; height:36px; border-radius:10px; background:var(--green-light); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; color:var(--green); }
+  .subject-info { flex:1; margin-left:12px; overflow:hidden; }
+  .subject-info .name { font-size:15px; font-weight:700; color:var(--blue-dark); }
+  .subject-info .meta { font-size:12px; color:#6B7280; margin-top:2px; }
+
+  /* Class card in manage */
+  .class-card { border:1px solid #E5E7EB; border-radius:14px; padding:14px; margin-bottom:12px; background:#fff; }
+  .class-card-top { display:flex; align-items:center; justify-content:space-between; }
+  .class-card-top .class-name { font-size:16px; font-weight:700; color:var(--blue-dark); }
+  .class-card-actions { display:flex; gap:4px; }
+  .class-card .program { font-size:12px; color:#6B7280; margin-top:4px; }
+  .manage-subjects-btn { display:flex; align-items:center; gap:6px; margin-top:12px; padding:8px 12px; border:1px solid var(--green); border-radius:10px; background:none; color:var(--green); font-size:13px; font-weight:600; cursor:pointer; width:fit-content; }
+
+  /* Snackbar */
+  .snackbar { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--blue-primary); color:#fff; padding:12px 24px; border-radius:12px; font-size:14px; font-weight:600; z-index:200; opacity:0; transition:opacity 0.3s; pointer-events:none; }
+  .snackbar.show { opacity:1; }
+
+  /* Pages */
+  .page { display:none; }
+  .page.active { display:block; }
+
+  @media (max-width:420px) {
+    .fab { right:20px; }
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+<!-- ===================== SETTINGS PAGE ===================== -->
+<div class="page active" id="page-settings">
+  <div class="appbar">
+    <button class="back" onclick="showPage('page-dashboard')">&lt;</button>
+    <span class="title">Settings</span>
+    <span></span>
+  </div>
+  <div class="content">
+    <div class="section-label">Class Management</div>
+    <div class="card">
+      <div class="card-row">
+        <div class="card-icon blue">👥</div>
+        <div class="card-text">
+          <h3>Students</h3>
+          <p>Add new students, edit their details, or remove them from your classes.</p>
+        </div>
+      </div>
+      <button class="btn btn-blue" onclick="showPage('page-students')">✏️ Edit Info</button>
+    </div>
+    <div class="card">
+      <div class="card-row">
+        <div class="card-icon green">📋</div>
+        <div class="card-text">
+          <h3>Classes & Subjects</h3>
+          <p>Add new classes, rename or remove them, and manage the subjects taught in each class.</p>
+        </div>
+      </div>
+      <button class="btn btn-green" onclick="showPage('page-classes')">✏️ Edit Classes & Subjects</button>
+    </div>
+    <div class="section-label">General</div>
+    <div class="about-card">
+      <span class="info-icon">ℹ️</span>
+      <p>Changes you make to students apply instantly everywhere — class rosters, attendance marking and assignment progress.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== DASHBOARD PAGE ===================== -->
+<div class="page" id="page-dashboard">
+  <div class="appbar">
+    <span class="title">School Connect</span>
+    <span style="font-size:14px;color:var(--grey)">Demo App</span>
+  </div>
+  <div class="content" style="padding-top:40px; text-align:center;">
+    <div style="font-size:48px; margin-bottom:16px;">🏫</div>
+    <h2 style="color:var(--blue-dark); margin-bottom:8px;">Welcome, Teacher!</h2>
+    <p style="color:var(--grey); margin-bottom:32px;">School Connect Demo App Preview</p>
+    <button class="btn btn-blue" onclick="showPage('page-settings')" style="max-width:280px; margin:0 auto;">⚙️ Open Settings</button>
+  </div>
+</div>
+
+<!-- ===================== STUDENTS PAGE ===================== -->
+<div class="page" id="page-students">
+  <div class="appbar">
+    <button class="back" onclick="showPage('page-settings')">&lt;</button>
+    <span class="title">Edit Students</span>
+    <button class="action" onclick="openStudentModal()" title="Add student">👤+</button>
+  </div>
+  <div class="search-bar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="student-search" placeholder="Search by name, email or roll no." oninput="renderStudents()">
+    </div>
+  </div>
+  <div class="filter-bar" id="student-filter-bar"></div>
+  <div style="padding:0 20px;" id="student-list"></div>
+  <button class="fab" onclick="openStudentModal()">➕ Add Student</button>
+</div>
+
+<!-- ===================== CLASSES PAGE ===================== -->
+<div class="page" id="page-classes">
+  <div class="appbar">
+    <button class="back" onclick="showPage('page-settings')">&lt;</button>
+    <span class="title">Classes & Subjects</span>
+    <span></span>
+  </div>
+  <div style="padding:20px;" id="class-list"></div>
+  <button class="fab green-fab" onclick="openClassModal()">➕ Add Class</button>
+</div>
+
+<!-- ===================== SUBJECTS PAGE ===================== -->
+<div class="page" id="page-subjects">
+  <div class="appbar">
+    <button class="back" onclick="showPage('page-classes')">&lt;</button>
+    <span class="title" id="subjects-title">Subjects</span>
+    <span></span>
+  </div>
+  <div style="padding:20px;" id="subject-list"></div>
+  <button class="fab green-fab" onclick="openSubjectModal()">➕ Add Subject</button>
+</div>
+
+</div><!-- /phone -->
+
+<!-- Student Modal -->
+<div class="modal-overlay" id="student-modal">
+  <div class="modal">
+    <h2 id="student-modal-title">Add Student</h2>
+    <div class="field"><label>Full name *</label><input id="sf-name" type="text" placeholder="e.g. Aarav Patel"></div>
+    <div class="field"><label>Email</label><input id="sf-email" type="email" placeholder="student@example.com"></div>
+    <div class="field"><label>Class *</label><select id="sf-group"></select></div>
+    <div style="display:flex;gap:12px;">
+      <div class="field" style="flex:1"><label>Roll no.</label><input id="sf-roll" type="number" placeholder="1"></div>
+      <div class="field" style="flex:1"><label>Age</label><input id="sf-age" type="number" placeholder="12"></div>
+    </div>
+    <div class="field"><label>Gender</label><select id="sf-gender"><option value="">—</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeModal('student-modal')">Cancel</button>
+      <button class="save-btn" id="student-save-btn" onclick="saveStudent()">Add Student</button>
+    </div>
+  </div>
+</div>
+
+<!-- Class Modal -->
+<div class="modal-overlay" id="class-modal">
+  <div class="modal">
+    <h2 class="green-title" id="class-modal-title">Add Class</h2>
+    <div class="field"><label>Class Name *</label><input id="cf-name" type="text" placeholder="e.g. Class 10-A"></div>
+    <div class="field"><label>Program / Grade</label><input id="cf-program" type="text" placeholder="e.g. Grade 10"></div>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeModal('class-modal')">Cancel</button>
+      <button class="save-btn green-btn" id="class-save-btn" onclick="saveClass()">Add Class</button>
+    </div>
+  </div>
+</div>
+
+<!-- Subject Modal -->
+<div class="modal-overlay" id="subject-modal">
+  <div class="modal">
+    <h2 class="green-title" id="subject-modal-title">Add Subject</h2>
+    <div class="field"><label>Subject Name *</label><input id="subjf-name" type="text" placeholder="e.g. Mathematics"></div>
+    <div class="field"><label>Room</label><input id="subjf-room" type="text" placeholder="e.g. Room 204"></div>
+    <div style="display:flex;gap:12px;">
+      <div class="field" style="flex:1"><label>Start Time</label><input id="subjf-start" type="time" value="09:00"></div>
+      <div class="field" style="flex:1"><label>End Time</label><input id="subjf-end" type="time" value="10:00"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeModal('subject-modal')">Cancel</button>
+      <button class="save-btn green-btn" id="subj-save-btn" onclick="saveSubject()">Add Subject</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <h2 id="confirm-title">Confirm</h2>
+    <p id="confirm-msg" style="color:#6B7280;font-size:14px;line-height:1.5;"></p>
+    <div class="confirm-actions">
+      <button class="cancel-btn" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="save-btn" id="confirm-btn" style="background:var(--red);" onclick="">Remove</button>
+    </div>
+  </div>
+</div>
+
+<!-- Snackbar -->
+<div class="snackbar" id="snackbar"></div>
+
+<script>
+// ==================== DATA STORE (localStorage) ====================
+function getStore(key, def) {
+  try { return JSON.parse(localStorage.getItem('sc_' + key)) || def; } catch { return def; }
+}
+function setStore(key, val) { localStorage.setItem('sc_' + key, JSON.stringify(val)); }
+
+function initDB() {
+  if (!getStore('students')) {
+    setStore('students', [
+      { id:'s1', name:'Aarav Patel', email:'aarav@school.com', groupId:'g1', rollNumber:'01', age:15, gender:'Male' },
+      { id:'s2', name:'Priya Sharma', email:'priya@school.com', groupId:'g1', rollNumber:'02', age:14, gender:'Female' },
+      { id:'s3', name:'Rohit Kumar', email:'rohit@school.com', groupId:'g2', rollNumber:'01', age:16, gender:'Male' },
+      { id:'s4', name:'Ananya Singh', email:'ananya@school.com', groupId:'g2', rollNumber:'02', age:15, gender:'Female' },
+      { id:'s5', name:'Vikram Mehta', email:'vikram@school.com', groupId:'g3', rollNumber:'01', age:16, gender:'Male' },
+    ]);
+  }
+  if (!getStore('groups')) {
+    setStore('groups', [
+      { id:'g1', name:'Class 10-A', program:'Grade 10' },
+      { id:'g2', name:'Class 10-B', program:'Grade 10' },
+      { id:'g3', name:'Class 9-A', program:'Grade 9' },
+    ]);
+  }
+  if (!getStore('subjects')) {
+    setStore('subjects', [
+      { id:'sub1', name:'Mathematics', groupId:'g1', room:'Room 101', startTime:'09:00', endTime:'10:00' },
+      { id:'sub2', name:'Science', groupId:'g1', room:'Room 102', startTime:'10:00', endTime:'11:00' },
+      { id:'sub3', name:'English', groupId:'g2', room:'Room 201', startTime:'09:00', endTime:'10:00' },
+      { id:'sub4', name:'History', groupId:'g3', room:'Room 301', startTime:'11:00', endTime:'12:00' },
+    ]);
+  }
+}
+initDB();
+
+let students = getStore('students', []);
+let groups = getStore('groups', []);
+let subjects = getStore('subjects', []);
+let activeGroupFilter = null;
+let editingStudentId = null;
+let editingClassId = null;
+let editingSubjectId = null;
+let currentSubjectGroupId = null;
+
+function saveAll() {
+  setStore('students', students);
+  setStore('groups', groups);
+  setStore('subjects', subjects);
+}
+
+function genId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2,5); }
+
+// ==================== NAVIGATION ====================
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'page-students') renderStudents();
+  if (id === 'page-classes') renderClasses();
+  if (id === 'page-subjects') renderSubjects();
+}
+
+// ==================== SNACKBAR ====================
+function showSnack(msg, color) {
+  const el = document.getElementById('snackbar');
+  el.textContent = msg;
+  el.style.background = color || 'var(--blue-primary)';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ==================== MODAL HELPERS ====================
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function openStudentModal(student) {
+  editingStudentId = student ? student.id : null;
+  document.getElementById('student-modal-title').textContent = student ? 'Edit Student' : 'Add Student';
+  document.getElementById('student-save-btn').textContent = student ? 'Save Changes' : 'Add Student';
+  document.getElementById('sf-name').value = student ? student.name : '';
+  document.getElementById('sf-email').value = student ? (student.email||'') : '';
+  document.getElementById('sf-roll').value = student ? (student.rollNumber||'') : '';
+  document.getElementById('sf-age').value = student ? (student.age||'') : '';
+  document.getElementById('sf-gender').value = student ? (student.gender||'') : '';
+  // Populate groups
+  const sel = document.getElementById('sf-group');
+  sel.innerHTML = groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+  sel.value = student ? student.groupId : (activeGroupFilter || (groups[0] ? groups[0].id : ''));
+  document.getElementById('student-modal').classList.add('open');
+}
+
+function openClassModal(cls) {
+  editingClassId = cls ? cls.id : null;
+  document.getElementById('class-modal-title').textContent = cls ? 'Edit Class' : 'Add Class';
+  document.getElementById('class-save-btn').textContent = cls ? 'Save Changes' : 'Add Class';
+  document.getElementById('cf-name').value = cls ? cls.name : '';
+  document.getElementById('cf-program').value = cls ? (cls.program||'') : '';
+  document.getElementById('class-modal').classList.add('open');
+}
+
+function openSubjectModal(subj) {
+  editingSubjectId = subj ? subj.id : null;
+  document.getElementById('subject-modal-title').textContent = subj ? 'Edit Subject' : 'Add Subject';
+  document.getElementById('subj-save-btn').textContent = subj ? 'Save Changes' : 'Add Subject';
+  document.getElementById('subjf-name').value = subj ? subj.name : '';
+  document.getElementById('subjf-room').value = subj ? (subj.room||'') : '';
+  document.getElementById('subjf-start').value = subj ? (subj.startTime||'09:00') : '09:00';
+  document.getElementById('subjf-end').value = subj ? (subj.endTime||'10:00') : '10:00';
+  document.getElementById('subject-modal').classList.add('open');
+}
+
+function openConfirm(title, msg, onConfirm) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent = msg;
+  const btn = document.getElementById('confirm-btn');
+  btn.onclick = () => { closeModal('confirm-modal'); onConfirm(); };
+  document.getElementById('confirm-modal').classList.add('open');
+}
+
+// ==================== STUDENTS CRUD ====================
+function saveStudent() {
+  const name = document.getElementById('sf-name').value.trim();
+  const email = document.getElementById('sf-email').value.trim();
+  const groupId = document.getElementById('sf-group').value;
+  const roll = document.getElementById('sf-roll').value.trim();
+  const age = document.getElementById('sf-age').value.trim();
+  const gender = document.getElementById('sf-gender').value;
+  if (!name) { showSnack('Name is required', 'var(--red)'); return; }
+  if (!groupId) { showSnack('Please choose a class', 'var(--red)'); return; }
+  if (editingStudentId) {
+    const idx = students.findIndex(s => s.id === editingStudentId);
+    if (idx >= 0) { students[idx] = { ...students[idx], name, email: email||null, groupId, rollNumber: roll||null, age: age ? parseInt(age) : null, gender: gender||null }; }
+    showSnack('Student details updated.');
+  } else {
+    students.push({ id: genId(), name, email: email||null, groupId, rollNumber: roll||null, age: age ? parseInt(age) : null, gender: gender||null });
+    showSnack(name + ' added to the class.');
+  }
+  saveAll();
+  closeModal('student-modal');
+  renderStudents();
+}
+
+function deleteStudent(id) {
+  const s = students.find(x => x.id === id);
+  openConfirm('Remove student?', `"${s.name}" will be removed from the class along with their attendance and assignment records. This cannot be undone.`, () => {
+    students = students.filter(x => x.id !== id);
+    saveAll();
+    renderStudents();
+    showSnack(s.name + ' removed.');
+  });
+}
+
+function renderStudents() {
+  const q = (document.getElementById('student-search').value || '').trim().toLowerCase();
+  // Filter chips
+  const filterBar = document.getElementById('student-filter-bar');
+  filterBar.innerHTML = `<button class="chip ${activeGroupFilter === null ? 'active' : 'inactive'}" onclick="setGroupFilter(null)">All</button>` +
+    groups.map(g => `<button class="chip ${activeGroupFilter === g.id ? 'active' : 'inactive'}" onclick="setGroupFilter('${g.id}')">${g.name}</button>`).join('');
+  // Filter students
+  const filtered = students.filter(s => {
+    if (activeGroupFilter && s.groupId !== activeGroupFilter) return false;
+    if (q) return s.name.toLowerCase().includes(q) || (s.email||'').toLowerCase().includes(q) || (s.rollNumber||'').includes(q);
+    return true;
+  });
+  // Group
+  const sections = {};
+  filtered.forEach(s => { (sections[s.groupId] = sections[s.groupId] || []).push(s); });
+  const container = document.getElementById('student-list');
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--grey);">😔<br><br>${q ? 'No students match your search.' : 'No students yet. Tap "Add Student" to add one.'}</div>`;
+    return;
+  }
+  let html = '';
+  groups.filter(g => sections[g.id]).forEach(g => {
+    html += `<div class="class-header"><span class="name">${g.name}</span><span class="badge">${sections[g.id].length}</span></div>`;
+    sections[g.id].forEach(s => {
+      const info = [s.gender, s.age ? s.age + ' yrs' : null].filter(Boolean).join(' • ') || (s.email || 'No email');
+      const finalInfo = info + (s.email && info !== s.email ? ' • ' + s.email : '');
+      html += `<div class="student-row">
+        <div class="avatar">${s.rollNumber || '-'}</div>
+        <div class="student-info">
+          <div class="name">${s.name}</div>
+          <div class="meta">${finalInfo}</div>
+        </div>
+        <button class="icon-btn blue" onclick='openStudentModal(${JSON.stringify(s).replace(/'/g,"&#39;")})' title="Edit">✏️</button>
+        <button class="icon-btn red" onclick="deleteStudent('${s.id}')" title="Remove">🗑️</button>
+      </div>`;
+    });
+    html += '<div style="height:8px;"></div>';
+  });
+  container.innerHTML = html;
+}
+
+function setGroupFilter(val) { activeGroupFilter = val; renderStudents(); }
+
+// ==================== CLASSES CRUD ====================
+function saveClass() {
+  const name = document.getElementById('cf-name').value.trim();
+  const program = document.getElementById('cf-program').value.trim();
+  if (!name) { showSnack('Class name is required', 'var(--red)'); return; }
+  if (editingClassId) {
+    const idx = groups.findIndex(g => g.id === editingClassId);
+    if (idx >= 0) groups[idx] = { ...groups[idx], name, program: program||null };
+    showSnack('Class updated.');
+  } else {
+    groups.push({ id: genId(), name, program: program||null });
+    showSnack(name + ' added.');
+  }
+  saveAll();
+  closeModal('class-modal');
+  renderClasses();
+}
+
+function deleteClass(id) {
+  const g = groups.find(x => x.id === id);
+  openConfirm('Remove class?', `"${g.name}" will be removed along with all its subjects, student assignments and attendance records. This cannot be undone.`, () => {
+    groups = groups.filter(x => x.id !== id);
+    subjects = subjects.filter(s => s.groupId !== id);
+    students = students.filter(s => s.groupId !== id);
+    saveAll();
+    renderClasses();
+    showSnack(g.name + ' removed.');
+  });
+}
+
+function openSubjectsForGroup(groupId) {
+  currentSubjectGroupId = groupId;
+  const g = groups.find(x => x.id === groupId);
+  document.getElementById('subjects-title').textContent = g.name + ' — Subjects';
+  showPage('page-subjects');
+}
+
+function renderClasses() {
+  const container = document.getElementById('class-list');
+  if (groups.length === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--grey);">📋<br><br>No classes yet. Tap "Add Class" to create one.</div>`;
+    return;
+  }
+  container.innerHTML = groups.map(g => {
+    const subCount = subjects.filter(s => s.groupId === g.id).length;
+    const stuCount = students.filter(s => s.groupId === g.id).length;
+    return `<div class="class-card">
+      <div class="class-card-top">
+        <div>
+          <div class="class-name">${g.name}</div>
+          <div class="program">${g.program || 'No program'} • ${stuCount} students • ${subCount} subjects</div>
+        </div>
+        <div class="class-card-actions">
+          <button class="icon-btn blue" onclick='openClassModal(${JSON.stringify(g).replace(/'/g,"&#39;")})' title="Edit">✏️</button>
+          <button class="icon-btn red" onclick="deleteClass('${g.id}')" title="Remove">🗑️</button>
+        </div>
+      </div>
+      <button class="manage-subjects-btn" onclick="openSubjectsForGroup('${g.id}')">📚 Manage Subjects (${subCount})</button>
+    </div>`;
+  }).join('');
+}
+
+// ==================== SUBJECTS CRUD ====================
+function saveSubject() {
+  const name = document.getElementById('subjf-name').value.trim();
+  const room = document.getElementById('subjf-room').value.trim();
+  const start = document.getElementById('subjf-start').value;
+  const end = document.getElementById('subjf-end').value;
+  if (!name) { showSnack('Subject name is required', 'var(--red)'); return; }
+  if (editingSubjectId) {
+    const idx = subjects.findIndex(s => s.id === editingSubjectId);
+    if (idx >= 0) subjects[idx] = { ...subjects[idx], name, room: room||null, startTime: start, endTime: end };
+    showSnack('Subject updated.');
+  } else {
+    subjects.push({ id: genId(), name, groupId: currentSubjectGroupId, room: room||null, startTime: start, endTime: end });
+    showSnack(name + ' added.');
+  }
+  saveAll();
+  closeModal('subject-modal');
+  renderSubjects();
+}
+
+function deleteSubject(id) {
+  const s = subjects.find(x => x.id === id);
+  openConfirm('Remove subject?', `"${s.name}" will be removed along with its schedule and attendance records. This cannot be undone.`, () => {
+    subjects = subjects.filter(x => x.id !== id);
+    saveAll();
+    renderSubjects();
+    showSnack(s.name + ' removed.');
+  });
+}
+
+function renderSubjects() {
+  const container = document.getElementById('subject-list');
+  const filtered = subjects.filter(s => s.groupId === currentSubjectGroupId);
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--grey);">📚<br><br>No subjects yet. Tap "Add Subject" to add one.</div>`;
+    return;
+  }
+  container.innerHTML = filtered.map(s => {
+    return `<div class="subject-row">
+      <div class="subject-icon">📚</div>
+      <div class="subject-info">
+        <div class="name">${s.name}</div>
+        <div class="meta">${s.room || 'No room'} • ${s.startTime || '?'} – ${s.endTime || '?'}</div>
+      </div>
+      <button class="icon-btn blue" onclick='openSubjectModal(${JSON.stringify(s).replace(/'/g,"&#39;")})' title="Edit">✏️</button>
+      <button class="icon-btn red" onclick="deleteSubject('${s.id}')" title="Remove">🗑️</button>
+    </div>`;
+  }).join('');
+}
+
+// Init
+renderStudents();
+</script>
+</body>
+</html>

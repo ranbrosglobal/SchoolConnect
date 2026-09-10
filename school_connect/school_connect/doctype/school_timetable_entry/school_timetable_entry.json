@@ -1,0 +1,107 @@
+{
+  "actions": [],
+  "creation": "Link",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "school",
+    "student_group",
+    "column_break_1",
+    "instructor",
+    "day",
+    "period",
+    "column_break_2",
+    "subject"
+  ],
+  "fields": [
+    {
+      "fieldname": "school",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "label": "School",
+      "options": "School",
+      "reqd": 1
+    },
+    {
+      "fieldname": "student_group",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "label": "Class",
+      "options": "Student Group",
+      "reqd": 1
+    },
+    {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "instructor",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "Instructor",
+      "options": "Instructor",
+      "reqd": 1
+    },
+    {
+      "fieldname": "day",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "label": "Day",
+      "options": "Monday\nTuesday\nWednesday\nThursday\nFriday",
+      "reqd": 1
+    },
+    {
+      "fieldname": "period",
+      "fieldtype": "Int",
+      "in_list_view": 1,
+      "label": "Period",
+      "reqd": 1
+    },
+    {
+      "fieldname": "column_break_2",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "subject",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Subject",
+      "reqd": 1
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2024-01-01 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "School Connect",
+  "name": "School Timetable Entry",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "School Admin",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Instructor",
+      "read": 1
+    }
+  ],
+  "search_fields": "student_group,subject,day",
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

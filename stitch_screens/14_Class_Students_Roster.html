@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Class Students Roster</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Kalam:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#000e5e",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "inverse-surface": "#2e3133",
+                        "tertiary-fixed-dim": "#61dca6",
+                        "surface-container": "#edeef1",
+                        "primary": "#3145bb",
+                        "tertiary-fixed": "#7ff9c1",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "inverse-primary": "#bbc3ff",
+                        "on-tertiary-container": "#a3ffd0",
+                        "surface-dim": "#d9dadd",
+                        "error": "#ba1a1a",
+                        "secondary-fixed": "#ffddb1",
+                        "secondary": "#815600",
+                        "outline-variant": "#c5c5d6",
+                        "surface": "#f8f9fc",
+                        "inverse-on-surface": "#f0f1f4",
+                        "surface-container-high": "#e7e8eb",
+                        "secondary-container": "#fdaf1e",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface-variant": "#454653",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#eaeaff",
+                        "secondary-fixed-dim": "#ffba4b",
+                        "surface-tint": "#3f52c8",
+                        "on-primary-fixed-variant": "#2338af",
+                        "surface-container-highest": "#e1e2e5",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#4c5fd5",
+                        "background": "#f8f9fc",
+                        "surface-bright": "#f8f9fc",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "primary-fixed": "#dee0ff",
+                        "surface-container-low": "#f2f3f6",
+                        "on-secondary-fixed": "#291800",
+                        "tertiary-container": "#007a53",
+                        "tertiary": "#005f40",
+                        "surface-variant": "#e1e2e5",
+                        "on-background": "#191c1e",
+                        "on-tertiary-fixed": "#002113",
+                        "on-surface": "#191c1e",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#757685",
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#6a4600",
+                        "on-secondary-fixed-variant": "#624000"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "xs": "8px",
+                        "margin-mobile": "16px",
+                        "md": "24px",
+                        "sm": "16px",
+                        "lg": "32px",
+                        "xl": "48px",
+                        "margin-desktop": "32px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "body-sm": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "doodle-note": ["Kalam"],
+                        "label-caps": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "doodle-note": ["16px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #F8F9FC; }
+        .notebook-border { border: 1px solid #E2E8F0; }
+        .hand-drawn-border { border: 2px dashed #c5c5d6; }
+        .scribble-underline {
+            position: relative;
+        }
+        .scribble-underline::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 10" preserveAspectRatio="none"><path d="M0,5 Q20,10 40,3 T60,8 T80,2 T100,5" fill="none" stroke="%233145bb" stroke-width="2"/></svg>') no-repeat;
+            background-size: 100% 100%;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen pb-[80px] md:pb-0">
+<!-- TopAppBar -->
+<header class="bg-primary dark:bg-primary-container text-on-primary dark:text-on-primary-container shadow-sm docked full-width top-0 z-40 bg-gradient-to-r from-primary to-primary-container dark:from-primary-container dark:to-primary">
+<div class="flex justify-between items-center w-full px-margin-mobile py-sm md:hidden">
+<div class="flex items-center gap-sm">
+<img class="w-8 h-8 rounded-full bg-surface object-cover" data-alt="A small circular avatar placeholder showing a generic user profile icon in a minimalist style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9xAfjxCr4e57taKrAUY_Eyx3-L6rVM0-mRqVi5mw__3ZA_1H7WA1rLK_qnjFfdzyz7S7CMoG-SjqW91I09UGHMMKDZawMaFUNan16a9gHpih851IH6LUugFjuBkAopef_fAqqVjYTGwGuXnTV7SOuTzVi4i1YKKqqBMf_tBDniMmaYyJwITXQUeSg3Q7d7ma4xo_K6wByFg23FruOxPQ4qkfCI7Fxz4mP-UvQeBSulSQ6WJJ-DngN"/>
+<span class="text-headline-md font-headline-md font-bold text-on-primary dark:text-on-primary-container">School Connect</span>
+</div>
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</div>
+<!-- Desktop Nav -->
+<div class="hidden md:flex justify-between items-center w-full px-margin-desktop py-sm max-w-7xl mx-auto">
+<div class="flex items-center gap-sm">
+<img class="w-10 h-10 rounded-full bg-surface object-cover" data-alt="A small circular avatar placeholder showing a generic user profile icon in a minimalist style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSCbcug7Grj67qDh8yESklzoqmjKE4__rvKEngrSorgWyS1JcCbvFWPOq8m2q9ow9EY3tQstacQKSkpvJfvoo6_8xI2fDnVRRmfLOpcA-ue3yocOPJWLQu3UbZv5AVeQSAxRAi9oiQa8wTQy87-GxYCK0bWV0gh7hyuhC2n3tPzzMntFfTTyCV2D_zFPh8DHAUAXXaLjH15af-aDA90onHIWxZp9iM_M3UiUAcIXXLyFyawiTEuldC"/>
+<span class="text-headline-md font-headline-md font-bold text-on-primary dark:text-on-primary-container">School Connect</span>
+</div>
+<nav class="flex gap-lg">
+<a class="text-on-primary/70 hover:opacity-90 transition-opacity text-label-caps font-label-caps" href="#">Home</a>
+<a class="text-on-primary/70 hover:opacity-90 transition-opacity text-label-caps font-label-caps" href="#">Attendance</a>
+<a class="text-on-primary font-bold hover:opacity-90 transition-opacity text-label-caps font-label-caps border-b-2 border-secondary-container pb-1" href="#">Classes</a>
+<a class="text-on-primary/70 hover:opacity-90 transition-opacity text-label-caps font-label-caps" href="#">Alerts</a>
+</nav>
+<span class="material-symbols-outlined hover:opacity-90 transition-opacity cursor-pointer" data-icon="settings">settings</span>
+</div>
+</header>
+<main class="px-margin-mobile md:px-margin-desktop py-md max-w-7xl mx-auto flex-1">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-lg gap-sm relative">
+<div>
+<h1 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg-mobile md:font-headline-lg text-primary mb-xs">Physics 101 Roster</h1>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Mr. Anderson • Fall Semester</p>
+</div>
+<div class="relative w-full md:w-auto">
+<div class="absolute -top-6 -right-2 md:right-auto md:-left-4 transform rotate-3">
+<span class="font-doodle-note text-doodle-note text-primary scribble-underline">sorted by roll no.</span>
+<span class="material-symbols-outlined text-primary text-[16px] absolute -left-4 top-2 transform -rotate-45" style="font-variation-settings: 'FILL' 1;">north_west</span>
+</div>
+</div>
+</div>
+<!-- Search Bar -->
+<div class="mb-lg">
+<div class="relative w-full md:w-96">
+<span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-outline">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-lowest notebook-border rounded-lg text-body-sm font-body-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-[0px_4px_12px_rgba(35,38,53,0.05)]" placeholder="Search students..." type="text"/>
+</div>
+</div>
+<!-- Roster List -->
+<div class="flex flex-col gap-sm">
+<!-- Student Row 1 -->
+<div class="bg-surface-container-lowest notebook-border rounded-[18px] p-sm flex items-center justify-between shadow-[0px_4px_12px_rgba(35,38,53,0.05)] hover:shadow-[0px_8px_24px_rgba(35,38,53,0.1)] transition-shadow">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-caps text-label-caps">
+                        #01
+                    </div>
+<div>
+<h3 class="text-body-lg font-body-lg font-bold">Alice Freeman</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Present</p>
+</div>
+</div>
+<div class="flex items-center gap-xs">
+<div class="relative w-12 h-12 flex items-center justify-center">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-variant" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+<path class="text-tertiary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="98, 100" stroke-width="3"></path>
+</svg>
+<span class="absolute text-[10px] font-bold text-tertiary">98%</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant cursor-pointer hover:text-primary transition-colors">more_vert</span>
+</div>
+</div>
+<!-- Student Row 2 -->
+<div class="bg-surface-container-lowest notebook-border rounded-[18px] p-sm flex items-center justify-between shadow-[0px_4px_12px_rgba(35,38,53,0.05)] hover:shadow-[0px_8px_24px_rgba(35,38,53,0.1)] transition-shadow">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-caps text-label-caps">
+                        #02
+                    </div>
+<div>
+<h3 class="text-body-lg font-body-lg font-bold">Bob Johnson</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Absent</p>
+</div>
+</div>
+<div class="flex items-center gap-xs">
+<div class="relative w-12 h-12 flex items-center justify-center">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-variant" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+<path class="text-secondary-container" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="85, 100" stroke-width="3"></path>
+</svg>
+<span class="absolute text-[10px] font-bold text-secondary-container">85%</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant cursor-pointer hover:text-primary transition-colors">more_vert</span>
+</div>
+</div>
+<!-- Student Row 3 -->
+<div class="bg-surface-container-lowest notebook-border rounded-[18px] p-sm flex items-center justify-between shadow-[0px_4px_12px_rgba(35,38,53,0.05)] hover:shadow-[0px_8px_24px_rgba(35,38,53,0.1)] transition-shadow relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-error"></div>
+<div class="flex items-center gap-sm ml-2">
+<div class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-caps text-label-caps">
+                        #03
+                    </div>
+<div>
+<h3 class="text-body-lg font-body-lg font-bold">Charlie Davis</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-error inline-block"></span>
+                            Late
+                        </p>
+</div>
+</div>
+<div class="flex items-center gap-xs">
+<div class="relative w-12 h-12 flex items-center justify-center">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-variant" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+<path class="text-error" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="72, 100" stroke-width="3"></path>
+</svg>
+<span class="absolute text-[10px] font-bold text-error">72%</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant cursor-pointer hover:text-primary transition-colors">more_vert</span>
+</div>
+</div>
+<!-- Add Student Slot -->
+<div class="bg-surface/50 hand-drawn-border rounded-[18px] p-sm flex items-center justify-center cursor-pointer hover:bg-surface-container-low transition-colors min-h-[72px]">
+<span class="text-primary font-doodle-note flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">add</span>
+                    Add new student
+                </span>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-surface-container-lowest dark:bg-inverse-surface border-t border-outline-variant dark:border-none shadow-[0px_-4px_12px_rgba(35,38,53,0.05)] rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined font-light" data-icon="dashboard">dashboard</span>
+<span class="text-label-caps font-label-caps mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined font-light" data-icon="event_available">event_available</span>
+<span class="text-label-caps font-label-caps mt-1">Attendance</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim relative after:content-[''] after:absolute after:-bottom-1 after:w-2 after:h-2 after:bg-secondary-container after:rounded-full scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined font-light" data-icon="menu_book">menu_book</span>
+<span class="text-label-caps font-label-caps mt-1 font-bold">Classes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined font-light" data-icon="notifications">notifications</span>
+<span class="text-label-caps font-label-caps mt-1">Alerts</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined font-light" data-icon="more_horiz">more_horiz</span>
+<span class="text-label-caps font-label-caps mt-1">Menu</span>
+</a>
+</nav>
+</body></html>

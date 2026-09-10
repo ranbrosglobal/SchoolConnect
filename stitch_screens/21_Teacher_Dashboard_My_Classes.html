@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Teacher Dashboard - My Classes</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Kalam:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#000e5e",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "inverse-surface": "#2e3133",
+                        "tertiary-fixed-dim": "#61dca6",
+                        "surface-container": "#edeef1",
+                        "primary": "#3145bb",
+                        "tertiary-fixed": "#7ff9c1",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "inverse-primary": "#bbc3ff",
+                        "on-tertiary-container": "#a3ffd0",
+                        "surface-dim": "#d9dadd",
+                        "error": "#ba1a1a",
+                        "secondary-fixed": "#ffddb1",
+                        "secondary": "#815600",
+                        "outline-variant": "#c5c5d6",
+                        "surface": "#f8f9fc",
+                        "inverse-on-surface": "#f0f1f4",
+                        "surface-container-high": "#e7e8eb",
+                        "secondary-container": "#fdaf1e",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface-variant": "#454653",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#eaeaff",
+                        "secondary-fixed-dim": "#ffba4b",
+                        "surface-tint": "#3f52c8",
+                        "on-primary-fixed-variant": "#2338af",
+                        "surface-container-highest": "#e1e2e5",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#4c5fd5",
+                        "background": "#f8f9fc",
+                        "surface-bright": "#f8f9fc",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "primary-fixed": "#dee0ff",
+                        "surface-container-low": "#f2f3f6",
+                        "on-secondary-fixed": "#291800",
+                        "tertiary-container": "#007a53",
+                        "tertiary": "#005f40",
+                        "surface-variant": "#e1e2e5",
+                        "on-background": "#191c1e",
+                        "on-tertiary-fixed": "#002113",
+                        "on-surface": "#191c1e",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#757685",
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#6a4600",
+                        "on-secondary-fixed-variant": "#624000"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "xs": "8px",
+                        "margin-mobile": "16px",
+                        "md": "24px",
+                        "sm": "16px",
+                        "lg": "32px",
+                        "xl": "48px",
+                        "margin-desktop": "32px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "body-sm": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "doodle-note": ["Kalam"],
+                        "label-caps": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "doodle-note": ["16px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill-1 {
+            font-variation-settings: 'FILL' 1;
+        }
+        .hairline-border {
+            border: 1px solid #E2E8F0;
+        }
+        .doodle-border {
+            border: 2px dashed #c5c5d6;
+            border-radius: 18px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background antialiased min-h-screen pb-20 md:pb-0">
+<!-- TopAppBar -->
+<header class="bg-primary dark:bg-primary-container docked full-width top-0 shadow-sm bg-gradient-to-r from-primary to-primary-container dark:from-primary-container dark:to-primary">
+<div class="flex justify-between items-center w-full px-margin-mobile py-sm md:px-margin-desktop md:py-md">
+<div class="flex items-center gap-sm">
+<img class="w-10 h-10 rounded-full object-cover border-2 border-white/20" data-alt="A professional headshot of a middle-aged male teacher with a warm smile, wearing glasses and a neat button-down shirt. The lighting is soft and natural, suggesting a friendly and approachable academic environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDzwZ1-IueCMKac2hJnMM-AlnL9LrRHKnFga-y4T7QqYCjhAaURVn03fm6tq8G0ARVH65e4nMnJuKuL_NU4hOD00ZQhvrvtjspO0vMiwl7Pff3pBl8pXZwboi_htNBXmSHXi7_t2n4AZl_hw5SAcnzV1VsOBLtIrOMVg1H4yAxhD4QChiNhXoInb8l2e9qidgkKbCygLfd3VQA5cYFWUpqXRT7bvDs77pHW0Y-kZ80hLcuWik2Hl-s"/>
+<div>
+<h1 class="text-headline-md font-headline-md font-bold text-on-primary dark:text-on-primary-container">Good morning, Mr. Johnson</h1>
+<p class="text-label-caps font-label-caps text-on-primary/70">Monday, October 23</p>
+</div>
+</div>
+<div class="flex items-center gap-xs">
+<span aria-hidden="true" class="material-symbols-outlined text-secondary-container icon-fill-1 animate-pulse" style="font-size: 1.5rem;">alarm</span>
+<button class="hover:opacity-90 transition-opacity scale-95 transition-transform duration-150 p-2 rounded-full bg-white/10 text-on-primary">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</div>
+<!-- Desktop Nav Items (Hidden on mobile) -->
+<nav class="hidden md:flex gap-lg px-margin-desktop pb-sm">
+<a class="text-on-primary font-bold text-label-caps font-label-caps relative after:content-[''] after:absolute after:-bottom-2 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-secondary-container after:rounded-full" href="#">Home</a>
+<a class="text-on-primary/70 hover:opacity-90 transition-opacity text-label-caps font-label-caps" href="#">Attendance</a>
+<a class="text-on-primary/70 hover:opacity-90 transition-opacity text-label-caps font-label-caps" href="#">Classes</a>
+<a class="text-on-primary/70 hover:opacity-90 transition-opacity text-label-caps font-label-caps" href="#">Alerts</a>
+<a class="text-on-primary/70 hover:opacity-90 transition-opacity text-label-caps font-label-caps" href="#">Menu</a>
+</nav>
+</header>
+<!-- Main Content -->
+<main class="px-margin-mobile py-md md:px-margin-desktop md:py-lg max-w-7xl mx-auto">
+<div class="flex justify-between items-end mb-md">
+<div>
+<h2 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg-mobile md:font-headline-lg text-primary">My Classes</h2>
+<p class="text-body-sm font-body-sm text-on-surface-variant font-doodle-note mt-1 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">edit</span> 3 classes scheduled today
+                </p>
+</div>
+<button class="hidden md:flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded-xl text-label-caps font-label-caps hover:bg-primary-container transition-colors shadow-sm">
+<span class="material-symbols-outlined text-sm">add</span> New Assignment
+            </button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-sm md:gap-md">
+<!-- Class Card 1 -->
+<div class="bg-surface-container-lowest rounded-[18px] hairline-border shadow-[0px_4px_12px_rgba(35,38,53,0.05)] p-sm md:p-md flex flex-col justify-between hover:shadow-[0px_8px_24px_rgba(35,38,53,0.1)] transition-shadow">
+<div>
+<div class="flex justify-between items-start mb-sm">
+<div>
+<span class="inline-flex items-center gap-1 bg-tertiary/10 text-tertiary px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> In Progress
+                            </span>
+<h3 class="text-headline-md font-headline-md text-on-surface">Advanced Physics</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Grade 11 • Group A</p>
+</div>
+<div class="w-12 h-12 rounded-full border-4 border-surface-container-low flex items-center justify-center relative">
+<!-- Simulated Progress Ring -->
+<svg class="absolute inset-0 w-full h-full -rotate-90 text-primary" viewbox="0 0 36 36">
+<path class="stroke-current" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-dasharray="100, 100" stroke-dashoffset="15" stroke-width="4"></path>
+</svg>
+<span class="text-label-caps font-label-caps text-primary">85%</span>
+</div>
+</div>
+<div class="space-y-2 mb-md">
+<div class="flex items-center gap-2 text-body-sm font-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">calendar_today</span>
+                            Mon, Wed, Fri • 09:00 AM - 10:30 AM
+                        </div>
+<div class="flex items-center gap-2 text-body-sm font-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">meeting_room</span>
+                            Room 302, Science Wing
+                        </div>
+</div>
+</div>
+<div class="flex gap-2 mt-auto">
+<button class="flex-1 flex items-center justify-center gap-2 bg-surface-container-low hover:bg-surface-container transition-colors text-primary py-2 rounded-lg text-label-caps font-label-caps">
+<span class="material-symbols-outlined text-sm">checklist</span> Attendance
+                    </button>
+<button class="flex-1 flex items-center justify-center gap-2 bg-surface-container-low hover:bg-surface-container transition-colors text-primary py-2 rounded-lg text-label-caps font-label-caps">
+<span class="material-symbols-outlined text-sm">group</span> Students
+                    </button>
+</div>
+</div>
+<!-- Class Card 2 -->
+<div class="bg-surface-container-lowest rounded-[18px] hairline-border shadow-[0px_4px_12px_rgba(35,38,53,0.05)] p-sm md:p-md flex flex-col justify-between hover:shadow-[0px_8px_24px_rgba(35,38,53,0.1)] transition-shadow">
+<div>
+<div class="flex justify-between items-start mb-sm">
+<div>
+<span class="inline-flex items-center gap-1 bg-secondary/10 text-secondary px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Upcoming
+                            </span>
+<h3 class="text-headline-md font-headline-md text-on-surface">World History</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Grade 10 • Group B</p>
+</div>
+<div class="w-12 h-12 rounded-full border-4 border-surface-container-low flex items-center justify-center relative text-on-surface-variant opacity-50">
+<span class="material-symbols-outlined">schedule</span>
+</div>
+</div>
+<div class="space-y-2 mb-md">
+<div class="flex items-center gap-2 text-body-sm font-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">calendar_today</span>
+                            Mon, Wed, Fri • 11:00 AM - 12:30 PM
+                        </div>
+<div class="flex items-center gap-2 text-body-sm font-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">meeting_room</span>
+                            Room 105, Main Building
+                        </div>
+</div>
+</div>
+<div class="flex gap-2 mt-auto">
+<button class="flex-1 flex items-center justify-center gap-2 bg-surface-container-low hover:bg-surface-container transition-colors text-primary py-2 rounded-lg text-label-caps font-label-caps">
+<span class="material-symbols-outlined text-sm">checklist</span> Attendance
+                    </button>
+<button class="flex-1 flex items-center justify-center gap-2 bg-surface-container-low hover:bg-surface-container transition-colors text-primary py-2 rounded-lg text-label-caps font-label-caps">
+<span class="material-symbols-outlined text-sm">group</span> Students
+                    </button>
+</div>
+</div>
+<!-- Empty State Card -->
+<div class="bg-transparent rounded-[18px] doodle-border p-sm md:p-md flex flex-col justify-center items-center text-center opacity-70 hover:opacity-100 transition-opacity cursor-pointer min-h-[250px]">
+<span class="material-symbols-outlined text-primary text-4xl mb-2 icon-fill-1">add_circle</span>
+<h3 class="text-headline-md font-headline-md text-primary mb-1">Add Class</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant font-doodle-note">Schedule a new session</p>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-surface-container-lowest dark:bg-inverse-surface border-t border-outline-variant dark:border-none shadow-[0px_-4px_12px_rgba(35,38,53,0.05)] rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined mb-1">dashboard</span>
+<span>Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined mb-1">event_available</span>
+<span>Attendance</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim relative after:content-[''] after:absolute after:-bottom-1 after:w-2 after:h-2 after:bg-secondary-container after:rounded-full text-label-caps font-label-caps Active: scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined mb-1 icon-fill-1">menu_book</span>
+<span>Classes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined mb-1">notifications</span>
+<span>Alerts</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary-container dark:hover:text-primary-fixed text-label-caps font-label-caps" href="#">
+<span class="material-symbols-outlined mb-1">more_horiz</span>
+<span>Menu</span>
+</a>
+</nav>
+</body></html>

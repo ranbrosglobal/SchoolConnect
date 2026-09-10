@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="#FFEBEE"/>
+  
+  <!-- Warning sign -->
+  <polygon points="100,30 170,150 30,150" fill="#FFC107"/>
+  <polygon points="100,40 160,145 40,145" fill="#FFF"/>
+  
+  <!-- Exclamation mark -->
+  <rect x="95" y="70" width="10" height="50" rx="5" fill="#F44336"/>
+  <circle cx="100" cy="135" r="6" fill="#F44336"/>
+  
+  <!-- Sad character -->
+  <circle cx="100" cy="80" r="30" fill="#FFCC80"/>
+  
+  <!-- Hair -->
+  <path d="M70 75 Q70 50 100 50 Q130 50 130 75" fill="#616161"/>
+  
+  <!-- Eyes -->
+  <circle cx="88" cy="80" r="4" fill="#333"/>
+  <circle cx="112" cy="80" r="4" fill="#333"/>
+  
+  <!-- Tear -->
+  <path d="M92 88 Q94 95 92 100" fill="none" stroke="#64B5F6" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Sad mouth -->
+  <path d="M88 100 Q100 92 112 100" fill="none" stroke="#333" stroke-width="2"/>
+  
+  <!-- Arms down -->
+  <path d="M70 100 Q50 110 45 130" fill="none" stroke="#FFCC80" stroke-width="6" stroke-linecap="round"/>
+  <path d="M130 100 Q150 110 155 130" fill="none" stroke="#FFCC80" stroke-width="6" stroke-linecap="round"/>
+  
+  <!-- Hands -->
+  <circle cx="45" cy="130" r="6" fill="#FFCC80"/>
+  <circle cx="155" cy="130" r="6" fill="#FFCC80"/>
+  
+  <!-- Error symbols -->
+  <text x="30" y="60" fill="#FFCDD2" font-size="24" font-weight="bold">×</text>
+  <text x="160" y="55" fill="#FFCDD2" font-size="20" font-weight="bold">×</text>
+  <text x="25" y="140" fill="#FFCDD2" font-size="18" font-weight="bold">×</text>
+  <text x="165" y="145" fill="#FFCDD2" font-size="16" font-weight="bold">×</text>
+</svg>

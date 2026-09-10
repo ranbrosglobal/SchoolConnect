@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>School Connect - Pick your class</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&amp;family=Plus+Jakarta+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-on-surface": "#f0f1f4",
+                        "primary-fixed": "#dee0ff",
+                        "surface-container-low": "#f2f3f6",
+                        "surface-container-high": "#e7e8eb",
+                        "on-surface-variant": "#454653",
+                        "surface-variant": "#e1e2e5",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "primary": "#3145bb",
+                        "secondary": "#815600",
+                        "secondary-fixed-dim": "#ffba4b",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#fdaf1e",
+                        "outline-variant": "#c5c5d6",
+                        "error": "#ba1a1a",
+                        "on-primary": "#ffffff",
+                        "outline": "#757685",
+                        "on-secondary-container": "#6a4600",
+                        "surface-tint": "#3f52c8",
+                        "surface": "#f8f9fc",
+                        "inverse-primary": "#bbc3ff",
+                        "on-secondary-fixed": "#291800",
+                        "primary-container": "#4c5fd5",
+                        "on-primary-fixed": "#000e5e",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#7ff9c1",
+                        "inverse-surface": "#2e3133",
+                        "surface-dim": "#d9dadd",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#191c1e",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "on-primary-container": "#eaeaff",
+                        "surface-container": "#edeef1",
+                        "surface-container-highest": "#e1e2e5",
+                        "tertiary-fixed-dim": "#61dca6",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#2338af",
+                        "tertiary": "#005f40",
+                        "on-tertiary-container": "#a3ffd0",
+                        "surface-bright": "#f8f9fc",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#ffddb1",
+                        "on-tertiary-fixed": "#002113",
+                        "on-background": "#191c1e",
+                        "on-secondary-fixed-variant": "#624000",
+                        "tertiary-container": "#007a53",
+                        "background": "#f8f9fc",
+                        "on-error-container": "#93000a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "base": "4px",
+                        "xl": "48px",
+                        "gutter": "16px",
+                        "md": "24px",
+                        "lg": "32px",
+                        "margin-desktop": "32px",
+                        "xs": "8px",
+                        "sm": "16px"
+                    },
+                    "fontFamily": {
+                        "doodle-note": ["Kalam"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "label-caps": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "body-sm": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "doodle-note": ["16px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #f8f9fc;
+            background-image: 
+                linear-gradient(#e2e8f0 1px, transparent 1px),
+                linear-gradient(90deg, #e2e8f0 1px, transparent 1px);
+            background-size: 24px 24px;
+            background-position: center top;
+        }
+        
+        .class-card {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .class-card.selected {
+            background-color: #3145bb;
+            color: #ffffff;
+            border-color: #3145bb;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .class-card.selected .doodle-star {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .doodle-star {
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .progress-step.completed {
+            background-color: #fdaf1e;
+        }
+        
+        .progress-step.current {
+            background-color: #3145bb;
+        }
+        
+        .progress-step.upcoming {
+            background-color: #e1e2e5;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen flex flex-col font-body-lg text-on-background relative text-on-surface">
+<!-- TopAppBar Nav suppression: This is a linear/transactional signup flow, so standard nav is suppressed -->
+<header class="w-full flex items-center justify-between px-margin-mobile md:px-margin-desktop py-sm bg-surface shadow-sm sticky top-0 z-10 border-b border-outline-variant/30">
+<button aria-label="Go back" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">arrow_back</span>
+</button>
+<div class="flex-1 flex justify-center">
+<h1 class="font-headline-md text-headline-md text-primary font-bold">School Connect</h1>
+</div>
+<div class="w-10 h-10"></div> <!-- Spacer for balance -->
+</header>
+<main class="flex-1 flex flex-col max-w-3xl w-full mx-auto px-margin-mobile py-lg">
+<!-- Progress Bar Section -->
+<div class="mb-xl flex flex-col items-center">
+<div class="flex items-center w-full max-w-sm gap-2">
+<div class="progress-step completed h-2 flex-1 rounded-full relative">
+<span class="material-symbols-outlined absolute -top-6 left-1/2 -translate-x-1/2 text-secondary-container text-[18px] font-doodle-note">done</span>
+</div>
+<div class="progress-step completed h-2 flex-1 rounded-full relative">
+<span class="material-symbols-outlined absolute -top-6 left-1/2 -translate-x-1/2 text-secondary-container text-[18px] font-doodle-note">done</span>
+</div>
+<div class="progress-step current h-2 flex-1 rounded-full relative">
+<span class="absolute -bottom-8 left-1/2 -translate-x-1/2 font-label-caps text-label-caps text-primary whitespace-nowrap">STEP 3</span>
+</div>
+<div class="progress-step upcoming h-2 flex-1 rounded-full"></div>
+</div>
+</div>
+<!-- Header -->
+<div class="mb-md text-center relative">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface font-bold mb-xs">Pick your class</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Select the class you'll be managing.</p>
+<!-- Doodle Accent -->
+<svg class="absolute -bottom-6 left-1/2 -translate-x-1/2 w-32 h-6 text-primary/40 pointer-events-none" fill="none" viewbox="0 0 100 20" xmlns="http://www.w3.org/2000/svg">
+<path class="stroke-current" d="M2 15C20 5 80 5 98 15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<!-- Class Selection Grid -->
+<div class="grid grid-cols-2 md:grid-cols-3 gap-gutter mb-xl mt-sm">
+<button class="class-card bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col items-center justify-center gap-xs relative overflow-hidden group hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50" onclick="toggleSelection(this)">
+<span class="font-headline-md text-headline-md font-semibold">Grade 8</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant group-[.selected]:text-on-primary/80 bg-surface-variant group-[.selected]:bg-on-primary/20 px-3 py-1 rounded-full">Section A</span>
+<span class="doodle-star material-symbols-outlined absolute top-2 right-2 text-secondary-container">kid_star</span>
+</button>
+<button class="class-card bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col items-center justify-center gap-xs relative overflow-hidden group hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50" onclick="toggleSelection(this)">
+<span class="font-headline-md text-headline-md font-semibold">Grade 9</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant group-[.selected]:text-on-primary/80 bg-surface-variant group-[.selected]:bg-on-primary/20 px-3 py-1 rounded-full">Section B</span>
+<span class="doodle-star material-symbols-outlined absolute top-2 right-2 text-secondary-container">kid_star</span>
+</button>
+<button class="class-card bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col items-center justify-center gap-xs relative overflow-hidden group hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50" onclick="toggleSelection(this)">
+<span class="font-headline-md text-headline-md font-semibold">Grade 10</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant group-[.selected]:text-on-primary/80 bg-surface-variant group-[.selected]:bg-on-primary/20 px-3 py-1 rounded-full">Section A</span>
+<span class="doodle-star material-symbols-outlined absolute top-2 right-2 text-secondary-container">kid_star</span>
+</button>
+<button class="class-card bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col items-center justify-center gap-xs relative overflow-hidden group hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50" onclick="toggleSelection(this)">
+<span class="font-headline-md text-headline-md font-semibold">Grade 10</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant group-[.selected]:text-on-primary/80 bg-surface-variant group-[.selected]:bg-on-primary/20 px-3 py-1 rounded-full">Section B</span>
+<span class="doodle-star material-symbols-outlined absolute top-2 right-2 text-secondary-container">kid_star</span>
+</button>
+<button class="class-card bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col items-center justify-center gap-xs relative overflow-hidden group hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50" onclick="toggleSelection(this)">
+<span class="font-headline-md text-headline-md font-semibold">Grade 11</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant group-[.selected]:text-on-primary/80 bg-surface-variant group-[.selected]:bg-on-primary/20 px-3 py-1 rounded-full">Section A</span>
+<span class="doodle-star material-symbols-outlined absolute top-2 right-2 text-secondary-container">kid_star</span>
+</button>
+<button class="class-card bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col items-center justify-center gap-xs relative overflow-hidden group hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50" onclick="toggleSelection(this)">
+<span class="font-headline-md text-headline-md font-semibold">Grade 12</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant group-[.selected]:text-on-primary/80 bg-surface-variant group-[.selected]:bg-on-primary/20 px-3 py-1 rounded-full">Section C</span>
+<span class="doodle-star material-symbols-outlined absolute top-2 right-2 text-secondary-container">kid_star</span>
+</button>
+</div>
+<!-- Add Class Option (Dashed style) -->
+<button class="w-full border-2 border-dashed border-outline-variant rounded-xl p-md flex items-center justify-center gap-xs text-on-surface-variant hover:text-primary hover:border-primary hover:bg-primary-fixed/20 transition-colors">
+<span class="material-symbols-outlined">add</span>
+<span class="font-headline-md text-headline-md">Add a custom class</span>
+</button>
+<div class="flex-1"></div> <!-- Spacer to push button to bottom if content is short -->
+<!-- Bottom Action -->
+<div class="mt-xl pb-md">
+<button class="w-full bg-primary text-on-primary rounded-[16px] py-4 font-headline-md text-headline-md font-bold shadow-[0_4px_12px_rgba(49,69,187,0.2)] hover:bg-primary-container transition-all active:scale-95 flex items-center justify-center gap-2 relative">
+                Continue
+                <span class="material-symbols-outlined">arrow_forward</span>
+<!-- Hand-drawn arrow accent near CTA -->
+<svg class="absolute -top-8 -right-4 w-12 h-12 text-secondary-container pointer-events-none transform rotate-12" fill="none" viewbox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<path d="M20 80 Q 50 20 80 40" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="4"></path>
+<path d="M70 30 L 85 45 L 65 50" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"></path>
+</svg>
+</button>
+</div>
+</main>
+<!-- BottomNavBar Nav suppression: This is a transactional flow -->
+<script>
+        function toggleSelection(element) {
+            // Deselect all others
+            document.querySelectorAll('.class-card').forEach(card => {
+                if (card !== element) card.classList.remove('selected');
+            });
+            // Toggle current
+            element.classList.toggle('selected');
+        }
+    </script>
+</body></html>

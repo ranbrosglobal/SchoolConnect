@@ -1,0 +1,71 @@
+services:
+  mariadb:
+    image: mariadb:10.11
+    container_name: school_connect_db
+    environment:
+      - MYSQL_ROOT_PASSWORD=admin
+      - MYSQL_DATABASE=erpnext
+      - MYSQL_USER=erpnext
+      - MYSQL_PASSWORD=erpnext
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  redis-cache:
+    image: redis:alpine
+    container_name: school_connect_redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+
+  setup:
+    image: frappe/erpnext:v15
+    container_name: school_connect_setup
+    depends_on:
+      - mariadb
+      - redis-cache
+    environment:
+      - MARIADB_HOST=mariadb
+      - REDIS_CACHE=redis://redis-cache:6379
+    volumes:
+      - ./sites:/home/frappe/frappe-bench/sites
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for MariaDB..."
+        sleep 20
+        echo "Creating site..."
+        bench new-site site1.localhost --mariadb-root-password admin --admin-password admin --force
+        echo "Adding erpnext to apps.txt..."
+        echo erpnext > /home/frappe/frappe-bench/sites/apps.txt
+        echo "Installing ERPNext..."
+        bench --site site1.localhost install-app erpnext
+        echo "Setting developer mode..."
+        bench --site site1.localhost set-config developer_mode 1
+        echo "Setup complete!"
+
+  backend:
+    image: frappe/erpnext:v15
+    container_name: school_connect_backend
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+      mariadb:
+        condition: service_started
+      redis-cache:
+        condition: service_started
+    environment:
+      - MARIADB_HOST=mariadb
+      - REDIS_CACHE=redis://redis-cache:6379
+      - FRAPPE_SITE_NAME_HEADER=site1.localhost
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./sites:/home/frappe/frappe-bench/sites
+
+volumes:
+  mariadb_data:
+  redis_data:

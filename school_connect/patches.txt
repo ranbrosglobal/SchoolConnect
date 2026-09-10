@@ -1,0 +1,4 @@
+school_connect.patches.add_school_field_to_user
+school_connect.patches.add_subjects_to_instructor
+school_connect.patches.add_timetable_periods_to_school
+school_connect.patches.add_timetable_unique_indexes

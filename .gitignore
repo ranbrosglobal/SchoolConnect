@@ -1,0 +1,44 @@
+# Demo credentials file
+democred.md
+
+# Redis dump (accidentally committed)
+dump.rdb
+
+# Accidental empty files
+the
+
+# FastAPI bridge
+fastapi_backend/.venv/
+fastapi_backend/.env
+fastapi_backend/**/__pycache__/
+fastapi_backend/**/*.pyc
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Environment / secrets
+.env
+.env.*
+!.env.live
+
+# sc_backend databases (generated at first run — see sc_backend/README.md)
+sc_backend/data/
+
+# Freebuff local files (app's live database - never commit these)
+.freebuff/
+
+# Node
+node_modules/
+
+# Frontend build
+dist/
+build/
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,7 @@
+{
+  "db_host": "mariadb",
+  "db_port": 3306,
+  "redis_cache": "redis://redis-cache:6379",
+  "redis_queue": "redis://redis-cache:6379",
+  "redis_socketio": "redis://redis-cache:6379"
+}

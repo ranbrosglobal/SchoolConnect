@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin Dashboard - Lincoln Academy</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Plus Jakarta Sans & Kalam -->
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400&amp;family=Plus+Jakarta+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config injected from design system -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                            "on-secondary": "#ffffff",
+                            "on-secondary-fixed-variant": "#624000",
+                            "background": "#f8f9fc",
+                            "error": "#ba1a1a",
+                            "surface-container-low": "#f2f3f6",
+                            "surface-variant": "#e1e2e5",
+                            "on-primary-container": "#eaeaff",
+                            "inverse-on-surface": "#f0f1f4",
+                            "outline-variant": "#c5c5d6",
+                            "inverse-primary": "#bbc3ff",
+                            "secondary-fixed-dim": "#ffba4b",
+                            "on-tertiary-container": "#a3ffd0",
+                            "surface-dim": "#d9dadd",
+                            "tertiary-container": "#007a53",
+                            "on-surface": "#191c1e",
+                            "on-primary-fixed": "#000e5e",
+                            "secondary": "#815600",
+                            "secondary-fixed": "#ffddb1",
+                            "tertiary-fixed-dim": "#61dca6",
+                            "on-tertiary-fixed-variant": "#005236",
+                            "error-container": "#ffdad6",
+                            "on-background": "#191c1e",
+                            "on-primary": "#ffffff",
+                            "secondary-container": "#fdaf1e",
+                            "surface": "#f8f9fc",
+                            "surface-container-high": "#e7e8eb",
+                            "on-primary-fixed-variant": "#2338af",
+                            "on-surface-variant": "#454653",
+                            "on-error": "#ffffff",
+                            "surface-container-lowest": "#ffffff",
+                            "outline": "#757685",
+                            "on-secondary-container": "#6a4600",
+                            "surface-container": "#edeef1",
+                            "surface-tint": "#3f52c8",
+                            "primary-fixed-dim": "#bbc3ff",
+                            "on-error-container": "#93000a",
+                            "primary-container": "#4c5fd5",
+                            "surface-container-highest": "#e1e2e5",
+                            "tertiary": "#005f40",
+                            "surface-bright": "#f8f9fc",
+                            "tertiary-fixed": "#7ff9c1",
+                            "on-secondary-fixed": "#291800",
+                            "inverse-surface": "#2e3133",
+                            "on-tertiary-fixed": "#002113",
+                            "on-tertiary": "#ffffff",
+                            "primary": "#3145bb",
+                            "primary-fixed": "#dee0ff"
+                    },
+                    "borderRadius": {
+                            "DEFAULT": "0.25rem",
+                            "lg": "0.5rem",
+                            "xl": "0.75rem",
+                            "full": "9999px"
+                    },
+                    "spacing": {
+                            "xl": "48px",
+                            "gutter": "16px",
+                            "md": "24px",
+                            "margin-mobile": "16px",
+                            "xs": "8px",
+                            "sm": "16px",
+                            "margin-desktop": "32px",
+                            "base": "4px",
+                            "lg": "32px"
+                    },
+                    "fontFamily": {
+                            "body-lg": ["Plus Jakarta Sans"],
+                            "headline-lg": ["Plus Jakarta Sans"],
+                            "label-caps": ["Plus Jakarta Sans"],
+                            "headline-lg-mobile": ["Plus Jakarta Sans"],
+                            "headline-md": ["Plus Jakarta Sans"],
+                            "body-sm": ["Plus Jakarta Sans"],
+                            "doodle-note": ["Kalam"]
+                    },
+                    "fontSize": {
+                            "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                            "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                            "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                            "headline-lg-mobile": ["24px", {"lineHeight": "30px", "fontWeight": "700"}],
+                            "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                            "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                            "doodle-note": ["16px", {"lineHeight": "18px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom Doodle SVG Stroke */
+        .doodle-stroke {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: dash 2s linear forwards;
+        }
+        @keyframes dash {
+            to { stroke-dashoffset: 0; }
+        }
+        /* Hide scrollbar for clean horizontal scrolls */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen font-body-lg text-body-lg pb-24 md:pb-0">
+<!-- TopAppBar Shell (Shared Component Blueprint) -->
+<header class="bg-primary text-on-primary bg-gradient-to-r from-primary to-primary-container shadow-sm flex justify-between items-center w-full px-margin-mobile py-sm md:px-margin-desktop docked full-width top-0 sticky z-40">
+<div class="flex items-center gap-xs">
+<img class="w-10 h-10 rounded-full object-cover shadow-sm border border-on-primary/20" data-alt="A small, stylized profile avatar of a school administrator in a modern, light-mode corporate setting. The avatar features clean lines, bright lighting, and a professional yet approachable mood, fitting a high-density dashboard UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZyKVLOpIohrOykYEkT0h3rH-AB-KACEzh9L3KRnHJ9Z5g7-VuU2yjqh64DJrci3WCfxDW66AH-ojkNBy7dN5NSnUK4qTvvHDItGzr99_e3hSNgctlStz3ailPrmpUe29q9jl8w-XSo5D9vw7HeN3aMYbRZwnG9jzNmigoBaBptYH3llTkmRgmhELlrxWhNt9fnQM6wJuDFPjrwhqawUkR4_JUJ89FxLznojvDk-K_9dQoPxTi_a4m"/>
+<h1 class="text-headline-md font-headline-md font-bold text-on-primary hidden md:block">School Connect</h1>
+</div>
+<!-- Web Nav (Hidden on Mobile) -->
+<nav class="hidden md:flex items-center gap-md">
+<a class="text-on-primary font-bold hover:opacity-90 transition-opacity scale-95 transition-transform duration-150" href="#">Home</a>
+<a class="text-on-primary/70 text-label-caps font-label-caps hover:opacity-90 transition-opacity scale-95 transition-transform duration-150" href="#">Attendance</a>
+<a class="text-on-primary/70 text-label-caps font-label-caps hover:opacity-90 transition-opacity scale-95 transition-transform duration-150" href="#">Classes</a>
+<a class="text-on-primary/70 text-label-caps font-label-caps hover:opacity-90 transition-opacity scale-95 transition-transform duration-150" href="#">Alerts</a>
+</nav>
+<button aria-label="Settings" class="text-on-primary hover:opacity-90 transition-opacity p-2 rounded-full hover:bg-white/10">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
+</button>
+</header>
+<!-- Main Canvas -->
+<main class="w-full max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop pt-md pb-xl">
+<!-- Header Section -->
+<section class="mb-lg relative z-10">
+<!-- Hand-drawn compass doodle -->
+<div class="absolute -top-4 -left-6 md:-left-12 opacity-40 rotate-12 w-16 h-16 pointer-events-none text-secondary">
+<svg class="doodle-stroke" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 100 100">
+<circle cx="50" cy="50" r="40" stroke-dasharray="4 4"></circle>
+<path d="M50 15 L50 85 M15 50 L85 50"></path>
+<path d="M45 20 L50 10 L55 20 Z" fill="currentColor"></path>
+<path d="M45 80 L50 90 L55 80 Z"></path>
+<text class="font-doodle-note text-[12px] fill-current border-none" x="55" y="25">N</text>
+</svg>
+</div>
+<p class="text-label-caps font-label-caps text-primary tracking-widest uppercase mb-1">Lincoln Academy, Chicago, IL</p>
+<h2 class="text-headline-lg-mobile font-headline-lg-mobile md:text-headline-lg md:font-headline-lg text-primary bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-container inline-block">MY SCHOOL</h2>
+</section>
+<!-- Bento Grid: Stats (2x2 on Mobile, 4-col on Desktop) -->
+<section class="grid grid-cols-2 md:grid-cols-4 gap-gutter md:gap-md mb-lg">
+<!-- Stat Card 1 -->
+<div class="bg-surface-container-lowest border border-surface-variant rounded-xl p-md shadow-[0px_4px_12px_rgba(35,38,53,0.05)] hover:shadow-md transition-shadow relative overflow-hidden group">
+<!-- Inner glow effect on hover -->
+<div class="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+<div class="flex items-start justify-between mb-sm relative z-10">
+<div class="p-2 bg-primary/10 rounded-lg text-primary">
+<span class="material-symbols-outlined">school</span>
+</div>
+<!-- Status Badge -->
+<div class="flex items-center gap-1 bg-tertiary-container/10 px-2 py-1 rounded-full border border-tertiary-container/20">
+<div class="w-1.5 h-1.5 rounded-full bg-tertiary"></div>
+<span class="text-[10px] font-label-caps text-tertiary-fixed-variant">+2%</span>
+</div>
+</div>
+<div class="relative z-10">
+<p class="text-headline-md font-headline-md text-on-surface">142</p>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Teachers</p>
+</div>
+</div>
+<!-- Stat Card 2 -->
+<div class="bg-surface-container-lowest border border-surface-variant rounded-xl p-md shadow-[0px_4px_12px_rgba(35,38,53,0.05)] hover:shadow-md transition-shadow relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-b from-secondary-container/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+<div class="flex items-start justify-between mb-sm relative z-10">
+<div class="p-2 bg-secondary-container/20 rounded-lg text-secondary-container">
+<span class="material-symbols-outlined">group</span>
+</div>
+</div>
+<div class="relative z-10">
+<p class="text-headline-md font-headline-md text-on-surface">1,845</p>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Students</p>
+</div>
+</div>
+<!-- Stat Card 3 -->
+<div class="bg-surface-container-lowest border border-surface-variant rounded-xl p-md shadow-[0px_4px_12px_rgba(35,38,53,0.05)] hover:shadow-md transition-shadow relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-b from-tertiary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+<div class="flex items-start justify-between mb-sm relative z-10">
+<div class="p-2 bg-tertiary/10 rounded-lg text-tertiary">
+<span class="material-symbols-outlined">menu_book</span>
+</div>
+</div>
+<div class="relative z-10">
+<p class="text-headline-md font-headline-md text-on-surface">320</p>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Classes</p>
+</div>
+</div>
+<!-- Stat Card 4 -->
+<div class="bg-surface-container-lowest border border-surface-variant rounded-xl p-md shadow-[0px_4px_12px_rgba(35,38,53,0.05)] hover:shadow-md transition-shadow relative overflow-hidden group">
+<!-- Doodle Underline on this specific card for human element -->
+<div class="absolute bottom-4 right-4 text-primary/30 pointer-events-none">
+<svg class="doodle-stroke" fill="none" height="10" stroke="currentColor" stroke-linecap="round" stroke-width="2" viewbox="0 0 40 10" width="40">
+<path d="M2 5 Q 10 2, 20 5 T 38 5"></path>
+</svg>
+</div>
+<div class="flex items-start justify-between mb-sm relative z-10">
+<div class="p-2 bg-outline-variant/30 rounded-lg text-outline">
+<span class="material-symbols-outlined">online_prediction</span>
+</div>
+<div class="flex items-center gap-1 bg-tertiary-container/10 px-2 py-1 rounded-full border border-tertiary-container/20">
+<div class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></div>
+<span class="text-[10px] font-label-caps text-tertiary">Active</span>
+</div>
+</div>
+<div class="relative z-10">
+<p class="text-headline-md font-headline-md text-on-surface">892</p>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Active Now</p>
+</div>
+</div>
+</section>
+<!-- Quick Actions Row -->
+<section class="mb-lg">
+<h3 class="text-headline-md font-headline-md text-on-surface mb-sm">Quick Actions</h3>
+<div class="flex gap-gutter overflow-x-auto no-scrollbar pb-xs">
+<!-- Action 1 -->
+<button class="flex flex-col items-center gap-xs min-w-[80px] group focus:outline-none">
+<div class="w-14 h-14 rounded-full bg-surface-container-lowest border border-surface-variant shadow-sm flex items-center justify-center text-primary group-hover:bg-primary/5 transition-colors group-active:scale-95">
+<span class="material-symbols-outlined" style="font-weight: 300;">person_add</span>
+</div>
+<span class="text-label-caps font-label-caps text-on-surface-variant group-hover:text-primary transition-colors">Teachers</span>
+</button>
+<!-- Action 2 -->
+<button class="flex flex-col items-center gap-xs min-w-[80px] group focus:outline-none">
+<div class="w-14 h-14 rounded-full bg-surface-container-lowest border border-surface-variant shadow-sm flex items-center justify-center text-primary group-hover:bg-primary/5 transition-colors group-active:scale-95">
+<span class="material-symbols-outlined" style="font-weight: 300;">class</span>
+</div>
+<span class="text-label-caps font-label-caps text-on-surface-variant group-hover:text-primary transition-colors">Classes</span>
+</button>
+<!-- Action 3 -->
+<button class="flex flex-col items-center gap-xs min-w-[80px] group focus:outline-none">
+<div class="w-14 h-14 rounded-full bg-surface-container-lowest border border-surface-variant shadow-sm flex items-center justify-center text-primary group-hover:bg-primary/5 transition-colors group-active:scale-95">
+<span class="material-symbols-outlined" style="font-weight: 300;">person_search</span>
+</div>
+<span class="text-label-caps font-label-caps text-on-surface-variant group-hover:text-primary transition-colors">Students</span>
+</button>
+<!-- Action 4 -->
+<button class="flex flex-col items-center gap-xs min-w-[80px] group focus:outline-none">
+<div class="w-14 h-14 rounded-full bg-surface-container-lowest border border-surface-variant shadow-sm flex items-center justify-center text-on-surface-variant group-hover:bg-surface-variant/50 transition-colors group-active:scale-95">
+<span class="material-symbols-outlined" style="font-weight: 300;">settings_applications</span>
+</div>
+<span class="text-label-caps font-label-caps text-on-surface-variant group-hover:text-on-surface transition-colors">Settings</span>
+</button>
+</div>
+</section>
+<!-- Recent Classes (Asymmetric List/Cards) -->
+<section>
+<div class="flex justify-between items-center mb-sm">
+<h3 class="text-headline-md font-headline-md text-on-surface">Recent Classes</h3>
+<a class="text-label-caps font-label-caps text-primary hover:underline underline-offset-4 flex items-center gap-1 group" href="#">
+                    View All
+                    <span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- Class Card 1 (Detailed) -->
+<div class="bg-surface-container-lowest border border-surface-variant rounded-[18px] p-4 shadow-[0px_4px_12px_rgba(35,38,53,0.05)] flex items-center gap-4 hover:shadow-md transition-shadow relative">
+<!-- Circular Progress Stand-in -->
+<div class="w-12 h-12 rounded-full border-4 border-tertiary-container/20 flex items-center justify-center relative flex-shrink-0">
+<!-- Partial Ring simulation -->
+<svg class="absolute inset-0 w-full h-full -rotate-90" viewbox="0 0 36 36">
+<path class="text-tertiary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="80, 100" stroke-width="4"></path>
+</svg>
+<span class="text-label-caps font-label-caps text-on-surface">80%</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<div>
+<h4 class="text-body-lg font-headline-md font-semibold text-on-surface">Advanced Physics</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Mr. Anderson • Room 302</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant hover:text-primary cursor-pointer transition-colors">more_vert</span>
+</div>
+<div class="mt-2 flex gap-2">
+<div class="bg-surface-variant/30 px-2 py-0.5 rounded text-[11px] font-label-caps text-on-surface-variant border border-outline-variant/30">11th Grade</div>
+<div class="bg-surface-variant/30 px-2 py-0.5 rounded text-[11px] font-label-caps text-on-surface-variant border border-outline-variant/30">Science</div>
+</div>
+</div>
+</div>
+<!-- Class Card 2 -->
+<div class="bg-surface-container-lowest border border-surface-variant rounded-[18px] p-4 shadow-[0px_4px_12px_rgba(35,38,53,0.05)] flex items-center gap-4 hover:shadow-md transition-shadow">
+<div class="w-12 h-12 rounded-full border-4 border-secondary-container/20 flex items-center justify-center relative flex-shrink-0">
+<svg class="absolute inset-0 w-full h-full -rotate-90" viewbox="0 0 36 36">
+<path class="text-secondary-container" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="95, 100" stroke-width="4"></path>
+</svg>
+<span class="text-label-caps font-label-caps text-on-surface">95%</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<div>
+<h4 class="text-body-lg font-headline-md font-semibold text-on-surface">AP Calculus BC</h4>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Ms. Davis • Room 104</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant hover:text-primary cursor-pointer transition-colors">more_vert</span>
+</div>
+</div>
+</div>
+<!-- Scribble Border Add Slot -->
+<button class="border-2 border-dashed border-outline-variant/50 rounded-[18px] p-4 flex flex-col items-center justify-center gap-2 text-outline-variant hover:border-primary hover:text-primary hover:bg-primary/5 transition-all md:col-span-2 group min-h-[100px]">
+<span class="material-symbols-outlined text-[32px] font-light">add_circle</span>
+<span class="text-label-caps font-label-caps">Add New Class Segment</span>
+</button>
+</div>
+</section>
+</main>
+<!-- BottomNavBar Shell (Mobile Only) -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl border-t border-outline-variant dark:border-none bg-surface-container-lowest shadow-[0px_-4px_12px_rgba(35,38,53,0.05)] flex justify-around items-center px-4 py-2 md:hidden pb-safe">
+<!-- Home (Active) -->
+<a class="flex flex-col items-center justify-center text-primary relative after:content-[''] after:absolute after:-bottom-1 after:w-2 after:h-2 after:bg-secondary-container after:rounded-full scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" style="font-weight: 300;">dashboard</span>
+<span class="text-label-caps font-label-caps mt-1">Home</span>
+<!-- Hand-drawn active indicator doodle -->
+<svg class="absolute -bottom-3 w-4 h-4 text-primary pointer-events-none" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="3" viewbox="0 0 24 24">
+<path class="doodle-stroke" d="M6 12 Q 12 18, 18 12"></path>
+</svg>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-container transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-weight: 300;">event_available</span>
+<span class="text-label-caps font-label-caps mt-1">Attendance</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-container transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-weight: 300;">menu_book</span>
+<span class="text-label-caps font-label-caps mt-1">Classes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-container transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-weight: 300;">notifications</span>
+<span class="text-label-caps font-label-caps mt-1">Alerts</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-container transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-weight: 300;">more_horiz</span>
+<span class="text-label-caps font-label-caps mt-1">Menu</span>
+</a>
+</nav>
+<!-- Support for iOS safe area bottom -->
+<style>
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 16px); }
+    </style>
+</body></html>

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="#E3F2FD"/>
+  
+  <!-- Book -->
+  <rect x="40" y="70" width="120" height="90" rx="5" fill="#1976D2"/>
+  <rect x="45" y="75" width="110" height="80" rx="3" fill="#FFF"/>
+  
+  <!-- Book spine -->
+  <rect x="40" y="70" width="10" height="90" fill="#1565C0"/>
+  
+  <!-- Book lines -->
+  <line x1="55" y1="90" x2="145" y2="90" stroke="#E0E0E0" stroke-width="2"/>
+  <line x1="55" y1="105" x2="145" y2="105" stroke="#E0E0E0" stroke-width="2"/>
+  <line x1="55" y1="120" x2="145" y2="120" stroke="#E0E0E0" stroke-width="2"/>
+  <line x1="55" y1="135" x2="145" y2="135" stroke="#E0E0E0" stroke-width="2"/>
+  
+  <!-- Pen on book -->
+  <rect x="120" y="80" width="6" height="25" rx="2" fill="#FDD835" transform="rotate(15 123 92)"/>
+  <polygon points="120,80 126,80 123,74" fill="#333" transform="rotate(15 123 77)"/>
+  
+  <!-- Pencil holder character -->
+  <circle cx="100" cy="50" r="20" fill="#FFCC80"/>
+  
+  <!-- Hair -->
+  <path d="M80 45 Q80 30 100 30 Q120 30 120 45" fill="#8D6E63"/>
+  
+  <!-- Eyes -->
+  <circle cx="92" cy="50" r="3" fill="#333"/>
+  <circle cx="108" cy="50" r="3" fill="#333"/>
+  
+  <!-- Smile -->
+  <path d="M92 58 Q100 63 108 58" fill="none" stroke="#333" stroke-width="2"/>
+  
+  <!-- Arms holding book -->
+  <path d="M80 60 Q60 50 50 70" fill="none" stroke="#FFCC80" stroke-width="6" stroke-linecap="round"/>
+  <path d="M120 60 Q140 50 150 70" fill="none" stroke="#FFCC80" stroke-width="6" stroke-linecap="round"/>
+  
+  <!-- Hands -->
+  <circle cx="50" cy="70" r="6" fill="#FFCC80"/>
+  <circle cx="150" cy="70" r="6" fill="#FFCC80"/>
+  
+  <!-- Stars -->
+  <polygon points="170,30 172,36 178,36 173,40 175,46 170,42 165,46 167,40 162,36 168,36" fill="#FFC107"/>
+  <polygon points="30,25 32,31 38,31 33,35 35,41 30,37 25,41 27,35 22,31 28,31" fill="#FFC107"/>
+</svg>

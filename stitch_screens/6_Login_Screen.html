@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>School Connect - Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Kalam:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#f8f9fc",
+                        "surface-container-high": "#e7e8eb",
+                        "surface-bright": "#f8f9fc",
+                        "surface-container": "#edeef1",
+                        "tertiary-fixed-dim": "#61dca6",
+                        primary: "#3145bb",
+                        "secondary-fixed-dim": "#ffba4b",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed": "#7ff9c1",
+                        secondary: "#815600",
+                        "surface-tint": "#3f52c8",
+                        "on-primary-fixed": "#000e5e",
+                        "on-surface-variant": "#454653",
+                        "on-tertiary-container": "#a3ffd0",
+                        "error-container": "#ffdad6",
+                        surface: "#f8f9fc",
+                        "inverse-surface": "#2e3133",
+                        "on-tertiary-fixed": "#002113",
+                        "on-tertiary": "#ffffff",
+                        outline: "#757685",
+                        error: "#ba1a1a",
+                        "surface-dim": "#d9dadd",
+                        "primary-fixed": "#dee0ff",
+                        "outline-variant": "#c5c5d6",
+                        "secondary-fixed": "#ffddb1",
+                        tertiary: "#005f40",
+                        "on-secondary-fixed-variant": "#624000",
+                        "on-primary-container": "#eaeaff",
+                        "on-primary-fixed-variant": "#2338af",
+                        "on-surface": "#191c1e",
+                        "surface-variant": "#e1e2e5",
+                        "on-secondary-container": "#6a4600",
+                        "on-primary": "#ffffff",
+                        "inverse-on-surface": "#f0f1f4",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#e1e2e5",
+                        "surface-container-low": "#f2f3f6",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "on-background": "#191c1e",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "tertiary-container": "#007a53",
+                        "primary-container": "#4c5fd5",
+                        "inverse-primary": "#bbc3ff",
+                        "on-error": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed": "#291800",
+                        "secondary-container": "#fdaf1e"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    },
+                    spacing: {
+                        xl: "48px",
+                        gutter: "16px",
+                        base: "4px",
+                        "margin-mobile": "16px",
+                        lg: "32px",
+                        md: "24px",
+                        xs: "8px",
+                        "margin-desktop": "32px",
+                        sm: "16px"
+                    },
+                    fontFamily: {
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "doodle-note": ["Kalam"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "body-sm": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "label-caps": ["Plus Jakarta Sans"]
+                    },
+                    fontSize: {
+                        "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+                        "doodle-note": ["16px", { lineHeight: "18px", fontWeight: "400" }],
+                        "headline-md": ["20px", { lineHeight: "28px", fontWeight: "600" }],
+                        "headline-lg-mobile": ["24px", { lineHeight: "30px", fontWeight: "700" }],
+                        "body-sm": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+                        "headline-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "700" }],
+                        "label-caps": ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .squiggle-underline {
+            text-decoration-style: wavy;
+            text-decoration-color: #3145bb;
+            text-decoration-line: underline;
+            text-decoration-thickness: 2px;
+        }
+    </style>
+</head>
+<body class="bg-background min-h-screen flex flex-col font-body-lg text-on-surface">
+<main class="flex-grow flex items-center justify-center p-margin-mobile md:p-margin-desktop">
+<div class="w-full max-w-[440px] bg-surface-container-lowest rounded-[18px] border border-outline-variant/30 shadow-[0px_4px_12px_rgba(35,38,53,0.05)] overflow-hidden relative">
+<!-- Subtle margin doodle -->
+<div class="absolute -right-4 top-10 opacity-20 pointer-events-none rotate-12">
+<span class="font-doodle-note text-primary text-[24px]">★</span>
+</div>
+<div class="p-lg">
+<!-- Role Picker -->
+<div class="flex gap-sm mb-xl">
+<button class="flex-1 bg-primary-fixed border border-primary text-primary-fixed-variant rounded-xl p-sm flex items-center justify-center gap-xs relative group transition-colors hover:bg-primary-fixed/80">
+<img alt="Student Icon" class="w-6 h-6 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3Jc_cvCJqrqrTg4iXAQ2xdZKJL4qFERKb11W_1G3TI0ZioeiVvIPpd3My7ItfBpmL9MDU0mZtbq-0SvDO1pq0-F8jOERvBQmvpEQ1jV1PFnknzh-i70o9aBFZO_GUFCYOGimcCqnL7YXqOp5ZXm5X7njyLX5-h8c120QJPH2xYiesx9GTiM4GRIEjgn73RUmc8Ieb_jXmgwUlmfS_kffWIOVqvXAG3LT2OP6z2x95fhI3dYAgLq1u"/>
+<span class="font-label-caps text-label-caps">Student</span>
+<div class="absolute -bottom-1 w-2 h-2 bg-primary rounded-full group-hover:scale-110 transition-transform"></div>
+</button>
+<button class="flex-1 bg-surface-container-low border border-outline-variant rounded-xl p-sm flex items-center justify-center gap-xs transition-colors hover:bg-surface-container">
+<img alt="Teacher Icon" class="w-6 h-6 object-contain opacity-60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0147ev4qUrvAsmw4Pgl805UHy6LMQ-5Rc00HbzWi1zxJkFT5mjsK908AEySQ7yF021agNnPUvVna-I9xVynX2QbqiqanlxgtIkXolVDLNcxb2dg9B5L5Iy31YZbXETwyMde2CJwvbz0ttcER1mWT_rz7i6Syoe-mXO0FZCg2R8571bJXiO0L3CeTfbZgPtP4cp7Wo7_U412dtEQRtQKcP723T3HMJbvJXuSnwfA2i5S-2wUB57H09"/>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Teacher</span>
+</button>
+</div>
+<!-- Logo & Heading -->
+<div class="text-center mb-lg">
+<img alt="School Connect Logo" class="w-16 h-16 mx-auto mb-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSq0sKYvaP7xcDZrbNggw0rsLkQS5UW-lM1heQ_gOKMVMsAdng36mvjxcax8fHTXBee4OIyAbsOgnVU_amyhLnQECFD9UWF5EqvJ9p8r6A41uJvpDKVUYRHG6pGBrSPvPAvGgDVX2zkhEo4lKXUCzgXBsA7I5SV6vhWATnZkoYA6CuSPWmlgL7i5QdXI1tSVYGIbU5i0fM31Omig32puskkuGdmcNfNRCf9_SlNJixh0REypVDv4ue"/>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface mb-xs">
+                        Welcome back
+                    </h1>
+<div class="flex justify-center mt-[-4px]">
+<svg class="text-primary-container" fill="none" height="8" viewbox="0 0 100 8" width="100" xmlns="http://www.w3.org/2000/svg">
+<path d="M1 4C15 4 15 1 25 2.5C35 4 35 7 50 6C65 5 65 2 75 3C85 4 85 6 99 5" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Form -->
+<form class="flex flex-col gap-sm mb-lg">
+<div class="relative">
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-base ml-1" for="email">Email</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-sm text-on-surface-variant z-10" style="font-variation-settings: 'FILL' 0;">mail</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg pl-xl pr-sm py-xs font-body-lg text-body-lg text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all" id="email" placeholder="Enter your email" type="email"/>
+</div>
+</div>
+<div class="relative">
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-base ml-1" for="password">Password</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-sm text-on-surface-variant z-10" style="font-variation-settings: 'FILL' 0;">lock</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg pl-xl pr-sm py-xs font-body-lg text-body-lg text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all" id="password" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<div class="flex justify-end mb-sm">
+<a class="font-body-sm text-body-sm text-primary hover:underline" href="#">Forgot password?</a>
+</div>
+<button class="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary rounded-full py-xs px-md font-label-caps text-label-caps hover:opacity-90 transition-opacity flex items-center justify-center gap-xs shadow-sm hover:shadow-md transform hover:-translate-y-[1px]" type="button">
+                        Sign In
+                        <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 0;">arrow_forward</span>
+</button>
+</form>
+<!-- Demo Accounts Expansion -->
+<div class="border-t border-outline-variant/50 pt-sm mt-md" x-data="{ expanded: false }">
+<button @click="expanded = !expanded" class="w-full flex items-center justify-between font-label-caps text-label-caps text-on-surface-variant hover:text-primary transition-colors py-xs">
+                        Show Demo Accounts
+                        <span :class="expanded ? 'rotate-180' : ''" class="material-symbols-outlined text-[16px] transition-transform duration-200">expand_more</span>
+</button>
+<!-- Simulating expansion state open for preview -->
+<div class="mt-sm grid grid-cols-1 md:grid-cols-2 gap-xs">
+<!-- Card 1 -->
+<div class="flex items-center gap-xs p-xs border border-dashed border-outline-variant rounded-lg hover:border-primary cursor-pointer transition-colors group">
+<div class="w-6 h-6 rounded-full bg-error-container text-on-error-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">admin_panel_settings</span>
+</div>
+<div class="overflow-hidden">
+<p class="font-label-caps text-label-caps text-on-surface truncate group-hover:text-primary">Super Admin</p>
+<p class="font-body-sm text-[10px] text-on-surface-variant truncate">admin@school.com</p>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="flex items-center gap-xs p-xs border border-dashed border-outline-variant rounded-lg hover:border-primary cursor-pointer transition-colors group">
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">domain</span>
+</div>
+<div class="overflow-hidden">
+<p class="font-label-caps text-label-caps text-on-surface truncate group-hover:text-primary">School Admin</p>
+<p class="font-body-sm text-[10px] text-on-surface-variant truncate">principal@school.com</p>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="flex items-center gap-xs p-xs border border-dashed border-outline-variant rounded-lg hover:border-primary cursor-pointer transition-colors group">
+<div class="w-6 h-6 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">co_present</span>
+</div>
+<div class="overflow-hidden">
+<p class="font-label-caps text-label-caps text-on-surface truncate group-hover:text-primary">Teacher</p>
+<p class="font-body-sm text-[10px] text-on-surface-variant truncate">teacher@school.com</p>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="flex items-center gap-xs p-xs border border-dashed border-outline-variant rounded-lg hover:border-primary cursor-pointer transition-colors group">
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">school</span>
+</div>
+<div class="overflow-hidden">
+<p class="font-label-caps text-label-caps text-on-surface truncate group-hover:text-primary">Student</p>
+<p class="font-body-sm text-[10px] text-on-surface-variant truncate">student@school.com</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low p-sm text-center border-t border-outline-variant/30">
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                    New student? <a class="text-[#f97316] hover:underline font-semibold" href="#">Sign Up</a>
+</p>
+</div>
+</div>
+</main>
+</body></html>
