@@ -8,13 +8,15 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "start": "node ../sc_backend/src/index.js"
+    "build:live": "vite build --mode live",
+    "start": "serve -s dist -l 5173"
   },
   "dependencies": {
     "lucide-react": "^1.31.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.2"
+    "react-router-dom": "^7.18.2",
+    "serve": "^14.2.6"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -24,5 +26,8 @@
     "oxlint": "^1.75.0",
     "tailwindcss": "^4.3.3",
     "vite": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
   }
 }
