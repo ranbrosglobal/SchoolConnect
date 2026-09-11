@@ -8,12 +8,12 @@
 class ApiConfig {
   /// Backend server base URL (school admin + mobile app data).
   /// Replace with AWS static IP when deploying.
-  static const String backendHost = 'http://localhost';
+  static const String backendHost = 'http://13.205.212.64';
   static const int backendPort = 3000;
 
   /// Super admin backend URL.
   /// Replace with AWS static IP when deploying.
-  static const String superAdminHost = 'http://localhost';
+  static const String superAdminHost = 'http://13.205.212.64';
   static const int superAdminPort = 3001;
 
   /// Full backend base URL for the mobile app (school admin server).
@@ -23,7 +23,7 @@ class ApiConfig {
   static String get superAdminBaseUrl => '$superAdminHost:$superAdminPort';
 
   /// Web admin dashboard URL (for redirect from mobile).
-  static const String webAdminUrl = 'http://localhost:5173';
+  static const String webAdminUrl = 'http://13.205.212.64:5173';
 
   /// Google Sheets scopes needed by the app (for Google Sign-In only).
   static const List<String> scopes = [
