@@ -4,10 +4,6 @@ import { Eye, EyeOff, Loader2, Lock, LogIn, Mail } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { Logo, Field, inputClass, PrimaryButton } from '../components/ui'
 
-const QUICK_LOGINS = [
-  { label: 'Super Admin', email: 'admin@schoolconnect.app', pwd: 'admin123' },
-]
-
 export default function LoginPage() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
@@ -100,14 +96,14 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={submit} className="mt-6 space-y-4">
-            <Field label="Email">
+            <Field label="Username">
               <div className="relative">
                 <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
                 <input
-                  type="email"
+                  type="text"
                   required
                   autoComplete="username"
-                  placeholder="you@school.edu"
+                  placeholder="admin"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={`${inputClass} pl-10`}
@@ -143,28 +139,6 @@ export default function LoginPage() {
               {busy ? 'Signing in…' : 'Sign in'}
             </PrimaryButton>
           </form>
-
-          <div className="mt-8">
-            <div className="flex items-center gap-3">
-              <span className="h-px flex-1 bg-outline-soft" />
-              <span className="text-xs font-bold uppercase tracking-wide text-ink-soft">Demo account</span>
-              <span className="h-px flex-1 bg-outline-soft" />
-            </div>
-            <div className="mt-4 grid gap-2">
-              {QUICK_LOGINS.map((q) => (
-                <button
-                  key={q.email}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => quickLogin(q)}
-                  className="flex items-center justify-between rounded-btn border border-outline-soft bg-white px-4 py-2.5 text-sm font-medium text-ink transition hover:border-primary/40 hover:bg-primary-soft active:scale-[0.97] disabled:opacity-60"
-                >
-                  <span>{q.label}</span>
-
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>

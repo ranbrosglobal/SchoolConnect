@@ -14,7 +14,7 @@ import { mockRequest } from './mock'
 import * as sheets from './sheets'
 import { CSRF_KEY } from './keys'
 
-const MODE = import.meta.env.VITE_APP_MODE || 'sheets'
+const MODE = import.meta.env.VITE_APP_MODE || 'live'
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
 export const isMockMode = MODE === 'mock'
