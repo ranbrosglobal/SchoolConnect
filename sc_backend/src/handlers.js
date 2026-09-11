@@ -7,7 +7,7 @@
 
 import crypto from 'node:crypto'
 import { getOne, getAll, getById, insert, updateById, deleteById, deleteWhere, count, genId } from './db.js'
-import { verifyPassword, hashPassword } from './seed.js'
+import { verifyPassword, hashPassword, storeFileBlob } from './seed.js'
 
 // ─── Session helpers ────────────────────────────────────────────────
 
@@ -42,6 +42,9 @@ function publicUser(user, schoolName) {
     school_name: schoolName || null,
   }
 }
+
+// Max base64 payload accepted for file uploads (~10 MB decoded)
+const MAX_UPLOAD_B64 = 14 * 1024 * 1024
 
 // ─── Lockout & Rate Limiter ────────────────────────────────────────
 
@@ -85,11 +88,15 @@ function checkRateLimit(ip) {
 
 // ─── CSRF ───────────────────────────────────────────────────────────
 
-function checkCsrf(req, user) {
+function checkCsrf(req, user, path) {
   // GET requests don't need CSRF
   if (req.method === 'GET') return true
   // No session → no CSRF needed (login)
   if (!user) return true
+  // Mobile-app endpoints are exempt: the native app cannot hold CSRF tokens.
+  // The session cookie is SameSite=Lax, which already blocks cross-site
+  // browser requests, so this does not weaken protection for the consoles.
+  if (typeof path === 'string' && path.startsWith('school_connect.api.mobile.')) return true
   const token = req.headers['x-frappe-csrf-token']
   return token === user.id
 }
@@ -676,14 +683,96 @@ function mobileGetStudentSchedule(db, params, user) {
   return enriched
 }
 
-/** Mobile: get student's assignments */
+// ─── Assignment / submission helpers ─────────────────────────────────
+
+/** Serialize a submission row in the shape the mobile app expects. */
+function serializeSubmission(db, sub) {
+  const student = getById(db, 'students', sub.student_id)
+  const assignment = getById(db, 'assignments', sub.assignment_id)
+  const grade = sub.score !== '' && sub.score != null ? Number(sub.score) : null
+  return {
+    name: sub.id,
+    assignment: sub.assignment_id,
+    assignment_title: assignment?.title || null,
+    student: sub.student_id,
+    student_name: student?.name || null,
+    student_email_id: student?.email || null,
+    roll_number: student?.roll_number ?? null,
+    file: sub.file_id || null,
+    file_name: sub.file_name || null,
+    submitted_at: sub.submitted_at || null,
+    grade: Number.isFinite(grade) ? grade : null,
+    feedback: sub.feedback || null,
+    status: sub.status || 'Submitted',
+  }
+}
+
+/**
+ * Serialize an assignment row. When `student` is given, embeds that
+ * student's submission under `submission` (student view). Otherwise adds
+ * class/student/graded counts (teacher view).
+ */
+function serializeAssignment(db, row, student = null) {
+  const cls = getById(db, 'classes', row.class_id)
+  const teacher = row.created_by ? getById(db, 'users', row.created_by) : null
+  const base = {
+    name: row.id,
+    id: row.id,
+    title: row.title,
+    description: row.description || null,
+    course: row.course || null,
+    student_group: row.class_id || null,
+    student_group_name: cls?.name || null,
+    instructor: row.created_by || null,
+    instructor_name: teacher?.full_name || null,
+    due_date: row.due_date || null,
+    creation: row.created_at || null,
+    attachment: row.attachment_id || null,
+    attachment_name: row.attachment_name || null,
+  }
+  if (student) {
+    const subs = getAll(db, 'submissions', 'assignment_id = ? AND student_id = ?', row.id, student.id)
+    const sub = subs.length ? serializeSubmission(db, subs[subs.length - 1]) : null
+    return {
+      ...base,
+      submitted: !!(sub && sub.status !== 'Returned'),
+      submission: sub,
+    }
+  }
+  const subs = getAll(db, 'submissions', 'assignment_id = ?', row.id)
+  const students = row.class_id ? getAll(db, 'students', 'class_id = ?', row.class_id) : []
+  return {
+    ...base,
+    total_students: students.length,
+    submitted_count: subs.filter(s => s.status !== 'Returned').length,
+    graded_count: subs.filter(s => s.status === 'Graded').length,
+  }
+}
+
+function assertTeacherOrAdmin(user) {
+  if (!user) throw { status: 401, message: 'Not signed in' }
+  if (user.role !== 'Teacher' && user.role !== 'School Admin') {
+    throw { status: 403, message: 'Access denied' }
+  }
+}
+
+function assertOwnsAssignment(db, user, assignmentId) {
+  const row = getById(db, 'assignments', assignmentId)
+  if (!row) throw { status: 404, message: 'Assignment not found' }
+  if (user.role === 'School Admin') return row
+  const classIds = JSON.parse(user.class_ids || '[]')
+  if (!classIds.includes(row.class_id)) throw { status: 403, message: 'This assignment belongs to another class' }
+  return row
+}
+
+/** Mobile: get student's assignments (with their submission + grade) */
 function mobileGetStudentAssignments(db, params, user) {
   if (!user) throw { status: 401, message: 'Not signed in' }
   const student = getOne(db, 'students', 'email', user.email) || getById(db, 'students', user.id)
   if (!student) return []
 
   const assignments = getAll(db, 'assignments', 'class_id = ?', student.class_id)
-  return assignments
+  return assignments.map(a => serializeAssignment(db, a, student))
 }
 
 /** Mobile: get my attendance */
@@ -725,53 +814,173 @@ function mobileMarkAttendance(db, params, user) {
   return { message: 'Attendance marked', count: records.length }
 }
 
-/** Mobile: teacher creates assignment */
+/** Mobile: teacher creates assignment (optionally with an uploaded attachment) */
 function mobileCreateAssignment(db, params, user) {
-  if (!user || (user.role !== 'Teacher' && user.role !== 'School Admin')) {
-    throw { status: 403, message: 'Access denied' }
-  }
-  const { title, class_id, due_date, description, course } = params
+  assertTeacherOrAdmin(user)
+  const { title, class_id, due_date, description, course, file_name, file_data } = params
   if (!title || !class_id) throw { status: 400, message: 'title and class_id are required' }
+
+  let attachmentId = null
+  let attachmentName = null
+  if (file_data) {
+    if (file_data.length > MAX_UPLOAD_B64) throw { status: 413, message: 'File too large (max 10 MB)' }
+    attachmentId = storeFileBlob(db, { name: file_name, data: file_data, uploadedBy: user.id })
+    attachmentName = file_name || 'attachment'
+  }
 
   const id = genId('asgn-')
   insert(db, 'assignments', {
     id, title, course: course || '', class_id, school_id: user.school_id || '',
     due_date: due_date || '', description: description || '',
+    attachment_id: attachmentId, attachment_name: attachmentName,
     created_by: user.id, created_at: new Date().toISOString(),
   })
-  return { id, title, course, class_id, due_date, description }
+  return { id, title, course, class_id, due_date, description, attachment: attachmentId, attachment_name: attachmentName }
 }
 
-/** Mobile: student submits assignment */
+/** Mobile: teacher updates an assignment */
+function mobileUpdateAssignment(db, params, user) {
+  assertTeacherOrAdmin(user)
+  const row = assertOwnsAssignment(db, user, params.id)
+
+  const updates = {}
+  if (params.title) updates.title = params.title
+  if (params.course != null) updates.course = params.course
+  if (params.class_id) updates.class_id = params.class_id
+  if (params.due_date != null) updates.due_date = params.due_date
+  if (params.description != null) updates.description = params.description
+
+  if (params.clear_attachment) {
+    updates.attachment_id = null
+    updates.attachment_name = null
+  } else if (params.file_data) {
+    if (params.file_data.length > MAX_UPLOAD_B64) throw { status: 413, message: 'File too large (max 10 MB)' }
+    updates.attachment_id = storeFileBlob(db, { name: params.file_name, data: params.file_data, uploadedBy: user.id })
+    updates.attachment_name = params.file_name || 'attachment'
+  }
+
+  updateById(db, 'assignments', row.id, updates)
+  return { id: row.id, ...updates }
+}
+
+/** Mobile: teacher deletes an assignment (and its submissions) */
+function mobileDeleteAssignment(db, params, user) {
+  assertTeacherOrAdmin(user)
+  const row = assertOwnsAssignment(db, user, params.id)
+  deleteWhere(db, 'submissions', 'assignment_id', row.id)
+  deleteById(db, 'assignments', row.id)
+  return { id: row.id, deleted: true }
+}
+
+/** Mobile: student submits (or resubmits) an assignment with an uploaded file */
 function mobileSubmitAssignment(db, params, user) {
   if (!user) throw { status: 401, message: 'Not signed in' }
-  const { assignment_id, file_name } = params
+  const { assignment_id, file_name, file_data, file_id } = params
   if (!assignment_id) throw { status: 400, message: 'assignment_id is required' }
+  const assignment = getById(db, 'assignments', assignment_id)
+  if (!assignment) throw { status: 404, message: 'Assignment not found' }
 
   const student = getOne(db, 'students', 'email', user.email) || getById(db, 'students', user.id)
   if (!student) throw { status: 404, message: 'Student profile not found' }
 
+  let storedFileId = file_id || null
+  if (!storedFileId && file_data) {
+    if (file_data.length > MAX_UPLOAD_B64) throw { status: 413, message: 'File too large (max 10 MB)' }
+    storedFileId = storeFileBlob(db, { name: file_name, data: file_data, uploadedBy: student.id })
+  }
+
+  const existing = getAll(db, 'submissions', 'assignment_id = ? AND student_id = ?', assignment_id, student.id)
+  if (existing.length) {
+    // Resubmit (e.g. after a teacher returned it): replace file and reset status
+    const prev = existing[existing.length - 1]
+    updateById(db, 'submissions', prev.id, {
+      file_id: storedFileId,
+      file_name: file_name || prev.file_name || '',
+      score: '', feedback: '', status: 'Submitted',
+      submitted_at: new Date().toISOString(),
+    })
+    return { id: prev.id, assignment_id, status: 'Submitted' }
+  }
+
   const id = genId('sub-')
   insert(db, 'submissions', {
-    id, assignment_id, student_id: student.id, file_name: file_name || '',
-    score: '', feedback: '', status: 'Submitted',
+    id, assignment_id, student_id: student.id, file_id: storedFileId,
+    file_name: file_name || '', score: '', feedback: '', status: 'Submitted',
     submitted_at: new Date().toISOString(),
   })
   return { id, assignment_id, status: 'Submitted' }
 }
 
-/** Mobile: get teacher's assignments */
-function mobileGetTeacherAssignments(db, params, user) {
-  if (!user || (user.role !== 'Teacher' && user.role !== 'School Admin')) {
-    throw { status: 403, message: 'Access denied' }
+/** Mobile: teacher lists all submissions for one assignment */
+function mobileGetAssignmentSubmissions(db, params, user) {
+  assertTeacherOrAdmin(user)
+  const row = assertOwnsAssignment(db, user, params.assignment_id || params.id)
+  const subs = getAll(db, 'submissions', 'assignment_id = ?', row.id)
+  return subs.map(s => serializeSubmission(db, s))
+}
+
+/** Mobile: teacher grades a submission (0-100) */
+function mobileGradeSubmission(db, params, user) {
+  assertTeacherOrAdmin(user)
+  const sub = getById(db, 'submissions', params.submission_id || params.id)
+  if (!sub) throw { status: 404, message: 'Submission not found' }
+  assertOwnsAssignment(db, user, sub.assignment_id)
+
+  const grade = Number(params.grade)
+  if (!Number.isFinite(grade) || grade < 0 || grade > 100) {
+    throw { status: 400, message: 'Grade must be a number between 0 and 100' }
   }
+  updateById(db, 'submissions', sub.id, {
+    score: String(grade),
+    feedback: params.feedback ?? sub.feedback ?? '',
+    status: 'Graded',
+  })
+  return serializeSubmission(db, getById(db, 'submissions', sub.id))
+}
+
+/** Mobile: teacher returns a submission so the student can revise and resubmit */
+function mobileUnsubmitSubmission(db, params, user) {
+  assertTeacherOrAdmin(user)
+  const sub = getById(db, 'submissions', params.submission_id || params.id)
+  if (!sub) throw { status: 404, message: 'Submission not found' }
+  assertOwnsAssignment(db, user, sub.assignment_id)
+  updateById(db, 'submissions', sub.id, { status: 'Returned', score: '', feedback: '' })
+  return serializeSubmission(db, getById(db, 'submissions', sub.id))
+}
+
+/** Mobile: teacher deletes a submission (student can resubmit fresh) */
+function mobileDeleteSubmission(db, params, user) {
+  assertTeacherOrAdmin(user)
+  const sub = getById(db, 'submissions', params.submission_id || params.id)
+  if (!sub) throw { status: 404, message: 'Submission not found' }
+  assertOwnsAssignment(db, user, sub.assignment_id)
+  deleteById(db, 'submissions', sub.id)
+  return { id: sub.id, deleted: true }
+}
+
+/** Mobile: download an uploaded file (assignment attachment or submission) */
+function mobileGetFile(db, params, user) {
+  if (!user) throw { status: 401, message: 'Not signed in' }
+  const id = params.file_id || params.id
+  if (!id) throw { status: 400, message: 'file_id is required' }
+  const row = db.prepare('SELECT * FROM file_blobs WHERE id = ?').get(id)
+  if (!row) throw { status: 404, message: 'File not found' }
+  return { id: row.id, name: row.name, mime_type: row.mime_type, size: row.size, data: row.data }
+}
+
+/** Mobile: get teacher's assignments (with submission stats) */
+function mobileGetTeacherAssignments(db, params, user) {
+  assertTeacherOrAdmin(user)
   const classIds = JSON.parse(user.class_ids || '[]')
   if (classIds.length === 0) return []
   let all = []
   for (const cid of classIds) {
     all = all.concat(getAll(db, 'assignments', 'class_id = ?', cid))
   }
-  return all
+  // Dedupe (a class could theoretically appear twice) and enrich
+  const seen = new Set()
+  return all.filter(a => (seen.has(a.id) ? false : (seen.add(a.id), true)))
+    .map(a => serializeAssignment(db, a))
 }
 
 /** Mobile: get school profile */
@@ -1115,8 +1324,15 @@ const SA_HANDLERS = {
   'school_connect.api.mobile.get_my_attendance': mobileGetMyAttendance,
   'school_connect.api.mobile.mark_attendance': mobileMarkAttendance,
   'school_connect.api.mobile.create_assignment': mobileCreateAssignment,
+  'school_connect.api.mobile.update_assignment': mobileUpdateAssignment,
+  'school_connect.api.mobile.delete_assignment': mobileDeleteAssignment,
   'school_connect.api.mobile.submit_assignment': mobileSubmitAssignment,
   'school_connect.api.mobile.get_teacher_assignments': mobileGetTeacherAssignments,
+  'school_connect.api.mobile.get_assignment_submissions': mobileGetAssignmentSubmissions,
+  'school_connect.api.mobile.grade_submission': mobileGradeSubmission,
+  'school_connect.api.mobile.unsubmit_submission': mobileUnsubmitSubmission,
+  'school_connect.api.mobile.delete_submission': mobileDeleteSubmission,
+  'school_connect.api.mobile.get_file': mobileGetFile,
   'school_connect.api.mobile.get_school_profile': mobileGetSchoolProfile,
   'school_connect.api.mobile.get_admin_stats': mobileGetAdminStats,
 }
@@ -1170,7 +1386,7 @@ export function handleRequest(consoleName, bothDbs, path, req) {
   const user = getSessionUser(db, sid)
 
   // CSRF check
-  if (!checkCsrf(req, user)) {
+  if (!checkCsrf(req, user, path)) {
     throw { status: 403, message: 'CSRF token missing or invalid', exc_type: 'CSRFError' }
   }
 

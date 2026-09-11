@@ -137,12 +137,14 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
     required DateTime dueDate,
     String? description,
     String? filePath,
+    List<int>? fileBytes,
   }) async {
     state = state.copyWith(isSubmitting: true, error: null);
     try {
       await _apiService.createAssignment(
         title: title, course: course, studentGroup: studentGroup,
         dueDate: dueDate, description: description, filePath: filePath,
+        fileBytes: fileBytes,
       );
       await loadAssignments();
       return true;
@@ -162,6 +164,7 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
     required DateTime dueDate,
     String? description,
     String? filePath,
+    List<int>? fileBytes,
     bool clearAttachment = false,
   }) async {
     state = state.copyWith(isSubmitting: true, error: null);
@@ -170,7 +173,7 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
         assignmentId: assignmentId, title: title, course: course,
         studentGroup: studentGroup, dueDate: dueDate,
         description: description, filePath: filePath,
-        clearAttachment: clearAttachment,
+        fileBytes: fileBytes, clearAttachment: clearAttachment,
       );
       await loadAssignments();
       return true;

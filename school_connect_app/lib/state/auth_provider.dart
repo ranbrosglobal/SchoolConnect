@@ -97,6 +97,48 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return login(email, password);
   }
 
+  /// Sign in with Google (Firebase) and create a backend session.
+  Future<bool> signInWithGoogle() async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final result = await _sheetsService.signInWithGoogle();
+      if (result.success && result.user != null) {
+        state = state.copyWith(
+          isLoading: false,
+          isAuthenticated: true,
+          user: result.user,
+        );
+        return true;
+      }
+      state = state.copyWith(isLoading: false, error: result.error ?? 'Google sign-in failed.');
+      return false;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: 'Google sign-in failed: ${e.toString()}');
+      return false;
+    }
+  }
+
+  /// Sign in with Apple (Firebase) and create a backend session.
+  Future<bool> signInWithApple() async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final result = await _sheetsService.signInWithApple();
+      if (result.success && result.user != null) {
+        state = state.copyWith(
+          isLoading: false,
+          isAuthenticated: true,
+          user: result.user,
+        );
+        return true;
+      }
+      state = state.copyWith(isLoading: false, error: result.error ?? 'Apple sign-in failed.');
+      return false;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: 'Apple sign-in failed: ${e.toString()}');
+      return false;
+    }
+  }
+
   /// Sign up student.
   Future<bool> signupStudent({
     required String fullName,

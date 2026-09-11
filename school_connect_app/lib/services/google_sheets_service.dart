@@ -1,11 +1,14 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'dart:io' show File, Platform;
+import 'dart:typed_data' show Uint8List;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart' as apple;
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
+import 'export_service.dart';
 import '../models/user_model.dart';
 import '../models/student_model.dart';
 import '../models/student_group_model.dart';
@@ -498,15 +501,35 @@ class GoogleSheetsService {
     required DateTime dueDate,
     String? description,
     String? filePath,
+    List<int>? fileBytes,
   }) async {
+    final payload = await _filePayload(filePath, fileBytes);
     final result = await _post('school_connect.api.mobile.create_assignment', {
       'title': title,
       'course': course,
       'class_id': studentGroup,
       'due_date': dueDate.toIso8601String().split('T')[0],
       'description': description ?? '',
+      ...payload,
     });
     return AssignmentModel.fromJson(result);
+  }
+
+  /// Builds the base64 upload fields from in-memory bytes when available,
+  /// falling back to reading the file from disk.
+  Future<Map<String, String>> _filePayload(String? filePath, List<int>? fileBytes) async {
+    if (fileBytes != null && fileBytes.isNotEmpty) {
+      final name = (filePath ?? 'attachment').split(Platform.pathSeparator).last;
+      return {'file_name': name, 'file_data': base64Encode(fileBytes)};
+    }
+    if (filePath == null || kIsWeb) return const {};
+    try {
+      final bytes = await File(filePath).readAsBytes();
+      return {'file_name': filePath.split(Platform.pathSeparator).last, 'file_data': base64Encode(bytes)};
+    } catch (e) {
+      debugPrint('Failed to read attachment $filePath: $e');
+      return const {};
+    }
   }
 
   Future<void> updateAssignment({
@@ -517,18 +540,58 @@ class GoogleSheetsService {
     required DateTime dueDate,
     String? description,
     String? filePath,
+    List<int>? fileBytes,
     bool clearAttachment = false,
   }) async {
-    await _post('school_connect.api.admin.update_class', {
+    final payload = await _filePayload(filePath, fileBytes);
+    await _post('school_connect.api.mobile.update_assignment', {
       'id': assignmentId,
-      'name': title,
-      'program': course,
-      'teacher_ids': [studentGroup],
+      'title': title,
+      'course': course,
+      'class_id': studentGroup,
+      'due_date': dueDate.toIso8601String().split('T')[0],
+      'description': description ?? '',
+      ...payload,
+      'clear_attachment': clearAttachment,
     });
   }
 
   Future<void> deleteAssignment(String assignmentId) async {
-    await _post('school_connect.api.admin.delete_class', {'id': assignmentId});
+    await _post('school_connect.api.mobile.delete_assignment', {'id': assignmentId});
+  }
+
+  /// Fetches an uploaded file (assignment attachment or submission) and
+  /// returns its raw bytes.
+  Future<Uint8List> downloadFile(String fileId) async {
+    final result = await _get('school_connect.api.mobile.get_file', {'file_id': fileId});
+    final data = result['data'] as String?;
+    if (data == null || data.isEmpty) throw Exception('File has no content');
+    return base64Decode(data);
+  }
+
+  /// Downloads a file and opens the platform share sheet so the user can
+  /// save it anywhere (Files, Google Drive, WhatsApp, …).
+  Future<void> downloadAndShareFile(String fileId, String fileName) async {
+    final bytes = await downloadFile(fileId);
+    await ExportService.instance.shareBytes(bytes, fileName, _mimeTypeFor(fileName));
+  }
+
+  String _mimeTypeFor(String fileName) {
+    final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
+    return switch (ext) {
+      'pdf' => 'application/pdf',
+      'png' => 'image/png',
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'gif' => 'image/gif',
+      'txt' || 'md' => 'text/plain',
+      'csv' => 'text/csv',
+      'zip' => 'application/zip',
+      'doc' => 'application/msword',
+      'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'ppt' => 'application/vnd.ms-powerpoint',
+      'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      _ => 'application/octet-stream',
+    };
   }
 
   Future<List<AssignmentModel>> getAssignmentsOnDate(DateTime date) async {
@@ -546,14 +609,26 @@ class GoogleSheetsService {
   // ─────────────────────────────────────────────────────────────────────
 
   Future<List<AssignmentSubmissionModel>> getAssignmentSubmissions(String assignment) async {
-    return [];
+    final result = await _get('school_connect.api.mobile.get_assignment_submissions', {
+      'assignment_id': assignment,
+    });
+    final list = result is List ? result : (result['submissions'] ?? []);
+    return (list as List)
+        .map((s) => AssignmentSubmissionModel.fromJson(Map<String, dynamic>.from(s)))
+        .toList();
   }
 
   Future<void> gradeSubmission({
     required String submission,
     required double grade,
     String? feedback,
-  }) async {}
+  }) async {
+    await _post('school_connect.api.mobile.grade_submission', {
+      'submission_id': submission,
+      'grade': grade,
+      if (feedback != null && feedback.isNotEmpty) 'feedback': feedback,
+    });
+  }
 
   Future<void> submitAssignment({
     required String assignment,
@@ -566,16 +641,24 @@ class GoogleSheetsService {
     });
   }
 
-  Future<void> unsubmitSubmission(String submission) async {}
+  Future<void> unsubmitSubmission(String submission) async {
+    await _post('school_connect.api.mobile.unsubmit_submission', {'submission_id': submission});
+  }
 
-  Future<void> deleteSubmission(String submission) async {}
+  Future<void> deleteSubmission(String submission) async {
+    await _post('school_connect.api.mobile.delete_submission', {'submission_id': submission});
+  }
 
   Future<void> submitAssignmentWithFile({
     required String assignment,
     required String fileName,
     required List<int> fileBytes,
   }) async {
-    await submitAssignment(assignment: assignment, fileName: fileName);
+    await _post('school_connect.api.mobile.submit_assignment', {
+      'assignment_id': assignment,
+      'file_name': fileName,
+      'file_data': base64Encode(fileBytes),
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────

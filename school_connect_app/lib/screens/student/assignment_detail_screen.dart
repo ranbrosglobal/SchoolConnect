@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../state/student_provider.dart';
+import '../../state/auth_provider.dart' show sheetsServiceProvider;
 import '../../models/assignment_model.dart';
 
 class AssignmentDetailScreen extends ConsumerStatefulWidget {
@@ -28,6 +29,37 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
   int? _selectedFileSize;
   List<int>? _selectedFileBytes;
   bool _isSubmitting = false;
+  bool _downloading = false;
+
+  Future<void> _downloadAttachment() async {
+    final fileId = _assignment.attachment;
+    final name = _assignment.attachmentName ?? 'attachment';
+    if (fileId == null || fileId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No attachment file available')),
+      );
+      return;
+    }
+    setState(() => _downloading = true);
+    try {
+      await ref
+          .read(sheetsServiceProvider)
+          .downloadAndShareFile(fileId, name);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Opened $name — choose where to save it')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Download failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _downloading = false);
+    }
+  }
 
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
@@ -375,10 +407,14 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
                     _assignment.attachmentName ?? 'Attachment',
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
-                  trailing: const Icon(Icons.download),
-                  onTap: () {
-                    // TODO: Download attachment
-                  },
+                  trailing: _downloading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.download),
+                  onTap: _downloading ? null : _downloadAttachment,
                 ),
               ),
               const SizedBox(height: 16),

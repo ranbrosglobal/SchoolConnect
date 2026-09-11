@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../state/teacher_provider.dart';
+import '../../state/auth_provider.dart' show sheetsServiceProvider;
 import '../../models/assignment_model.dart';
 import '../../models/assignment_submission_model.dart';
 
@@ -17,6 +18,45 @@ class TeacherAssignmentDetailScreen extends ConsumerStatefulWidget {
 
 class _TeacherAssignmentDetailScreenState
     extends ConsumerState<TeacherAssignmentDetailScreen> {
+  String? _busyFileId;
+
+  Future<void> _downloadSubmission(AssignmentSubmissionModel s) async {
+    final fileId = s.file;
+    if (fileId == null || fileId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This submission has no uploaded file'),
+        ),
+      );
+      return;
+    }
+    setState(() => _busyFileId = s.id);
+    try {
+      await ref
+          .read(sheetsServiceProvider)
+          .downloadAndShareFile(fileId, s.fileName ?? 'submission');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Opened ${s.fileName ?? 'submission'} — choose where to save it'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Download failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busyFileId = null);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -577,32 +617,51 @@ class _TeacherAssignmentDetailScreenState
             ),
             if (s.fileName != null) ...[
               const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.insert_drive_file,
-                        size: 18, color: Color(0xFF1976D2)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        s.fileName!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.grey[700],
-                          fontSize: 13,
+              InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: _busyFileId == s.id ? null : () => _downloadSubmission(s),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      if (_busyFileId == s.id)
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      else
+                        const Icon(Icons.insert_drive_file,
+                            size: 18, color: Color(0xFF1976D2)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          s.fileName!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: s.file != null
+                                ? const Color(0xFF1976D2)
+                                : Colors.grey[700],
+                            fontSize: 13,
+                            decoration: s.file != null
+                                ? TextDecoration.underline
+                                : null,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                      if (s.file != null)
+                        const Icon(Icons.download,
+                            size: 16, color: Color(0xFF1976D2)),
+                    ],
+                  ),
                 ),
               ),
             ],

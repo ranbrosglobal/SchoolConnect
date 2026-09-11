@@ -28,6 +28,7 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
   DateTime? _dueDate;
   String? _attachmentPath;
   String? _attachmentName;
+  List<int>? _attachmentBytes;
   bool _isSubmitting = false;
 
   bool get _isEditing => widget.assignment != null;
@@ -82,6 +83,7 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
       setState(() {
         _attachmentPath = result.files.first.path;
         _attachmentName = result.files.first.name;
+        _attachmentBytes = result.files.first.bytes;
       });
     }
   }
@@ -137,6 +139,7 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
             dueDate: _dueDate!,
             description: description,
             filePath: _attachmentPath,
+            fileBytes: _attachmentBytes,
             clearAttachment: clearedAttachment,
           )
         : await notifier.createAssignment(
@@ -146,6 +149,7 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
             dueDate: _dueDate!,
             description: description,
             filePath: _attachmentPath,
+            fileBytes: _attachmentBytes,
           );
 
     if (!mounted) return;
@@ -301,6 +305,7 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
                       ? () => setState(() {
                             _attachmentPath = null;
                             _attachmentName = null;
+                            _attachmentBytes = null;
                           })
                       : _pickAttachment,
                 ),

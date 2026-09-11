@@ -101,8 +101,19 @@ function createSchooladminTables(db) {
     school_id   TEXT,
     due_date    TEXT,
     description TEXT,
+    attachment_id   TEXT,
+    attachment_name TEXT,
     created_by  TEXT,
     created_at  TEXT
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS file_blobs (
+    id         TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    mime_type  TEXT NOT NULL DEFAULT 'application/octet-stream',
+    size       INTEGER NOT NULL DEFAULT 0,
+    data       TEXT NOT NULL,
+    uploaded_by TEXT,
+    created_at TEXT NOT NULL
   )`)
   db.exec(`CREATE TABLE IF NOT EXISTS attendance_log (
     id          TEXT PRIMARY KEY,
@@ -118,12 +129,21 @@ function createSchooladminTables(db) {
     id            TEXT PRIMARY KEY,
     assignment_id TEXT NOT NULL,
     student_id    TEXT NOT NULL,
+    file_id       TEXT,
     file_name     TEXT,
     score         TEXT,
     feedback      TEXT,
     status        TEXT NOT NULL DEFAULT 'Submitted',
     submitted_at  TEXT
   )`)
+
+  // Migrations for databases created before the attachment columns existed
+  const addColumn = (table, column, type) => {
+    try { db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`) } catch (_e) { /* already exists */ }
+  }
+  addColumn('assignments', 'attachment_id', 'TEXT')
+  addColumn('assignments', 'attachment_name', 'TEXT')
+  addColumn('submissions', 'file_id', 'TEXT')
   db.exec(`CREATE TABLE IF NOT EXISTS sessions (
     sid TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -133,6 +153,22 @@ function createSchooladminTables(db) {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_students_school ON students (school_id)`)
   db.exec(`CREATE INDEX IF NOT EXISTS idx_timetable_class ON timetable (class_id, day, period)`)
   db.exec(`CREATE INDEX IF NOT EXISTS idx_users_school ON users (school_id)`)
+}
+
+/**
+ * Store a base64 file in the file_blobs table.
+ * @returns {string} the generated file id
+ */
+export function storeFileBlob(db, { name, mimeType, data, uploadedBy }) {
+  const id = genFileId()
+  const size = Math.floor(data.length * 3 / 4)
+  db.prepare('INSERT INTO file_blobs (id, name, mime_type, size, data, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(id, name || 'file', mimeType || 'application/octet-stream', size, data, uploadedBy || '', new Date().toISOString())
+  return id
+}
+
+export function genFileId() {
+  return `file-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 }
 
 function createSuperadminTables(db) {
