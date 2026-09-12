@@ -1,7 +1,7 @@
 /**
  * SQLite database wrapper for both schooladmin and superadmin databases.
  *
- * Uses Node 24's built-in node:sqlite module (experimental but functional).
+ * Uses Node 22+'s built-in node:sqlite module.
  * Each database is opened as a separate DatabaseSync instance.
  */
 

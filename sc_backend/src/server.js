@@ -15,12 +15,18 @@ import { openDatabases, closeDatabases } from './db.js'
 import { handleRequest, listEndpoints } from './handlers.js'
 import { seedSchooladmin, seedSuperadmin } from './seed.js'
 
+const SERVER_IP = process.env.SC_HOST || '13.205.212.64'
 const ALLOWED_ORIGINS = [
-  'http://13.205.212.64:5173',
-  'http://13.205.212.64:5175',
-  'http://13.205.212.64:3000',
-  'http://13.205.212.64:3001',
-  'http://13.205.212.64',
+  `http://${SERVER_IP}:5173`,
+  `http://${SERVER_IP}:5175`,
+  `http://${SERVER_IP}:3000`,
+  `http://${SERVER_IP}:3001`,
+  `http://${SERVER_IP}`,
+  'http://localhost:5173',
+  'http://localhost:5175',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost',
 ]
 
 /**
@@ -95,7 +101,7 @@ export function createServer({ consoleName, port, seed, sync }) {
     }
 
     // Parse URL
-    const url = new URL(req.url, `http://13.205.212.64:${port}`)
+    const url = new URL(req.url, `http://${SERVER_IP}:${port}`)
 
     // Health endpoint
     if (url.pathname === '/health') {
@@ -247,7 +253,7 @@ export function createServer({ consoleName, port, seed, sync }) {
   })
 
   server.listen(port, '0.0.0.0', () => {
-    console.log(`[${consoleName}] Server running on http://13.205.212.64:${port}`)
+    console.log(`[${consoleName}] Server running on http://${SERVER_IP}:${port}`)
   })
 
   // Graceful shutdown

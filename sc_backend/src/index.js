@@ -16,6 +16,7 @@ import { createOutbox } from './sync.js'
 
 const SA_PORT = Number(process.env.SC_SA_PORT || 3000)
 const SU_PORT = Number(process.env.SC_SU_PORT || 3001)
+const SERVER_IP = process.env.SC_HOST || '13.205.212.64'
 
 const reset = process.argv.includes('--reset')
 
@@ -97,12 +98,12 @@ function startupSync() {
 // Set up cross-backend sync (sync moved to after servers start)
 const saOutbox = createOutbox({
   consoleName: 'schooladmin',
-  peerUrl: `http://13.205.212.64:${SU_PORT}`,
+  peerUrl: `http://${SERVER_IP}:${SU_PORT}`,
   secret: process.env.SC_SYNC_SECRET || 'schoolconnect-sync',
 })
 const suOutbox = createOutbox({
   consoleName: 'superadmin',
-  peerUrl: `http://13.205.212.64:${SA_PORT}`,
+  peerUrl: `http://${SERVER_IP}:${SA_PORT}`,
   secret: process.env.SC_SYNC_SECRET || 'schoolconnect-sync',
 })
 
@@ -125,9 +126,9 @@ const suServer = createServer({
 try { startupSync() } catch (e) { console.error('[sync] Startup sync failed:', e.message) }
 
 console.log(`\nSchoolConnect backend ready!`)
-console.log(`  School Admin: http://13.205.212.64:${SA_PORT}`)
-console.log(`  Super Admin:  http://13.205.212.64:${SU_PORT}`)
-console.log(`  Health:       http://13.205.212.64:${SA_PORT}/health\n`)
+console.log(`  School Admin: http://${SERVER_IP}:${SA_PORT}`)
+console.log(`  Super Admin:  http://${SERVER_IP}:${SU_PORT}`)
+console.log(`  Health:       http://${SERVER_IP}:${SA_PORT}/health\n`)
 
 // Graceful shutdown
 process.on('SIGINT', () => {

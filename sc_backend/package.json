@@ -9,6 +9,6 @@
     "reset": "node src/index.js --reset"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.5.0"
   }
 }
