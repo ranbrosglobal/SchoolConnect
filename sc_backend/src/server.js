@@ -261,11 +261,21 @@ const ALLOWED_ORIGINS = [
   `http://${SERVER_IP}:3000`,
   `http://${SERVER_IP}:3001`,
   `http://${SERVER_IP}`,
+  `https://${SERVER_IP}`,
+  `https://${SERVER_IP}:5173`,
+  `https://${SERVER_IP}:5175`,
+  `https://${SERVER_IP}:3000`,
+  `https://${SERVER_IP}:3001`,
   'http://localhost:5173',
   'http://localhost:5175',
   'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost',
+  'https://localhost',
+  'https://localhost:5173',
+  'https://localhost:5175',
+  'https://localhost:3000',
+  'https://localhost:3001',
 ]
 
 /**
@@ -330,6 +340,11 @@ export function createServer({ consoleName, port, seed, sync }) {
       res.setHeader('Access-Control-Allow-Credentials', 'true')
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-CSRF-Token, X-Sync-Secret, X-Mobile-Key, Authorization, Cookie')
+    } else if (origin) {
+      // Log mismatched origins so blocked preflights are easy to debug.
+      // Do NOT reflect an arbitrary origin back — the browser must still see
+      // no Access-Control-Allow-Origin on the response in this branch.
+      console.log(`[${consoleName}] Rejected CORS origin: ${origin}`)
     }
 
     // Handle preflight
