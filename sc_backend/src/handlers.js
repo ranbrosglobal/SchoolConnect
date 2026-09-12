@@ -97,7 +97,7 @@ function checkCsrf(req, user, path) {
   // The session cookie is SameSite=Lax, which already blocks cross-site
   // browser requests, so this does not weaken protection for the consoles.
   if (typeof path === 'string' && path.startsWith('school_connect.api.mobile.')) return true
-  const token = req.headers['x-frappe-csrf-token']
+  const token = req.headers['x-csrf-token']
   return token === user.id
 }
 
@@ -429,10 +429,15 @@ function schoolAdminCreateStudent(db, params) {
   const roll = Number(params.roll_number) || (peers.length ? Math.max(...peers.map(s => s.roll_number || 0)) + 1 : 1)
   const hashedPw = params.password ? hashPassword(params.password) : ''
   insert(db, 'students', { id, name, email: params.email || '', password: hashedPw,
-    roll_number: roll, class_id: cls.id, school_id: cls.school_id, attendance_pct: 0,
+    roll_number: roll, class_id: cls.id, school_id: cls.school_id,
+    parent_name: params.parent_name || '', parent_phone: params.parent_phone || '',
+    parent_email: params.parent_email || '', address: params.address || '',
+    attendance_pct: 0,
     status: params.status === 'Inactive' ? 'Inactive' : 'Active' })
   return { id, name, email: params.email || '', roll_number: roll, class_id: cls.id,
-    school_id: cls.school_id, attendance_pct: 0, status: params.status || 'Active' }
+    school_id: cls.school_id, parent_name: params.parent_name || '',
+    parent_phone: params.parent_phone || '', parent_email: params.parent_email || '',
+    address: params.address || '', attendance_pct: 0, status: params.status || 'Active' }
 }
 
 function schoolAdminUpdateStudent(db, params) {
@@ -445,6 +450,10 @@ function schoolAdminUpdateStudent(db, params) {
   if (params.class_id) updates.class_id = params.class_id
   if (params.roll_number) updates.roll_number = Number(params.roll_number)
   if (params.status) updates.status = params.status
+  if (params.parent_name != null) updates.parent_name = params.parent_name
+  if (params.parent_phone != null) updates.parent_phone = params.parent_phone
+  if (params.parent_email != null) updates.parent_email = params.parent_email
+  if (params.address != null) updates.address = params.address
   updateById(db, 'students', params.id, updates)
   return { ...s, ...updates }
 }

@@ -53,7 +53,7 @@ export function createServer({ consoleName, port, seed, sync }) {
       res.setHeader('Access-Control-Allow-Origin', origin)
       res.setHeader('Access-Control-Allow-Credentials', 'true')
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Frappe-CSRF-Token, X-Sync-Secret, X-Mobile-Key, Authorization, Cookie')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-CSRF-Token, X-Sync-Secret, X-Mobile-Key, Authorization, Cookie')
     }
 
     // Handle preflight

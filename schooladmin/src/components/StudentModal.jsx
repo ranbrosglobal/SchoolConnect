@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import { useFetch } from '../lib/useFetch'
 import { Field, Modal, PrimaryButton, SecondaryButton, inputClass } from './ui'
 
-/*
+/* 
  * Add / edit a student. `student` = null → add mode.
  * On add, roll_number is optional — the backend assigns the next free roll.
  */
@@ -15,11 +15,17 @@ export default function StudentModal({ student, school, onClose, onSaved }) {
       ? {
           name: student.name,
           email: student.email,
+          password: '',
           class_id: student.class_id,
           roll_number: student.roll_number,
           status: student.status,
+          parent_name: student.parent_name || '',
+          parent_phone: student.parent_phone || '',
+          parent_email: student.parent_email || '',
+          address: student.address || '',
         }
-      : { name: '', email: '', class_id: '', roll_number: '', status: 'Active' },
+      : { name: '', email: '', password: '', class_id: '', roll_number: '', status: 'Active',
+          parent_name: '', parent_phone: '', parent_email: '', address: '' },
   )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -35,6 +41,10 @@ export default function StudentModal({ student, school, onClose, onSaved }) {
       setError('Please pick a class.')
       return
     }
+    if (!student && !fields.password) {
+      setError('A password is required for new student accounts.')
+      return
+    }
     setBusy(true)
     try {
       if (student) {
@@ -45,14 +55,23 @@ export default function StudentModal({ student, school, onClose, onSaved }) {
           class_id: fields.class_id,
           roll_number: Number(fields.roll_number) || undefined,
           status: fields.status,
+          parent_name: fields.parent_name,
+          parent_phone: fields.parent_phone,
+          parent_email: fields.parent_email,
+          address: fields.address,
         })
       } else {
         await api.createStudent({
           name: fields.name,
           email: fields.email,
+          password: fields.password,
           class_id: fields.class_id,
           roll_number: Number(fields.roll_number) || undefined,
           school,
+          parent_name: fields.parent_name,
+          parent_phone: fields.parent_phone,
+          parent_email: fields.parent_email,
+          address: fields.address,
         })
       }
       onSaved()
@@ -75,6 +94,8 @@ export default function StudentModal({ student, school, onClose, onSaved }) {
             {error}
           </div>
         )}
+
+        {/* Name + Email */}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Full name">
             <input
@@ -98,6 +119,19 @@ export default function StudentModal({ student, school, onClose, onSaved }) {
           </Field>
         </div>
 
+        {/* Password (required for new, optional for edit) */}
+        <Field label={student ? 'New password (blank = keep)' : 'Password'}>
+          <input
+            type="text"
+            required={!student}
+            value={fields.password}
+            onChange={(e) => setFields({ ...fields, password: e.target.value })}
+            placeholder={student ? '••••••••' : 'Temporary password'}
+            className={inputClass}
+          />
+        </Field>
+
+        {/* Class + Roll */}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Class">
             <select
@@ -121,6 +155,47 @@ export default function StudentModal({ student, school, onClose, onSaved }) {
               value={fields.roll_number}
               onChange={(e) => setFields({ ...fields, roll_number: e.target.value })}
               placeholder={student ? String(student.roll_number) : 'Next free roll'}
+              className={inputClass}
+            />
+          </Field>
+        </div>
+
+        {/* Parent info */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Parent / Guardian name">
+            <input
+              value={fields.parent_name}
+              onChange={(e) => setFields({ ...fields, parent_name: e.target.value })}
+              placeholder="e.g. Rajesh Sharma"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Parent phone">
+            <input
+              type="tel"
+              value={fields.parent_phone}
+              onChange={(e) => setFields({ ...fields, parent_phone: e.target.value })}
+              placeholder="e.g. 9876543210"
+              className={inputClass}
+            />
+          </Field>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Parent email">
+            <input
+              type="email"
+              value={fields.parent_email}
+              onChange={(e) => setFields({ ...fields, parent_email: e.target.value })}
+              placeholder="parent@email.com"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Address">
+            <input
+              value={fields.address}
+              onChange={(e) => setFields({ ...fields, address: e.target.value })}
+              placeholder="Home address"
               className={inputClass}
             />
           </Field>

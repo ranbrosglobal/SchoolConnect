@@ -81,6 +81,10 @@ function createSchooladminTables(db) {
     roll_number    INTEGER,
     class_id       TEXT,
     school_id      TEXT,
+    parent_name    TEXT,
+    parent_phone   TEXT,
+    parent_email   TEXT,
+    address        TEXT,
     attendance_pct INTEGER NOT NULL DEFAULT 0,
     status         TEXT NOT NULL DEFAULT 'Active'
   )`)
@@ -144,6 +148,10 @@ function createSchooladminTables(db) {
   addColumn('assignments', 'attachment_id', 'TEXT')
   addColumn('assignments', 'attachment_name', 'TEXT')
   addColumn('submissions', 'file_id', 'TEXT')
+  addColumn('students', 'parent_name', 'TEXT')
+  addColumn('students', 'parent_phone', 'TEXT')
+  addColumn('students', 'parent_email', 'TEXT')
+  addColumn('students', 'address', 'TEXT')
   db.exec(`CREATE TABLE IF NOT EXISTS sessions (
     sid TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,

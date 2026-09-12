@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, BookOpen, CalendarCheck, DoorOpen, Hash, Mail, UserCheck } from 'lucide-react'
+import { ArrowLeft, BookOpen, CalendarCheck, DoorOpen, Hash, Home, Mail, Phone, User, UserCheck } from 'lucide-react'
 import { api } from '../lib/api'
 import { useFetch } from '../lib/useFetch'
 import StudentModal from '../components/StudentModal'
@@ -93,6 +93,15 @@ export default function StudentDetailPage() {
             ) : (
               <p className="text-sm text-ink-soft">No teacher assigned to this class.</p>
             )}
+          </Card>
+          <Card className="p-6">
+            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-soft">Parent / Guardian</h2>
+            <div className="divide-y divide-outline-soft/40">
+              <InfoRow icon={User} label="Parent name" value={student.parent_name} />
+              <InfoRow icon={Phone} label="Parent phone" value={student.parent_phone} />
+              <InfoRow icon={Mail} label="Parent email" value={student.parent_email} />
+              <InfoRow icon={Home} label="Address" value={student.address} />
+            </div>
           </Card>
           <Card className="p-6">
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-soft">School</h2>

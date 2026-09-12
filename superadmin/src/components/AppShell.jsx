@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Building2, LayoutDashboard, LogOut, Menu, Settings, X } from 'lucide-react'
 import { useAuth } from '../lib/auth'
+import { useInactivityLogout } from '../lib/useInactivityLogout'
 import { Avatar, Badge, Logo } from './ui'
 
 const NAV = [
@@ -84,6 +85,7 @@ function SidebarContent({ onNavigate }) {
 }
 
 export default function AppShell() {
+  const { showWarning, resetTimer } = useInactivityLogout()
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
@@ -123,6 +125,14 @@ export default function AppShell() {
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+          {showWarning && (
+            <div className="mb-4 flex items-center justify-between rounded-btn border border-warning/30 bg-warning-soft px-4 py-3 text-sm">
+              <span className="font-medium text-warning">You will be logged out in less than 1 minute due to inactivity.</span>
+              <button onClick={resetTimer} className="ml-4 rounded-btn bg-warning px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-warning/90">
+                Stay logged in
+              </button>
+            </div>
+          )}
           <Outlet />
         </main>
       </div>

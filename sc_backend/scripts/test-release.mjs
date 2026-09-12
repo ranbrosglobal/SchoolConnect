@@ -31,7 +31,7 @@ let ipN = 0
 async function req(url, path, { method = 'GET', body, cookie, csrf, ip, origin } = {}) {
   const headers = { Accept: 'application/json' }
   if (cookie) headers.Cookie = cookie
-  if (csrf) headers['X-Frappe-CSRF-Token'] = csrf
+  if (csrf) headers['X-CSRF-Token'] = csrf
   if (ip) headers['X-Forwarded-For'] = ip
   if (origin) headers.Origin = origin
   if (body !== undefined) {
