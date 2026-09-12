@@ -11,11 +11,250 @@
  */
 
 import http from 'node:http'
-import { openDatabases, closeDatabases } from './db.js'
-import { handleRequest, listEndpoints } from './handlers.js'
-import { seedSchooladmin, seedSuperadmin } from './seed.js'
+import crypto from 'node:crypto'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { DatabaseSync } from 'node:sqlite'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+// ─── Database setup (from db.js) ────────────────────────────────────
+
+const DEFAULT_DATA_DIR = join(__dirname, '..', 'data')
+
+let saDb = null
+let suDb = null
+
+export function openDatabases(dataDir = process.env.SC_DATA_DIR || DEFAULT_DATA_DIR) {
+  if (saDb) return { sa: saDb, su: suDb }
+  saDb = new DatabaseSync(join(dataDir, 'schooladmin.db'))
+  suDb = new DatabaseSync(join(dataDir, 'superadmin.db'))
+  saDb.exec('PRAGMA journal_mode = WAL')
+  suDb.exec('PRAGMA journal_mode = WAL')
+  return { sa: saDb, su: suDb }
+}
+
+export function closeDatabases() {
+  if (saDb) { try { saDb.close() } catch {} saDb = null }
+  if (suDb) { try { suDb.close() } catch {} suDb = null }
+}
+
+export function getById(db, table, id) {
+  return db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id)
+}
+
+export function getOne(db, table, field, value) {
+  return db.prepare(`SELECT * FROM ${table} WHERE ${field} = ?`).get(value)
+}
+
+export function getAll(db, table, where = '', ...args) {
+  const sql = where ? `SELECT * FROM ${table} WHERE ${where}` : `SELECT * FROM ${table}`
+  return db.prepare(sql).all(...args)
+}
+
+export function count(db, table, where = '', ...args) {
+  const sql = where ? `SELECT COUNT(*) as n FROM ${table} WHERE ${where}` : `SELECT COUNT(*) as n FROM ${table}`
+  return db.prepare(sql).get(...args).n
+}
+
+export function insert(db, table, row) {
+  const cols = Object.keys(row)
+  const placeholders = cols.map(() => '?').join(', ')
+  const sql = `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`
+  db.prepare(sql).run(...Object.values(row))
+  return row
+}
+
+export function updateById(db, table, id, updates) {
+  const cols = Object.keys(updates)
+  if (cols.length === 0) return
+  const sets = cols.map(c => `${c} = ?`).join(', ')
+  db.prepare(`UPDATE ${table} SET ${sets} WHERE id = ?`).run(...Object.values(updates), id)
+}
+
+export function deleteById(db, table, id) {
+  db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id)
+}
+
+export function deleteWhere(db, table, field, value) {
+  db.prepare(`DELETE FROM ${table} WHERE ${field} = ?`).run(value)
+}
+
+export function genId(prefix = '') {
+  return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+}
+
+// ─── Password helpers (from seed.js) ────────────────────────────────
+
+export function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex')
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex')
+  return `${salt}:${hash}`
+}
+
+export function verifyPassword(password, stored) {
+  if (!stored) return false
+  if (stored.includes(':') && !stored.startsWith('scrypt$')) {
+    const [salt, hash] = stored.split(':')
+    const test = crypto.scryptSync(password, salt, 64).toString('hex')
+    return test === hash
+  }
+  if (stored.startsWith('scrypt$')) {
+    const parts = stored.split('$')
+    const salt = Buffer.from(parts[4], 'hex')
+    const expectedHash = Buffer.from(parts[5], 'hex')
+    const keylen = expectedHash.length
+    const test = crypto.scryptSync(password, salt, keylen)
+    return crypto.timingSafeEqual(test, expectedHash)
+  }
+  if (password === stored) return true
+  return false
+}
+
+export function storeFileBlob(db, { name, mimeType, data, uploadedBy }) {
+  const id = `file-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+  const size = Math.floor(data.length * 3 / 4)
+  db.prepare('INSERT INTO file_blobs (id, name, mime_type, size, data, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(id, name || 'file', mimeType || 'application/octet-stream', size, data, uploadedBy || '', new Date().toISOString())
+  return id
+}
+
+// ─── Seed functions (from seed.js) ───────────────────────────────────
+
+function createSchooladminTables(db) {
+  db.exec(`CREATE TABLE IF NOT EXISTS schools (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL, location TEXT, status TEXT NOT NULL DEFAULT 'Active',
+    established INTEGER, periods TEXT NOT NULL DEFAULT '[]'
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, password TEXT NOT NULL, full_name TEXT NOT NULL,
+    role TEXT NOT NULL, school_id TEXT, class_ids TEXT NOT NULL DEFAULT '[]', subjects TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'Active'
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS classes (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL, program TEXT, school_id TEXT, room TEXT,
+    teacher_ids TEXT NOT NULL DEFAULT '[]'
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS students (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT, password TEXT NOT NULL DEFAULT '',
+    roll_number INTEGER, class_id TEXT, school_id TEXT, parent_name TEXT, parent_phone TEXT,
+    parent_email TEXT, address TEXT, attendance_pct INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'Active'
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS timetable (
+    id TEXT PRIMARY KEY, school_id TEXT, class_id TEXT, day TEXT, period INTEGER,
+    teacher_id TEXT, subject TEXT
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS assignments (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, course TEXT, class_id TEXT, school_id TEXT,
+    due_date TEXT, description TEXT, attachment_id TEXT, attachment_name TEXT, created_by TEXT, created_at TEXT
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS file_blobs (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL, mime_type TEXT NOT NULL DEFAULT 'application/octet-stream',
+    size INTEGER NOT NULL DEFAULT 0, data TEXT NOT NULL, uploaded_by TEXT, created_at TEXT NOT NULL
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS attendance_log (
+    id TEXT PRIMARY KEY, student_id TEXT NOT NULL, class_id TEXT, school_id TEXT,
+    date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Present', recorded_by TEXT, course TEXT
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS submissions (
+    id TEXT PRIMARY KEY, assignment_id TEXT NOT NULL, student_id TEXT NOT NULL,
+    file_id TEXT, file_name TEXT, score TEXT, feedback TEXT,
+    status TEXT NOT NULL DEFAULT 'Submitted', submitted_at TEXT
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS sessions (
+    sid TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at INTEGER NOT NULL
+  )`)
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_students_class ON students (class_id)`)
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_students_school ON students (school_id)`)
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_timetable_class ON timetable (class_id, day, period)`)
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_users_school ON users (school_id)`)
+}
+
+function createSuperadminTables(db) {
+  db.exec(`CREATE TABLE IF NOT EXISTS schools (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL, location TEXT, status TEXT NOT NULL DEFAULT 'Active',
+    established INTEGER, teacher_count INTEGER NOT NULL DEFAULT 0,
+    class_count INTEGER NOT NULL DEFAULT 0, student_count INTEGER NOT NULL DEFAULT 0
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, password TEXT NOT NULL, full_name TEXT NOT NULL,
+    role TEXT NOT NULL, school_id TEXT, status TEXT NOT NULL DEFAULT 'Active'
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS sessions (
+    sid TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at INTEGER NOT NULL
+  )`)
+}
+
+export function seedSchooladmin(db) {
+  createSchooladminTables(db)
+  if (db.prepare('SELECT COUNT(*) as n FROM users').get().n > 0) return
+}
+
+export function seedSuperadmin(db) {
+  createSuperadminTables(db)
+  if (db.prepare('SELECT COUNT(*) as n FROM users').get().n > 0) return
+  db.prepare('INSERT INTO schools (id, name, location, status, established, teacher_count, class_count, student_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run('demo-school', 'Demo School', 'Mumbai', 'Active', 2023, 0, 0, 0)
+  db.prepare('INSERT INTO users (id, email, password, full_name, role, school_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)').run('u-admin', 'admin', hashPassword('ranbrosglobal'), 'Administrator', 'Administrator', null, 'Active')
+}
+
+// ─── Sync outbox (from sync.js) ──────────────────────────────────────
+
+export function createOutbox({ consoleName, peerUrl, secret }) {
+  const queue = []
+  let sending = false
+
+  async function flush() {
+    if (sending || queue.length === 0) return
+    sending = true
+    while (queue.length > 0) {
+      const event = queue[0]
+      try {
+        await sendEvent(peerUrl, secret, event)
+        queue.shift()
+      } catch {
+        await new Promise(r => setTimeout(r, Math.min(30000, 1000 * Math.pow(2, queue.length))))
+        break
+      }
+    }
+    sending = false
+  }
+
+  async function sendEvent(peerUrl, secret, event) {
+    const body = JSON.stringify(event)
+    return new Promise((resolve, reject) => {
+      const url = new URL('/api/sync', peerUrl)
+      const req = http.request(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Sync-Secret': secret, 'Content-Length': Buffer.byteLength(body) },
+        timeout: 5000,
+      }, (res) => {
+        let data = ''
+        res.on('data', chunk => data += chunk)
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) resolve(data)
+          else reject(new Error(`Sync failed: ${res.statusCode} ${data}`))
+        })
+      })
+      req.on('error', reject)
+      req.on('timeout', () => { req.destroy(); reject(new Error('Sync timeout')) })
+      req.write(body)
+      req.end()
+    })
+  }
+
+  return {
+    push(event) {
+      queue.push({ ...event, source: consoleName, timestamp: Date.now() })
+      flush()
+    },
+    get pending() { return queue.length },
+  }
+}
+
+// ─── Server IP & config ──────────────────────────────────────────────
 
 const SERVER_IP = process.env.SC_HOST || '13.205.212.64'
+
 const ALLOWED_ORIGINS = [
   `http://${SERVER_IP}:5173`,
   `http://${SERVER_IP}:5175`,
