@@ -335,7 +335,8 @@ export function createServer({ consoleName, port, seed, sync }) {
 
     // CORS
     const origin = req.headers.origin
-    if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    const corsAllowed = origin && ALLOWED_ORIGINS.includes(origin)
+    if (corsAllowed) {
       res.setHeader('Access-Control-Allow-Origin', origin)
       res.setHeader('Access-Control-Allow-Credentials', 'true')
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
@@ -344,14 +345,20 @@ export function createServer({ consoleName, port, seed, sync }) {
       // Log mismatched origins so blocked preflights are easy to debug.
       // Do NOT reflect an arbitrary origin back — the browser must still see
       // no Access-Control-Allow-Origin on the response in this branch.
-      console.log(`[${consoleName}] Rejected CORS origin: ${origin}`)
+      console.log(`[${consoleName}] Rejected CORS origin: ${origin} method=${req.method} path=${req.url}`)
     }
 
     // Handle preflight
     if (req.method === 'OPTIONS') {
+      console.log(`[${consoleName}] OPTIONS preflight ${corsAllowed ? 'ALLOWED' : 'missing-cors'} origin=${origin || '(none)'} path=${req.url}`)
       res.writeHead(204)
       res.end()
       return
+    }
+
+    // Request logging for CORS debugging
+    if (consoleName === 'server' && req.url.startsWith('/api/method/school_connect.api.auth.login')) {
+      console.log(`[${consoleName}] login request method=${req.method} origin=${origin || '(none)'} corsAllowed=${corsAllowed} remote=${req.socket.remoteAddress}:${req.socket.remotePort}`)
     }
 
     // Parse URL
