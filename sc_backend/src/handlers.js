@@ -22,13 +22,17 @@ function createSession(db, userId) {
 
 function getSessionUser(db, sid) {
   if (!sid) return null
+  // Validate session ID format: must be a 64-char hex string (32 bytes)
+  if (typeof sid !== 'string' || !/^[0-9a-f]{64}$/.test(sid)) return null
   const row = db.prepare('SELECT * FROM sessions WHERE sid = ? AND expires_at > ?').get(sid, Date.now())
   if (!row) return null
   return getById(db, 'users', row.user_id)
 }
 
 function destroySession(db, sid) {
-  if (sid) db.prepare('DELETE FROM sessions WHERE sid = ?').run(sid)
+  if (sid && typeof sid === 'string' && /^[0-9a-f]{64}$/.test(sid)) {
+    db.prepare('DELETE FROM sessions WHERE sid = ?').run(sid)
+  }
 }
 
 function publicUser(user, schoolName) {
@@ -103,9 +107,18 @@ function checkCsrf(req, user, path) {
 
 // ─── School Admin handlers ──────────────────────────────────────────
 
+// Max input lengths
+const MAX_NAME = 200
+const MAX_EMAIL = 254
+const MAX_PASSWORD = 128
+const MAX_TEXT = 1000
+
 function schoolAdminLogin(db, params) {
   const { usr, pwd } = params
   if (!usr || !pwd) throw { status: 400, message: 'Email and password are required' }
+  if (String(usr).length > MAX_EMAIL || String(pwd).length > MAX_PASSWORD) {
+    throw { status: 400, message: 'Input too long' }
+  }
 
   const user = getOne(db, 'users', 'email', usr)
   if (!user || !verifyPassword(pwd, user.password)) {
@@ -135,6 +148,9 @@ function schoolAdminLogin(db, params) {
 function mobileLogin(db, params) {
   const { email, password } = params
   if (!email || !password) throw { status: 400, message: 'Email and password are required' }
+  if (String(email).length > MAX_EMAIL || String(password).length > MAX_PASSWORD) {
+    throw { status: 400, message: 'Input too long' }
+  }
 
   const normalizedEmail = email.trim().toLowerCase()
   
@@ -292,6 +308,9 @@ function schoolAdminCreateTeacher(db, params) {
   if (!name) throw { status: 400, message: 'Name is required' }
   if (!email) throw { status: 400, message: 'Email is required' }
   if (!params.password) throw { status: 400, message: 'Password is required' }
+  if (name.length > MAX_NAME) throw { status: 400, message: 'Name is too long' }
+  if (email.length > MAX_EMAIL) throw { status: 400, message: 'Email is too long' }
+  if (String(params.password).length > MAX_PASSWORD) throw { status: 400, message: 'Password is too long' }
   if (getOne(db, 'users', 'email', email)) throw { status: 400, message: 'An account with this email already exists' }
 
   const id = genId('t-')
@@ -422,6 +441,9 @@ function schoolAdminStudentDetail(db, params) {
 function schoolAdminCreateStudent(db, params) {
   const name = params.name?.trim()
   if (!name) throw { status: 400, message: 'Student name is required' }
+  if (name.length > MAX_NAME) throw { status: 400, message: 'Name is too long' }
+  if (params.email && String(params.email).length > MAX_EMAIL) throw { status: 400, message: 'Email is too long' }
+  if (params.password && String(params.password).length > MAX_PASSWORD) throw { status: 400, message: 'Password is too long' }
   const cls = getById(db, 'classes', params.class_id)
   if (!cls) throw { status: 400, message: 'Unknown class' }
   const id = genId('stu-')
@@ -1018,6 +1040,9 @@ function mobileGetAdminStats(db, params, user) {
 function superAdminLogin(db, params) {
   const { usr, pwd } = params
   if (!usr || !pwd) throw { status: 400, message: 'Email and password are required' }
+  if (String(usr).length > MAX_EMAIL || String(pwd).length > MAX_PASSWORD) {
+    throw { status: 400, message: 'Input too long' }
+  }
 
   const user = getOne(db, 'users', 'email', usr)
   if (!user || !verifyPassword(pwd, user.password)) {
@@ -1131,6 +1156,7 @@ function superAdminSchools(db, params, user, sid, bothDbs) {
 function superAdminCreateSchool(db, params, user, sid, bothDbs) {
   const name = params.name?.trim()
   if (!name) throw { status: 400, message: 'School name is required' }
+  if (name.length > MAX_NAME) throw { status: 400, message: 'School name is too long' }
   const id = genId('s-')
   insert(db, 'schools', { id, name, location: params.location || '',
     status: params.status || 'Active', established: Number(params.established) || new Date().getFullYear(),
@@ -1231,6 +1257,9 @@ function superAdminCreateSchoolAdmin(db, params, user, sid, bothDbs) {
   if (!name) throw { status: 400, message: 'Name is required' }
   if (!email) throw { status: 400, message: 'Email is required' }
   if (!params.password) throw { status: 400, message: 'Password is required' }
+  if (name.length > MAX_NAME) throw { status: 400, message: 'Name is too long' }
+  if (email.length > MAX_EMAIL) throw { status: 400, message: 'Email is too long' }
+  if (String(params.password).length > MAX_PASSWORD) throw { status: 400, message: 'Password is too long' }
   if (getOne(db, 'users', 'email', email)) throw { status: 400, message: 'An account with this email already exists' }
   if (!getById(db, 'schools', params.school)) throw { status: 400, message: 'Unknown school' }
 
@@ -1400,9 +1429,10 @@ export function handleRequest(consoleName, bothDbs, path, req) {
   }
 
   // Rate limiting (only for login)
-  const isLogin = path === 'school_connect.api.auth.login'
+  const isLogin = path === 'school_connect.api.auth.login' || path === 'school_connect.api.mobile.login'
   if (isLogin) {
-    if (isLocked(allParams.usr)) {
+    const loginEmail = allParams.usr || allParams.email
+    if (loginEmail && isLocked(loginEmail)) {
       throw { status: 429, message: 'Account temporarily locked due to too many failed attempts', exc_type: 'LockoutError' }
     }
     if (!checkRateLimit(req.ip)) {
@@ -1425,7 +1455,7 @@ export function handleRequest(consoleName, bothDbs, path, req) {
   } catch (err) {
     // Record failure for login attempts
     if (isLogin && (!err.status || err.status === 401 || err.status === 403)) {
-      recordFailure(allParams.usr)
+      recordFailure(allParams.usr || allParams.email)
     }
     throw err
   }
