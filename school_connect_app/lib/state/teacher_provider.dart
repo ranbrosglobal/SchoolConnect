@@ -4,7 +4,7 @@ import '../models/student_model.dart';
 import '../models/attendance_model.dart';
 import '../models/assignment_model.dart';
 import '../models/assignment_submission_model.dart';
-import '../services/google_sheets_service.dart';
+import '../services/frappe_api_service.dart';
 import 'auth_provider.dart';
 
 class TeacherState {
@@ -60,14 +60,14 @@ class TeacherState {
 }
 
 class TeacherNotifier extends StateNotifier<TeacherState> {
-  final GoogleSheetsService _apiService;
+  final FrappeApiService _api;
 
-  TeacherNotifier(this._apiService) : super(TeacherState());
+  TeacherNotifier(this._api) : super(TeacherState());
 
   Future<void> loadClasses() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final classes = await _apiService.getMyClasses();
+      final classes = await _api.getMyClasses();
       state = state.copyWith(isLoading: false, classes: classes);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -77,16 +77,15 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
   Future<void> selectClass(CourseScheduleModel courseSchedule) async {
     state = state.copyWith(isLoading: true, selectedClass: courseSchedule, error: null);
     try {
-      final students = await _apiService.getClassStudents(courseSchedule.id);
+      final students = await _api.getClassStudents(courseSchedule.id);
       students.sort((a, b) {
         final ra = int.tryParse(a.rollNumber ?? '');
         final rb = int.tryParse(b.rollNumber ?? '');
         if (ra != null && rb != null) return ra.compareTo(rb);
         return (a.rollNumber ?? '').compareTo(b.rollNumber ?? '');
       });
-      final attendance = await _apiService.getAttendanceReport(
-        courseSchedule: courseSchedule.id,
-        date: DateTime.now(),
+      final attendance = await _api.getMyAttendance(
+        course: courseSchedule.course,
       );
       state = state.copyWith(
         isLoading: false,
@@ -105,8 +104,7 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
   }) async {
     if (state.selectedClass == null) return false;
     state = state.copyWith(isLoading: true, error: null);
-    try {
-      await _apiService.markAttendance(
+    try {        await _api.markAttendance(
         courseSchedule: state.selectedClass!.id,
         studentGroup: studentGroup,
         date: date,
@@ -123,7 +121,7 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
   Future<void> loadAssignments() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final assignments = await _apiService.getMyTeacherAssignments();
+      final assignments = await _api.getTeacherAssignments();
       state = state.copyWith(isLoading: false, assignments: assignments);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -140,11 +138,12 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
     List<int>? fileBytes,
   }) async {
     state = state.copyWith(isSubmitting: true, error: null);
-    try {
-      await _apiService.createAssignment(
-        title: title, course: course, studentGroup: studentGroup,
-        dueDate: dueDate, description: description, filePath: filePath,
-        fileBytes: fileBytes,
+    try {        await _api.createAssignment(
+        title: title,
+        course: course,
+        studentGroup: studentGroup,
+        dueDate: dueDate,
+        description: description,
       );
       await loadAssignments();
       return true;
@@ -169,11 +168,13 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
   }) async {
     state = state.copyWith(isSubmitting: true, error: null);
     try {
-      await _apiService.updateAssignment(
-        assignmentId: assignmentId, title: title, course: course,
-        studentGroup: studentGroup, dueDate: dueDate,
-        description: description, filePath: filePath,
-        fileBytes: fileBytes, clearAttachment: clearAttachment,
+      await _api.updateAssignment(
+        name: assignmentId,
+        title: title,
+        course: course,
+        studentGroup: studentGroup,
+        dueDate: dueDate,
+        description: description,
       );
       await loadAssignments();
       return true;
@@ -188,7 +189,7 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
   Future<bool> deleteAssignment(String assignmentId) async {
     state = state.copyWith(isSubmitting: true, error: null);
     try {
-      await _apiService.deleteAssignment(assignmentId);
+      await _api.deleteAssignment(assignmentId);
       await loadAssignments();
       return true;
     } catch (e) {
@@ -202,7 +203,7 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
   Future<void> loadSubmissions(AssignmentModel assignment) async {
     state = state.copyWith(isLoading: true, selectedAssignment: assignment, error: null);
     try {
-      final submissions = await _apiService.getAssignmentSubmissions(assignment.id);
+      final submissions = await _api.getAssignmentSubmissions(assignment.id);
       state = state.copyWith(isLoading: false, submissions: submissions);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -216,7 +217,7 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
   }) async {
     state = state.copyWith(isSubmitting: true, error: null);
     try {
-      await _apiService.gradeSubmission(submission: submission, grade: grade, feedback: feedback);
+      await _api.gradeSubmission(submission: submission, grade: grade, feedback: feedback);
       await _reloadAfterMutation();
       return true;
     } catch (e) {
@@ -230,7 +231,7 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
   Future<bool> unsubmitSubmission(String submission) async {
     state = state.copyWith(isSubmitting: true, error: null);
     try {
-      await _apiService.unsubmitSubmission(submission);
+      await _api.unsubmitSubmission(submission);
       await _reloadAfterMutation();
       return true;
     } catch (e) {
@@ -244,7 +245,7 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
   Future<bool> deleteSubmission(String submission) async {
     state = state.copyWith(isSubmitting: true, error: null);
     try {
-      await _apiService.deleteSubmission(submission);
+      await _api.deleteSubmission(submission);
       await _reloadAfterMutation();
       return true;
     } catch (e) {
@@ -268,5 +269,5 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
 }
 
 final teacherProvider = StateNotifierProvider<TeacherNotifier, TeacherState>((ref) {
-  return TeacherNotifier(ref.watch(sheetsServiceProvider));
+  return TeacherNotifier(ref.watch(apiServiceProvider));
 });

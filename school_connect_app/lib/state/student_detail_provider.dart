@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/student_detail_model.dart';
-import '../services/google_sheets_service.dart';
 import 'auth_provider.dart';
 
 class StudentDetailRequest {
@@ -21,6 +20,6 @@ class StudentDetailRequest {
 
 final studentDetailProvider = FutureProvider.autoDispose
     .family<StudentDetailModel, StudentDetailRequest>((ref, request) async {
-  final api = ref.watch(sheetsServiceProvider);
+  final api = ref.watch(apiServiceProvider);
   return api.getStudentDetail(request.studentId, course: request.studentGroup);
 });

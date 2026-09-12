@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/school_profile_model.dart';
-import '../services/google_sheets_service.dart';
+import '../services/frappe_api_service.dart';
 import 'auth_provider.dart';
 
 /// School profile state — the public school info (name / logo / contact)
@@ -34,7 +34,7 @@ class SchoolState {
 }
 
 class SchoolNotifier extends StateNotifier<SchoolState> {
-  final GoogleSheetsService _api;
+  final FrappeApiService _api;
 
   SchoolNotifier(this._api) : super(const SchoolState());
 
@@ -47,10 +47,19 @@ class SchoolNotifier extends StateNotifier<SchoolState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final profile = await _api.getSchoolProfile();
-      state = state.copyWith(isLoading: false, profile: profile);
-      return profile;
+      final mapped = SchoolProfileModel(
+        schoolName: profile.schoolName,
+        motto: profile.motto,
+        logoUrl: profile.logoUrl,
+        contactEmail: profile.contactEmail,
+        contactNumber: profile.contactNumber,
+        website: profile.website,
+        address: profile.address,
+      );
+      state = state.copyWith(isLoading: false, profile: mapped);
+      return mapped;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: _userFacingError(e));
       return state.profile;
     }
   }
@@ -60,9 +69,18 @@ class SchoolNotifier extends StateNotifier<SchoolState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final profile = await _api.getSchoolProfile();
-      state = state.copyWith(isLoading: false, profile: profile);
+      final mapped = SchoolProfileModel(
+        schoolName: profile.schoolName,
+        motto: profile.motto,
+        logoUrl: profile.logoUrl,
+        contactEmail: profile.contactEmail,
+        contactNumber: profile.contactNumber,
+        website: profile.website,
+        address: profile.address,
+      );
+      state = state.copyWith(isLoading: false, profile: mapped);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: _userFacingError(e));
     }
   }
 
@@ -87,26 +105,40 @@ class SchoolNotifier extends StateNotifier<SchoolState> {
       state = state.copyWith(isUpdating: false, profile: profile);
       return profile;
     } catch (e) {
-      state = state.copyWith(isUpdating: false, error: e.toString());
+      state = state.copyWith(isUpdating: false, error: _userFacingError(e));
       rethrow;
     }
   }
 
-  Future<String?> uploadLogo({required String fileName, required List<int> fileBytes}) async {
+  Future<String?> uploadLogo({
+    required String fileName,
+    required List<int> fileBytes,
+  }) async {
     state = state.copyWith(isUpdating: true, error: null);
     try {
-      final url = await _api.uploadSchoolLogo(fileName: fileName, fileBytes: fileBytes);
+      final url = await _api.uploadSchoolLogo(
+        fileName: fileName,
+        fileBytes: fileBytes,
+      );
       await refresh();
       return url;
     } catch (e) {
-      state = state.copyWith(isUpdating: false, error: e.toString());
+      state = state.copyWith(isUpdating: false, error: _userFacingError(e));
       rethrow;
     }
+  }
+
+  static String _userFacingError(Object e) {
+    final msg = e.toString();
+    if (msg.contains('Cannot connect') || msg.contains('SocketException')) {
+      return 'Cannot connect to server. Please check your connection.';
+    }
+    return 'Something went wrong. Please try again.';
   }
 }
 
 final schoolProvider =
     StateNotifierProvider<SchoolNotifier, SchoolState>((ref) {
   ref.watch(authProvider); // re-create on auth change (new session/school)
-  return SchoolNotifier(ref.watch(sheetsServiceProvider));
+  return SchoolNotifier(ref.watch(apiServiceProvider));
 });

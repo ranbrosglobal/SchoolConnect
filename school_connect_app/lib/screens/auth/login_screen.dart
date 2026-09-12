@@ -26,8 +26,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _emailController.text = 'teacher@school.com';
-    _passwordController.text = 'teacher123';
+    // Quick-fill to the real seeded accounts on the live (sc_auth) backend.
+    _emailController.text = 'robert.johnson@school.com';
+    _passwordController.text = 'Teacher@123';
   }
 
   @override
@@ -41,18 +42,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() {
       _selectedRole = index;
       if (index == 0) {
-        _emailController.text = 'teacher@school.com';
-        _passwordController.text = 'teacher123';
+        _emailController.text = 'robert.johnson@school.com';
+        _passwordController.text = 'Teacher@123';
       } else {
-        _emailController.text = 'student@school.com';
-        _passwordController.text = 'student123';
+        _emailController.text = 'alex.smith@school.com';
+        _passwordController.text = 'Student@123';
       }
     });
-  }
-
-  Future<void> _googleSignIn() async {
-    final success = await ref.read(authProvider.notifier).signInWithGoogle();
-    if (success && mounted) _navigateToDashboard();
   }
 
   Future<void> _login() async {
@@ -183,6 +179,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Image.asset(
                     'assets/images/login_illustration.png',
                     fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 180,
+                      color: Colors.grey.shade200,
+                      child: const Center(child: Icon(Icons.school, size: 60, color: Colors.grey)),
+                    ),
                   ),
                 ),
 
@@ -207,40 +208,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ── Google Sign-In button (PRIMARY) ───────────────
+                      // ── Email login (primary) ───────────────────────
                       SizedBox(
                         width: double.infinity,
                         height: 56,
-                        child: OutlinedButton.icon(
-                          onPressed: authState.isLoading ? null : _googleSignIn,
-                          icon: const Icon(Icons.g_mobiledata, color: Color(0xFFEA4335), size: 28),
-                          label: const Text(
-                            'Sign in with Google',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF1E1B4B),
+                        child: ElevatedButton(
+                          onPressed: authState.isLoading ? null : _login,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF7C3AED),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
                             ),
                           ),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey.shade300, width: 1.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.login, size: 22),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Login with Email',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: 20),
-
-                      // ── or continue with email ───────────────────────
-                      Row(children: [
-                        Expanded(child: Divider(color: Colors.grey.shade200)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('or continue with email',
-                              style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
-                        ),
-                        Expanded(child: Divider(color: Colors.grey.shade200)),
-                      ]),
                       const SizedBox(height: 18),
 
                       // ── "Login as" toggle ─────────────────────────────
@@ -330,7 +327,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         style: const TextStyle(fontSize: 15, color: Color(0xFF1E1B4B)),
-                        decoration: _inputDeco(hint: 'Enter your email or ID', icon: Icons.email_outlined),
+                        decoration: _inputDeco(hint: 'Enter your email', icon: Icons.email_outlined),
                         validator: (v) => v!.isEmpty ? 'Required' : null,
                       ),
                       const SizedBox(height: 18),
@@ -367,7 +364,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                       const SizedBox(height: 12),
 
-                      // ── Email login button ───────────────────────────
+                      // ── Email login button (repeated under the form) ──
                       SizedBox(
                         width: double.infinity,
                         height: 50,

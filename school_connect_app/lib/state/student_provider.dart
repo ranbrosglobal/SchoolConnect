@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/attendance_model.dart';
 import '../models/assignment_model.dart';
-import '../services/google_sheets_service.dart';
+import '../services/frappe_api_service.dart';
 import 'auth_provider.dart';
 
 class StudentState {
@@ -41,66 +41,82 @@ class StudentState {
 }
 
 class StudentNotifier extends StateNotifier<StudentState> {
-  final GoogleSheetsService _apiService;
+  final FrappeApiService _api;
 
-  StudentNotifier(this._apiService) : super(StudentState());
+  StudentNotifier(this._api) : super(StudentState());
 
-  Future<void> loadDashboard() async {
+  /// Load the student dashboard (attendance summary + assignments).
+  /// Retries a few times on transient failure so the first paint has data.
+  Future<void> loadDashboard({int attempt = 0}) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final summary = await _apiService.getMyAttendanceSummary();
-      final assignments = await _apiService.getMyAssignments();
+      final summary = await _api.getMyAttendanceSummary();
+      final assignments = await _api.getMyAssignments();
       state = state.copyWith(
         isLoading: false,
         attendanceSummary: summary,
         assignments: assignments,
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      if (attempt < 2) {
+        await loadDashboard(attempt: attempt + 1);
+        return;
+      }
+      state = state.copyWith(isLoading: false, error: _userFacingError(e));
     }
   }
 
   Future<void> loadAttendanceForCourse(String? course) async {
     state = state.copyWith(isLoading: true, error: null, selectedCourse: course);
     try {
-      final attendance = await _apiService.getMyAttendance(course: course);
+      final attendance = await _api.getMyAttendance(course: course);
       state = state.copyWith(isLoading: false, attendanceRecords: attendance);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: _userFacingError(e));
     }
   }
 
+  /// Submit an assignment, with optional file bytes (real upload to Frappe File).
   Future<bool> submitAssignment({
     required String assignment,
     required String fileName,
-    String? fileUrl,
     List<int>? fileBytes,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      if (fileBytes != null) {
-        await _apiService.submitAssignmentWithFile(
-          assignment: assignment, fileName: fileName, fileBytes: fileBytes,
-        );
-      } else {
-        await _apiService.submitAssignment(
-          assignment: assignment, fileName: fileName, fileUrl: fileUrl,
-        );
-      }
-      final assignments = await _apiService.getMyAssignments();
+      await _api.submitAssignment(
+        assignment: assignment,
+        fileName: fileName,
+        fileBytes: fileBytes,
+      );
+      final assignments = await _api.getMyAssignments();
       state = state.copyWith(isLoading: false, assignments: assignments);
       return true;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: _userFacingError(e));
       return false;
     }
+  }
+
+  /// Refetch everything (used by pull-to-refresh).
+  Future<void> refresh() async {
+    await loadDashboard();
   }
 
   void clearError() {
     state = state.copyWith(error: null);
   }
+
+  static String _userFacingError(Object e) {
+    final msg = e.toString();
+    if (msg.contains('Cannot connect') || msg.contains('SocketException')) {
+      return 'Cannot connect to server. Please check your connection.';
+    }
+    return 'Something went wrong. Please try again.';
+  }
 }
 
 final studentProvider = StateNotifierProvider<StudentNotifier, StudentState>((ref) {
-  return StudentNotifier(ref.watch(sheetsServiceProvider));
+  return StudentNotifier(ref.watch(apiServiceProvider));
 });
+

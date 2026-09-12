@@ -1,8 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_model.dart';
-import '../services/google_sheets_service.dart';
+import '../services/frappe_api_service.dart';
 
-// Auth state
+/// Auth state for the live (Frappe + sc_auth) build.
+///
+/// [isDemoMode] is kept for shape compatibility but can never become true
+/// in the live build — the app no longer falls back to demo mode.
 class AuthState {
   final bool isLoading;
   final bool isAuthenticated;
@@ -35,40 +38,36 @@ class AuthState {
   }
 }
 
-// Auth notifier - direct backend login (no Firebase Auth).
 class AuthNotifier extends StateNotifier<AuthState> {
-  final GoogleSheetsService _sheetsService;
+  final FrappeApiService _api;
 
-  AuthNotifier(this._sheetsService) : super(AuthState()) {
+  AuthNotifier(this._api) : super(AuthState()) {
     _init();
   }
 
   Future<void> _init() async {
     state = state.copyWith(isLoading: true);
-
     try {
-      final restored = await _sheetsService.restoreSession();
+      final restored = await _api.restoreSession();
       if (restored) {
         state = state.copyWith(
           isLoading: false,
           isAuthenticated: true,
-          user: _sheetsService.currentUser,
+          user: _api.currentUser,
         );
       } else {
         state = state.copyWith(isLoading: false);
       }
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: 'Session restore failed: ${e.toString()}');
     }
   }
 
-  /// Email/password login via backend.
+  /// Email/password login against the active school site.
   Future<bool> login(String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
-
     try {
-      final result = await _sheetsService.login(email, password);
-
+      final result = await _api.login(email, password);
       if (result.success && result.user != null) {
         state = state.copyWith(
           isLoading: false,
@@ -77,7 +76,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
         return true;
       }
-
       state = state.copyWith(
         isLoading: false,
         error: result.error ?? 'Invalid email or password.',
@@ -86,86 +84,45 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: 'Connection failed: ${e.toString()}',
+        error: _userFacingError(e),
       );
       return false;
     }
   }
 
   /// Login with auto school detection.
+  /// The caller should first fetch `public_schools` from the super site and
+  /// then probe each school's login endpoint; this method runs one attempt
+  /// against the current base URL.
   Future<bool> loginAuto(String email, String password) async {
     return login(email, password);
   }
 
-  /// Sign in with Google (Firebase) and create a backend session.
-  Future<bool> signInWithGoogle() async {
-    state = state.copyWith(isLoading: true, error: null);
-    try {
-      final result = await _sheetsService.signInWithGoogle();
-      if (result.success && result.user != null) {
-        state = state.copyWith(
-          isLoading: false,
-          isAuthenticated: true,
-          user: result.user,
-        );
-        return true;
-      }
-      state = state.copyWith(isLoading: false, error: result.error ?? 'Google sign-in failed.');
-      return false;
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Google sign-in failed: ${e.toString()}');
-      return false;
-    }
-  }
-
-  /// Sign in with Apple (Firebase) and create a backend session.
-  Future<bool> signInWithApple() async {
-    state = state.copyWith(isLoading: true, error: null);
-    try {
-      final result = await _sheetsService.signInWithApple();
-      if (result.success && result.user != null) {
-        state = state.copyWith(
-          isLoading: false,
-          isAuthenticated: true,
-          user: result.user,
-        );
-        return true;
-      }
-      state = state.copyWith(isLoading: false, error: result.error ?? 'Apple sign-in failed.');
-      return false;
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Apple sign-in failed: ${e.toString()}');
-      return false;
-    }
-  }
-
-  /// Sign up student.
+  /// Sign up a new student (creates User + Student + enrollment, auto-login).
   Future<bool> signupStudent({
     required String fullName,
     required String email,
     required String password,
-    int? age,
     String? gender,
     String? city,
     String? userState,
     String? country,
-    required String school,
     String? studentGroup,
+    String? program,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
-
     try {
-      final result = await _sheetsService.signupStudent(
+      final result = await _api.signupStudent(
         fullName: fullName,
         email: email,
         password: password,
         gender: gender,
         studentGroup: studentGroup,
+        program: program,
         city: city,
         state: userState,
         country: country,
       );
-
       if (result.success && result.user != null) {
         state = state.copyWith(
           isLoading: false,
@@ -174,7 +131,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
         return true;
       }
-
       state = state.copyWith(
         isLoading: false,
         error: result.error ?? 'Signup failed.',
@@ -183,21 +139,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: 'Signup failed: ${e.toString()}',
+        error: _userFacingError(e),
       );
       return false;
     }
   }
 
-  /// Change password via backend.
+  /// Change password (old -> new). The caller enforces new != old and new >= 8.
   Future<bool> changePassword({
     required String currentPassword,
     required String newPassword,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
-
     try {
-      await _sheetsService.changePassword(
+      await _api.changePassword(
         currentPassword: currentPassword,
         newPassword: newPassword,
       );
@@ -206,28 +161,48 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: 'Failed to change password: ${e.toString()}',
+        error: _userFacingError(e),
       );
       return false;
     }
   }
 
-  /// Sign out and clear local data.
+  /// Sign out: clears local state synchronously first, then calls the server.
   Future<void> logout() async {
     state = AuthState();
     try {
-      await _sheetsService.signOut();
+      await _api.logout();
     } catch (_) {}
   }
 
   void clearError() {
     state = state.copyWith(error: null);
   }
+
+  /// Convert backend/transport errors into user-facing messages.
+  /// Never surface raw stack traces.
+  static String _userFacingError(Object e) {
+    final msg = e.toString();
+    if (msg.contains('Cannot connect to server') ||
+        msg.contains('Connection failed') ||
+        msg.contains('SocketException') ||
+        msg.contains('ClientException')) {
+      return 'Cannot connect to server. Please check your connection.';
+    }
+    if (msg.contains('Session expired') || msg.contains('Please login again')) {
+      return 'Session expired. Please login again.';
+    }
+    return 'Something went wrong. Please try again.';
+  }
 }
 
-// Providers
-final sheetsServiceProvider = Provider<GoogleSheetsService>((ref) => GoogleSheetsService());
+/// The live data service (Frappe + sc_auth).
+final apiServiceProvider = Provider<FrappeApiService>((ref) => FrappeApiService());
 
+/// Auth state notifier.
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.watch(sheetsServiceProvider));
+  return AuthNotifier(ref.watch(apiServiceProvider));
 });
+
+/// Keep the historical name for screens that already import it.
+final sheetsServiceProvider = apiServiceProvider;

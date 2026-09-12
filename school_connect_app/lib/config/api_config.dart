@@ -1,37 +1,51 @@
-/// API Configuration for School Connect
+/// API Configuration for School Connect.
 ///
-/// Backend: Node.js + SQLite (sc_backend)
-/// - School Admin backend: port 3000
-/// - Super Admin backend: port 3001
+/// Live backend: Frappe v17 + Education + the `sc_auth` custom app.
+/// Each school runs its own Frappe site + MariaDB; the app talks to the
+/// school site that authenticates the user (auto-detected at login).
 ///
-/// When deployed to AWS, replace localhost with the static IP.
+/// URLs are driven by environment variables so the same app binary runs
+/// against localhost dev benches and against deployed hosts:
+///   SC_BACKEND_URL     - school site base URL (default http://localhost:8000)
+///   SC_SUPERADMIN_URL  - super-admin registry site (default http://localhost:8002)
+///   SC_WEB_ADMIN_URL   - school admin web dashboard (default http://localhost:5173)
+/// No plaintext secrets live in this file. The JWT signing key is a Frappe
+/// site-config value (`sc_auth_jwt_secret`), set per site — never shipped
+/// in the app bundle.
 class ApiConfig {
-  /// Backend server base URL (school admin + mobile app data).
-  /// Replace with AWS static IP when deploying.
-  static const String backendHost = 'http://13.205.212.64';
-  static const int backendPort = 3000;
+  static String get backendHost {
+    return const String.fromEnvironment('SC_BACKEND_URL',
+        defaultValue: 'http://localhost')
+        .replaceAll('\\', '/');
+  }
 
-  /// Super admin backend URL.
-  /// Replace with AWS static IP when deploying.
-  static const String superAdminHost = 'http://13.205.212.64';
-  static const int superAdminPort = 3001;
+  static int get backendPort {
+    return int.tryParse(
+        const String.fromEnvironment('SC_BACKEND_PORT', defaultValue: '8000')) ?? 8000;
+  }
 
-  /// Full backend base URL for the mobile app (school admin server).
+  /// Full backend base URL for the mobile app (the school site that
+  /// authenticated the current user).
   static String get backendBaseUrl => '$backendHost:$backendPort';
 
-  /// Full super admin base URL.
+  static String get superAdminHost {
+    return const String.fromEnvironment('SC_SUPERADMIN_URL',
+        defaultValue: 'http://localhost')
+        .replaceAll('\\', '/');
+  }
+
+  static int get superAdminPort {
+    return int.tryParse(
+        const String.fromEnvironment('SC_SUPERADMIN_PORT', defaultValue: '8002')) ?? 8002;
+  }
+
   static String get superAdminBaseUrl => '$superAdminHost:$superAdminPort';
 
-  /// Web admin dashboard URL (for redirect from mobile).
-  static const String webAdminUrl = 'http://13.205.212.64:5173';
-
-  /// Google Sheets scopes needed by the app (for Google Sign-In only).
-  static const List<String> scopes = [
-    'https://www.googleapis.com/auth/spreadsheets',
-    'https://www.googleapis.com/auth/drive.file',
-    'email',
-    'profile',
-  ];
+  /// Web admin dashboard URL (for the mobile redirect screen).
+  static String get webAdminUrl {
+    return const String.fromEnvironment('SC_WEB_ADMIN_URL',
+        defaultValue: 'http://localhost:5173');
+  }
 
   /// Timeout settings.
   static const Duration connectionTimeout = Duration(seconds: 30);

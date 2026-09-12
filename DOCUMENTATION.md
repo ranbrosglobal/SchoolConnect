@@ -1,10 +1,16 @@
 # 🎓 School Connect — Complete Project Documentation
 
-> **Current state:** the project now runs a **live, multi-tenant** school
-> management system. Each school has its **own Frappe site + own database**,
-> there is a separate **super-admin registry** database, and a **local
-> SQLite-only demo replica** (`demoapp/`) that runs fully offline with no
-> backend at all.
+> **Current state (final):** the project now runs a **live, multi-tenant** school
+> management system with custom auth. Each school has its **own Frappe site +
+> own MariaDB database**, there is a separate **super-admin registry** database,
+> and a **local SQLite-only demo replica** (`demoapp/`) that runs fully offline
+> with no backend at all.
+>
+> Everything is in the actual production phase: the Flutter app talks directly to
+> the live Frappe backend via the `sc_auth` custom app's endpoints, every feature
+> has been clicked through as each role with real writes hitting the database, the
+> app no longer falls back to demo mode, assignment upload/download work end-to-end,
+> and a Study Assistant chatbot (Messages tab) is wired to the student's real data.
 
 ---
 

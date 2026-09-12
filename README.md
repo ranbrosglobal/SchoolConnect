@@ -1,127 +1,151 @@
 # School Connect
 
-School Attendance & Management System — **serverless architecture** powered by Google Sheets.
+School Attendance & Management System — **multi-tenant** school management built on
+**Frappe Framework v17 + ERPNext Education**, with a **Flutter mobile app**,
+a **React web admin console**, and a fully offline **SQLite demo replica**.
 
 ## Architecture
 
 ```
-┌─────────────────────┐
-│   Flutter Mobile App │ ── Google Sign-In ──→ Google Sheets API
-└─────────────────────┘        │                     │
-                               │                     │
-┌─────────────────────┐        │              ┌──────┴──────┐
-│   Web Admin (React) │ ── Google Sign-In ──→│  Spreadsheet │
-│   Super Admin       │                       │  (database)  │
-└─────────────────────┘                       └─────────────┘
+                        ┌─────────────────────────────────────┐
+                        │      Super Admin site (:8002)       │
+                        │   superadmin.localhost              │
+                        │   DB: superadmin_db                 │
+                        │   - School registry (all schools)   │
+                        │   - School Admin provisioning       │
+                        └───────────┬─────────────────────────┘
+                                    │ registry (public_schools)
+        ┌───────────────────────────┼───────────────────────────┐
+        │                           │                           │
+┌───────▼────────┐         ┌────────▼────────┐         ┌────────▼────────┐
+│  Sunrise (:8000)│         │ Oakridge (:8001)│         │  School 3...    │
+│ library.localhost│        │ oakridge.localhost│       │ own site + DB   │
+│ DB _cc9646d2…  │         │ DB: oakridge_db │         │                 │
+│ Students,      │         │ Students,      │         │                 │
+│ Teachers,      │         │ Teachers,      │         │                 │
+│ classes, etc.  │         │ classes, etc.  │         │                 │
+└───────┬────────┘         └────────┬────────┘         └─────────────────┘
+        │                           │
+        └─────────── Flutter mobile app (auto-detects school at login)
+                    + web admin dashboard (schooladmin, :5173)
 ```
 
-**No server, no Docker, no Frappe.** The teacher's Google account owns the data.
+- **One Frappe site + one MariaDB database per school** — no data mixing between schools.
+- **Super admin has its own site + database** holding only the school registry.
+- **Custom email/password auth** (`sc_auth.api.auth`): login, signup, me, logout,
+  change password — returns a real Frappe session sid **and** a signed JWT.
+- **No Google Sign-In, no Google Sheets** in the live build. The earlier
+  Google-Sheets serverless prototype was replaced by the Frappe backend.
+- **The mobile app auto-detects the school at login** — no school picker;
+it probes the known endpoints and logs the user into the site that
+  authenticates them.
 
-- **Authentication**: Google Sign-In (OAuth 2.0)
-- **Database**: Google Sheets (the spreadsheet IS the backend)
-- **Backend logic**: Client-side — apps read/write directly to Google Sheets API
+## Quick Start (live backend)
 
-## Google Sheets Tab Structure
+### 1. Start the Frappe bench
 
-| Tab | Columns |
-|-----|---------|
-| `Users` | id, email, name, role, school_id, password, status |
-| `Schools` | id, name, location, status, port, periods, motto, contact_email, contact_number, website, address |
-| `Classes` | id, name, program, school_id, room, teacher_ids |
-| `Students` | id, name, email, roll_number, class_id, school_id, attendance_pct, status |
-| `Attendance` | id, student_id, class_id, date, status, course |
-| `Assignments` | id, title, course, class_id, due_date, description, created_by, created_at |
-| `Submissions` | id, assignment_id, student_id, file_name, grade, feedback, status, submitted_at |
-| `Timetable` | id, class_id, day, period, teacher_id, subject, school_id |
+```bash
+# One-command startup (backend + web admin):
+./start.sh
 
-## Quick Start
+# Or manually:
+cd ~/Documents/frappe/frappe-bench
+bench serve --port 8000 --site library.localhost   # school site
+bench serve --port 8002 --site superadmin.localhost # super-admin registry
+```
 
-### 1. Set up Google Cloud (free)
+### 2. Run the web admin
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Create a new project
-3. Enable **Google Sheets API** and **Google Drive API**
-4. Create **OAuth 2.0 credentials** (Web application type)
-5. Add `http://localhost:5173` as authorized origin
-6. Note the **Client ID**
+```bash
+cd schooladmin
+npm run dev    # → http://localhost:5173
+```
 
-### 2. Create the Spreadsheet
-
-1. Create a new Google Spreadsheet
-2. Create tabs with the header rows listed above
-3. Share the spreadsheet with your Google account (or service account)
-
-### 3. Run the Flutter App
+### 3. Run the Flutter mobile app
 
 ```bash
 cd school_connect_app
 flutter pub get
-flutter run
+flutter run -d macos     # or any device/emulator
 ```
 
-On the login screen, tap **"Sign in with Google"** — the app reads/writes directly to your spreadsheet.
-
-### 4. Run the Web Admin
+### 4. Seed demo data (first time / rebuild)
 
 ```bash
-# Set your Google Client ID
-export VITE_GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
-
-# Start both admin consoles
-npm run dev:all
+python3 seed_data.py   # run with the bench venv's python
 ```
 
-- School Admin: http://localhost:5173
-- Super Admin: http://localhost:5175
+Creates a full school: academic year, term, holidays, grading scales, rooms,
+2 programs, 6 courses, 10 students, 2 instructors, 3 student groups, 15 course
+schedules, 50 attendance records, 15 assessment plans, 35 assessment results.
+Idempotent — re-runs skip existing records.
 
-### 5. Mock Mode (no Google account needed)
+## Test Accounts (seeded)
 
-```bash
-npm run dev:all:mock
-```
-
-Uses `localStorage` for development — no Google account or spreadsheet required.
-
-## Test Accounts (Mock Mode)
-
-| Role | Email | Password |
-|------|-------|----------|
-| Super Admin | admin@schoolconnect.app | admin123 |
-| School Admin | priya@springfield.edu | admin123 |
-| Teacher | anita.sharma@springfield.edu | teacher123 |
+| Role | Email | Password | Site / port |
+|------|-------|----------|-------------|
+| Super Admin | super.admin@school.com | Super@12345 | :8002 |
+| School Admin (Sunrise) | sunrise.admin@school.com | Admin@12345 | :8000 |
+| Teacher | robert.johnson@school.com | Teacher@123 | :8000 |
+| Student | alex.smith@school.com | Student@123 | :8000 |
 
 ## Project Structure
 
 ```
-├── school_connect_app/    # Flutter mobile app
+├── school_connect_app/      # Flutter mobile app (students, teachers, super admin)
 │   ├── lib/
-│   │   ├── services/
-│   │   │   ├── google_sheets_service.dart  # Core — Google Sheets API client
-│   │   │   └── demo_data_service.dart      # Mock data for demo mode
-│   │   ├── config/
-│   │   │   └── api_config.dart             # App configuration
-│   │   ├── state/                          # Riverpod providers
-│   │   ├── screens/                        # UI screens
-│   │   ├── models/                         # Data models
-│   │   └── widgets/                        # Reusable widgets
+│   │   ├── config/api_config.dart        # env-driven backend URLs
+│   │   ├── services/frappe_api_service.dart  # live data layer (sc_auth.api.*)
+│   │   ├── services/export_service.dart  # PDF / CSV / Excel / share / print
+│   │   ├── state/                        # Riverpod providers (auth, student, teacher, school)
+│   │   ├── screens/                      # login, student dashboard, teacher dashboard,
+│   │   │                                  #  super admin portal, assignments, attendance...
+│   │   ├── models/                       # user, student, instructor, attendance, assignment...
+│   │   └── widgets/                      # school header, export sheet, ...
 │   └── pubspec.yaml
-├── schooladmin/           # School Admin web console (React + Vite)
-│   └── src/lib/
-│       ├── api.js          # API client (mock + sheets modes)
-│       ├── sheets.js       # Google Sheets API browser client
-│       └── mock.js         # In-browser mock backend
-├── superadmin/            # Super Admin web console (React + Vite)
-└── demoapp/               # Standalone Flutter demo (SQLite)
+├── schooladmin/             # School Admin web console (React + Vite)
+├── sc_auth/                 # Frappe custom app (auth + data API + doctypes)
+│   └── sc_auth/api/
+│       ├── auth.py          # login / signup_student / me / logout / change_password
+│       ├── data.py          # student/teacher/admin data endpoints
+│       └── superadmin.py    # registry: schools CRUD + admin provisioning
+├── demoapp/                 # Offline replica of the mobile app (SQLite only)
+├── seed_data.py             # idempotent demo-data seeder for the bench
+├── start.sh                 # one-command startup (backend + web admin)
+├── scripts/bench_backup.sh  # Frappe backup + restore helpers
+├── README.md
+├── DOCUMENTATION.md
+├── TESTING.md
+└── SCHOOL_CONNECT_STATUS.md
 ```
 
-## What Replaced What
+## What's working
 
-| Before (Frappe) | After (Google Sheets) |
-|-----------------|----------------------|
-| Docker + MariaDB | Google Spreadsheet |
-| Frappe Education | Client-side Sheets API |
-| FastAPI bridge | Direct OAuth from app |
-| Password auth | Google Sign-In |
-| sc_backend (Node.js) | Deleted |
-| sheets_backend (Node.js) | Deleted |
-| fastapi_backend (Python) | Deleted |
+- Custom email/password auth with JWT + session (no Frappe Desk login)
+- Student dashboard: attendance %, subject-wise attendance, assignments, timetable,
+  calendar with month navigation + tap-a-day assignments sheet
+- Teacher dashboard: classes, attendance marking (roll-number sorted), assignments
+  (create/edit/delete), grading with feedback, student detail scoped to the teacher's
+  subject
+- Assignment submission with real file upload to Frappe's file store + download/
+  share of submitted files
+- School admin web dashboard: overview, teachers, classes, students, school profile
+  editing (name, logo, contact info)
+- Super admin portal (in the mobile app): registry, school CRUD, admin provisioning,
+  password reset across sites
+- Offline demo app (`demoapp/`) — exact replica on local SQLite, no backend needed
+- Teacher exports: PDF (download / share / print), Excel, CSV — with school branding
+
+## Secrets & config
+
+- The JWT signing key is a **Frappe site-config value** (`sc_auth_jwt_secret`),
+  set per site — never shipped in the app bundle.
+- The app reads backend URLs from environment variables:
+  `SC_BACKEND_URL`, `SC_BACKEND_PORT`, `SC_SUPERADMIN_URL`, `SC_SUPERADMIN_PORT`,
+  `SC_WEB_ADMIN_URL`. Defaults: localhost:8000 / localhost:8002 / localhost:5173.
+- No plaintext passwords are stored in the app or the repo.
+
+## Tests / checklist
+
+See `TESTING.md` for the feature-by-feature E2E checklist (every screen/button per
+role, tested against the live backend).
