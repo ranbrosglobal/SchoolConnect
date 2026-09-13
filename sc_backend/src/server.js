@@ -12,9 +12,11 @@
 
 import http from 'node:http'
 import crypto from 'node:crypto'
-import { join, dirname } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
+import { extname, join, dirname, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { DatabaseSync } from 'node:sqlite'
+import { handleRequest } from './handlers.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -315,7 +317,39 @@ function readBody(req, maxBytes = MAX_BODY_BYTES) {
   })
 }
 
-export function createServer({ consoleName, port, seed, sync }) {
+const CONTENT_TYPES = {
+  '.css': 'text/css; charset=utf-8',
+  '.html': 'text/html; charset=utf-8',
+  '.ico': 'image/x-icon',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.webp': 'image/webp',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+}
+
+function serveStatic(staticDir, urlPath, req, res) {
+  if (!staticDir || !['GET', 'HEAD'].includes(req.method)) return false
+  const requestedPath = decodeURIComponent(urlPath === '/' ? '/index.html' : urlPath)
+  const staticRoot = normalize(staticDir)
+  let filePath = normalize(join(staticDir, requestedPath))
+  if (!filePath.startsWith(staticRoot) || !existsSync(filePath)) {
+    if (extname(requestedPath)) return false
+    filePath = join(staticDir, 'index.html')
+    if (!existsSync(filePath)) return false
+  }
+
+  const contentType = CONTENT_TYPES[extname(filePath).toLowerCase()] || 'application/octet-stream'
+  const content = readFileSync(filePath)
+  res.writeHead(200, { 'Content-Type': contentType, 'Content-Length': content.length })
+  if (req.method !== 'HEAD') res.end(content)
+  else res.end()
+  return true
+}
+
+export function createServer({ consoleName, port, seed, sync, staticDir }) {
   const { sa, su } = openDatabases()
   const db = consoleName === 'schooladmin' ? sa : su
   const bothDbs = { sa, su }
@@ -328,7 +362,9 @@ export function createServer({ consoleName, port, seed, sync }) {
     res.setHeader('X-Content-Type-Options', 'nosniff')
     res.setHeader('X-Frame-Options', 'DENY')
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
-    res.setHeader('Content-Security-Policy', "default-src 'none'")
+    res.setHeader('Content-Security-Policy', staticDir
+      ? "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'"
+      : "default-src 'none'")
     res.setHeader('Referrer-Policy', 'no-referrer')
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
     if (IS_SECURE) res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains')
@@ -499,6 +535,8 @@ export function createServer({ consoleName, port, seed, sync }) {
         return
       }
     }
+
+    if (serveStatic(staticDir, url.pathname, req, res)) return
 
     // 404
     res.writeHead(404, { 'Content-Type': 'application/json' })

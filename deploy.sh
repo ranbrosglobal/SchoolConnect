@@ -89,9 +89,10 @@ echo -e "${GREEN}Frontend builds complete.${NC}"
 # ── Step 5: Stop old PM2 processes ─────────────────────────────────
 echo ""
 echo -e "${YELLOW}Step 5: Stopping old PM2 processes...${NC}"
+pm2 delete sc_backend 2>/dev/null || true
+pm2 delete server 2>/dev/null || true
 pm2 delete schooladmin 2>/dev/null || true
 pm2 delete superadmin 2>/dev/null || true
-pm2 delete sc_backend 2>/dev/null || true
 
 # ── Step 6: Start all services ─────────────────────────────────────
 echo ""
@@ -118,37 +119,22 @@ pm2 list
 echo ""
 
 # Check backend health
-if curl -sSf --max-time 5 http://localhost:3000/health > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ sc_backend (schooladmin API :3000) — healthy${NC}"
+if curl -sSf --max-time 5 http://localhost:5173/health > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ sc_backend (schooladmin + API :5173) — healthy${NC}"
 else
-    echo -e "${RED}❌ sc_backend (schooladmin API :3000) — not responding${NC}"
+    echo -e "${RED}❌ sc_backend (schooladmin + API :5173) — not responding${NC}"
 fi
 
-if curl -sSf --max-time 5 http://localhost:3001/health > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ sc_backend (superadmin API :3001) — healthy${NC}"
+if curl -sSf --max-time 5 http://localhost:5175/health > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ sc_backend (superadmin + API :5175) — healthy${NC}"
 else
-    echo -e "${RED}❌ sc_backend (superadmin API :3001) — not responding${NC}"
-fi
-
-# Check frontend static servers
-if curl -sSf --max-time 5 http://localhost:5173 > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ schooladmin UI (:5173) — running${NC}"
-else
-    echo -e "${RED}❌ schooladmin UI (:5173) — not responding${NC}"
-fi
-
-if curl -sSf --max-time 5 http://localhost:5175 > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ superadmin UI (:5175) — running${NC}"
-else
-    echo -e "${RED}❌ superadmin UI (:5175) — not responding${NC}"
+    echo -e "${RED}❌ sc_backend (superadmin + API :5175) — not responding${NC}"
 fi
 
 echo ""
 echo -e "${GREEN}=== Deploy Complete ===${NC}"
-echo "School Admin UI:    http://13.205.212.64:5173"
-echo "Super Admin UI:     http://13.205.212.64:5175"
-echo "School Admin API:   http://13.205.212.64:3000"
-echo "Super Admin API:    http://13.205.212.64:3001"
+echo "School Admin UI/API: http://13.205.212.64:5173"
+echo "Super Admin UI/API:  http://13.205.212.64:5175"
 echo ""
 echo "Useful commands:"
 echo "  pm2 list              — see all services"

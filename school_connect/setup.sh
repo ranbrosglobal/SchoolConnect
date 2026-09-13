@@ -1,4 +1,4 @@
-#!/bin/bash
+c#!/bin/bash
 
 echo "🎓 School Connect - Frappe/ERPNext Setup"
 echo "========================================"

@@ -5,8 +5,8 @@
   "description": "SQLite backend for SchoolConnect web consoles",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
-    "reset": "node src/index.js --reset"
+    "start": "node --experimental-sqlite server.js",
+    "reset": "node --experimental-sqlite src/index.js --reset"
   },
   "engines": {
     "node": ">=22.5.0"
