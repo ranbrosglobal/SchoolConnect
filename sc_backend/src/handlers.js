@@ -363,7 +363,7 @@ function schoolAdminClasses(db, params, user) {
     const tIds = JSON.parse(c.teacher_ids || '[]')
     const teacherNames = tIds.map(tid => { const t = getById(db, 'users', tid); return t?.full_name }).filter(Boolean)
     return { id: c.id, name: c.name, program: c.program, room: c.room, school_id: c.school_id,
-      student_count: classStudents.length, teachers: teacherNames }
+      student_count: classStudents.length, teachers: teacherNames, teacher_ids: tIds }
   })
 }
 

@@ -23,7 +23,12 @@ function ClassModal({ klass, school, onClose, onSaved }) {
   const { data: teachers, loading: teachersLoading } = useFetch(() => api.getTeachers(school), [school])
   const [fields, setFields] = useState(
     klass
-      ? { name: klass.name, program: klass.program, room: klass.room, teacher_ids: klass.teacher_ids }
+      ? {
+          name: klass.name || '',
+          program: klass.program || PROGRAMS[2],
+          room: klass.room || '',
+          teacher_ids: Array.isArray(klass.teacher_ids) ? klass.teacher_ids : [],
+        }
       : { name: '', program: PROGRAMS[2], room: '', teacher_ids: [] },
   )
   const [busy, setBusy] = useState(false)
