@@ -5,6 +5,7 @@
  * Each database is opened as a separate DatabaseSync instance.
  */
 
+import { mkdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { DatabaseSync } from 'node:sqlite'
@@ -21,6 +22,7 @@ let suDb = null
  */
 export function openDatabases(dataDir = process.env.SC_DATA_DIR || DEFAULT_DATA_DIR) {
   if (saDb) return { sa: saDb, su: suDb }
+  mkdirSync(dataDir, { recursive: true })
 
   saDb = new DatabaseSync(join(dataDir, 'schooladmin.db'))
   suDb = new DatabaseSync(join(dataDir, 'superadmin.db'))

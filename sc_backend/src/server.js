@@ -12,7 +12,7 @@
 
 import http from 'node:http'
 import crypto from 'node:crypto'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { extname, join, dirname, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { DatabaseSync } from 'node:sqlite'
@@ -29,6 +29,7 @@ let suDb = null
 
 export function openDatabases(dataDir = process.env.SC_DATA_DIR || DEFAULT_DATA_DIR) {
   if (saDb) return { sa: saDb, su: suDb }
+  mkdirSync(dataDir, { recursive: true })
   saDb = new DatabaseSync(join(dataDir, 'schooladmin.db'))
   suDb = new DatabaseSync(join(dataDir, 'superadmin.db'))
   saDb.exec('PRAGMA journal_mode = WAL')

@@ -70,6 +70,13 @@ cd superadmin && npm install && cd ..
 cd sc_backend && npm install && cd ..
 cd "$PROJECT_DIR"
 
+# SQLite needs a writable parent directory on fresh deployments.
+mkdir -p "$PROJECT_DIR/sc_backend/data"
+if [[ ! -w "$PROJECT_DIR/sc_backend/data" ]]; then
+    echo -e "${RED}❌ $PROJECT_DIR/sc_backend/data is not writable by $(whoami)${NC}"
+    exit 1
+fi
+
 # ── Step 4: Build both frontends ───────────────────────────────────
 echo ""
 echo -e "${YELLOW}Step 4: Building frontends...${NC}"
