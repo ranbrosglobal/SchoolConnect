@@ -385,6 +385,7 @@ function schoolAdminCreateClass(db, params) {
   const teacherIds = Array.isArray(params.teacher_ids) ? params.teacher_ids : []
   insert(db, 'classes', { id, name, program: params.program || '', school_id: params.school || '',
     room: params.room || '', teacher_ids: JSON.stringify(teacherIds) })
+  syncTeacherClassIds(db, id, teacherIds)
   return { id, name, program: params.program || '', room: params.room || '',
     school_id: params.school, teacher_ids: teacherIds }
 }
@@ -397,9 +398,26 @@ function schoolAdminUpdateClass(db, params) {
   const updates = { name }
   if (params.program) updates.program = params.program
   if (params.room) updates.room = params.room
-  if (Array.isArray(params.teacher_ids)) updates.teacher_ids = JSON.stringify(params.teacher_ids)
+  if (Array.isArray(params.teacher_ids)) {
+    updates.teacher_ids = JSON.stringify(params.teacher_ids)
+    syncTeacherClassIds(db, params.id, params.teacher_ids)
+  }
   updateById(db, 'classes', params.id, updates)
   return { ...c, ...updates, teacher_ids: params.teacher_ids || JSON.parse(c.teacher_ids || '[]') }
+}
+
+function syncTeacherClassIds(db, classId, assignedTeacherIds) {
+  const assigned = new Set(assignedTeacherIds)
+  const teachers = getAll(db, 'users', "role = 'Teacher'")
+  for (const teacher of teachers) {
+    const current = JSON.parse(teacher.class_ids || '[]')
+    const next = assigned.has(teacher.id)
+      ? [...new Set([...current, classId])]
+      : current.filter(id => id !== classId)
+    if (next.length !== current.length || next.some((id, index) => id !== current[index])) {
+      updateById(db, 'users', teacher.id, { class_ids: JSON.stringify(next) })
+    }
+  }
 }
 
 function schoolAdminDeleteClass(db, params) {
@@ -644,7 +662,12 @@ function mobileGetTeacherClasses(db, params, user) {
   if (!user || (user.role !== 'Teacher' && user.role !== 'School Admin')) {
     throw { status: 403, message: 'Access denied' }
   }
-  const classIds = JSON.parse(user.class_ids || '[]')
+  const storedClassIds = JSON.parse(user.class_ids || '[]')
+  const assignedClassIds = getAll(db, 'classes').filter(c => {
+    const teacherIds = JSON.parse(c.teacher_ids || '[]')
+    return teacherIds.includes(user.id)
+  }).map(c => c.id)
+  const classIds = [...new Set([...storedClassIds, ...assignedClassIds])]
   const classes = classIds.map(cid => getById(db, 'classes', cid)).filter(Boolean)
 
   return classes.map(c => {
@@ -1002,7 +1025,9 @@ function mobileGetFile(db, params, user) {
 /** Mobile: get teacher's assignments (with submission stats) */
 function mobileGetTeacherAssignments(db, params, user) {
   assertTeacherOrAdmin(user)
-  const classIds = JSON.parse(user.class_ids || '[]')
+  const storedClassIds = JSON.parse(user.class_ids || '[]')
+  const assignedClassIds = getAll(db, 'classes').filter(c => JSON.parse(c.teacher_ids || '[]').includes(user.id)).map(c => c.id)
+  const classIds = [...new Set([...storedClassIds, ...assignedClassIds])]
   if (classIds.length === 0) return []
   let all = []
   for (const cid of classIds) {

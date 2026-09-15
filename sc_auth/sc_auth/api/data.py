@@ -1176,3 +1176,240 @@ def my_timetable(week_start=None):
             for s in subjects.values()
         ],
     }
+
+
+# --------------------------------------------------------------------------
+# admin CRUD: classes (Student Group), subjects (Course Schedule), students
+# --------------------------------------------------------------------------
+
+@frappe.whitelist()
+def create_student_group(name, program=None):
+    """Create a new Student Group (class). Requires Instructor or System Manager role."""
+    _require_role("Instructor", "System Manager", "School Admin")
+    if not name or not name.strip():
+        frappe.throw(_("Class name is required."))
+    with _elevated():
+        # Determine program — use the first available if not specified
+        if not program:
+            programs = frappe.db.get_all("Program", fields=["name"], limit=1)
+            program = programs[0].name if programs else None
+        doc = frappe.get_doc({
+            "doctype": "Student Group",
+            "student_group_name": name.strip(),
+            "program": program or "",
+            "academic_year": _current_academic_year(),
+        })
+        doc.insert(ignore_permissions=True)
+        return {
+            "name": doc.name,
+            "student_group_name": doc.student_group_name,
+            "program": doc.program,
+        }
+
+
+@frappe.whitelist()
+def update_student_group(group_id, name=None, program=None):
+    """Update a Student Group (class)."""
+    _require_role("Instructor", "System Manager", "School Admin")
+    with _elevated():
+        doc = frappe.get_doc("Student Group", group_id)
+        if name:
+            doc.student_group_name = name.strip()
+        if program is not None:
+            doc.program = program
+        doc.save(ignore_permissions=True)
+        return {
+            "name": doc.name,
+            "student_group_name": doc.student_group_name,
+            "program": doc.program,
+        }
+
+
+@frappe.whitelist()
+def delete_student_group(group_id):
+    """Delete a Student Group and its associated schedules."""
+    _require_role("Instructor", "System Manager", "School Admin")
+    with _elevated():
+        # Remove associated course schedules
+        schedules = frappe.db.get_all("Course Schedule", filters={"student_group": group_id}, pluck="name")
+        for s in schedules:
+            frappe.delete_doc("Course Schedule", s, force=True, ignore_permissions=True)
+        frappe.delete_doc("Student Group", group_id, force=True, ignore_permissions=True)
+        return {"message": "Deleted"}
+
+
+@frappe.whitelist()
+def get_course_schedules_for_group(group_id):
+    """Get all Course Schedules (subjects) for a Student Group."""
+    _require_role("Instructor", "System Manager", "School Admin")
+    with _elevated():
+        schedules = frappe.db.get_all(
+            "Course Schedule",
+            filters={"student_group": group_id},
+            fields=["name", "course", "student_group", "instructor", "instructor_name",
+                    "schedule_date", "from_time", "to_time", "room"],
+            order_by="schedule_date asc, from_time asc",
+        )
+        return [{
+            "name": s.name,
+            "course": s.course,
+            "course_name": _course_name(s.course),
+            "student_group": s.student_group,
+            "student_group_name": _group_name(s.student_group),
+            "instructor": s.instructor,
+            "instructor_name": s.instructor_name,
+            "room": s.room,
+            "from_time": str(s.from_time) if s.from_time else None,
+            "to_time": str(s.to_time) if s.to_time else None,
+        } for s in schedules]
+
+
+@frappe.whitelist()
+def create_course_schedule(course, student_group, day="Monday", period=1, room=None, from_time=None, to_time=None):
+    """Create a Course Schedule (subject assignment) for a Student Group."""
+    _require_role("Instructor", "System Manager", "School Admin")
+    instructor = _current_instructor()
+    with _elevated():
+        group = frappe.get_doc("Student Group", student_group)
+        # Find a valid schedule date for the given day
+        today = datetime.date.today()
+        day_map = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4}
+        target_weekday = day_map.get(day, 0)
+        days_ahead = (target_weekday - today.weekday()) % 7
+        if days_ahead == 0:
+            days_ahead = 7
+        schedule_date = today + datetime.timedelta(days=days_ahead)
+        doc = frappe.get_doc({
+            "doctype": "Course Schedule",
+            "course": course,
+            "student_group": student_group,
+            "instructor": instructor,
+            "instructor_name": frappe.db.get_value("Instructor", instructor, "instructor_name"),
+            "program": group.program,
+            "schedule_date": str(schedule_date),
+            "from_time": from_time or "09:00:00",
+            "to_time": to_time or "10:00:00",
+            "room": room or "",
+        })
+        doc.insert(ignore_permissions=True)
+        return {
+            "name": doc.name,
+            "course": doc.course,
+            "course_name": _course_name(doc.course),
+            "student_group": doc.student_group,
+            "room": doc.room,
+        }
+
+
+@frappe.whitelist()
+def update_course_schedule(schedule_id, course=None, student_group=None, room=None, from_time=None, to_time=None):
+    """Update a Course Schedule."""
+    _require_role("Instructor", "System Manager", "School Admin")
+    with _elevated():
+        doc = frappe.get_doc("Course Schedule", schedule_id)
+        if course:
+            doc.course = course
+        if student_group:
+            doc.student_group = student_group
+        if room is not None:
+            doc.room = room
+        if from_time:
+            doc.from_time = from_time
+        if to_time:
+            doc.to_time = to_time
+        doc.save(ignore_permissions=True)
+        return {"message": "Updated"}
+
+
+@frappe.whitelist()
+def delete_course_schedule(schedule_id):
+    """Delete a Course Schedule."""
+    _require_role("Instructor", "System Manager", "School Admin")
+    with _elevated():
+        frappe.delete_doc("Course Schedule", schedule_id, force=True, ignore_permissions=True)
+        return {"message": "Deleted"}
+
+
+@frappe.whitelist()
+def create_student(name, email=None, class_id=None, roll_number=None):
+    """Create a new Student and link to a Student Group."""
+    _require_role("Instructor", "System Manager", "School Admin")
+    if not name or not name.strip():
+        frappe.throw(_("Student name is required."))
+    with _elevated():
+        # Create the Student doc
+        student_doc = frappe.get_doc({
+            "doctype": "Student",
+            "student_name": name.strip(),
+            "student_email_id": email or "",
+            "gender": "Other",
+        })
+        student_doc.insert(ignore_permissions=True)
+
+        # Also create a linked User for login
+        if email:
+            try:
+                user = frappe.get_doc({
+                    "doctype": "User",
+                    "email": email,
+                    "full_name": name.strip(),
+                    "student_student": student_doc.name,
+                    "new_password": "Student@123",
+                    "roles": [{"role": "Student"}],
+                })
+                user.insert(ignore_permissions=True)
+            except Exception:
+                pass  # User may already exist
+
+        # Add to Student Group if class_id is provided
+        if class_id:
+            try:
+                group_doc = frappe.get_doc("Student Group", class_id)
+                group_doc.append("students", {
+                    "student": student_doc.name,
+                    "student_name": name.strip(),
+                    "group_roll_number": roll_number,
+                    "active": 1,
+                })
+                group_doc.save(ignore_permissions=True)
+            except Exception:
+                pass
+
+        return {
+            "name": student_doc.name,
+            "student_name": student_doc.student_name,
+            "email": email,
+            "student_group": class_id,
+        }
+
+
+@frappe.whitelist()
+def update_student(student_id, name=None, email=None, class_id=None, roll_number=None):
+    """Update a Student's details."""
+    _require_role("Instructor", "System Manager", "School Admin")
+    with _elevated():
+        doc = frappe.get_doc("Student", student_id)
+        if name:
+            doc.student_name = name.strip()
+        if email is not None:
+            doc.student_email_id = email
+        doc.save(ignore_permissions=True)
+        return {"message": "Updated"}
+
+
+@frappe.whitelist()
+def delete_student(student_id):
+    """Delete a Student and remove from all groups."""
+    _require_role("Instructor", "System Manager", "School Admin")
+    with _elevated():
+        # Remove from all student groups
+        groups = frappe.db.get_all("Student Group Student", filters={"student": student_id}, pluck="parent")
+        for g in groups:
+            try:
+                group_doc = frappe.get_doc("Student Group", g)
+                group_doc.students = [s for s in group_doc.students if s.student != student_id]
+                group_doc.save(ignore_permissions=True)
+            except Exception:
+                pass
+        frappe.delete_doc("Student", student_id, force=True, ignore_permissions=True)
+        return {"message": "Deleted"}
