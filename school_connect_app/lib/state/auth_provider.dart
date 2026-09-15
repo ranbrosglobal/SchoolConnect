@@ -48,7 +48,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _init() async {
     state = state.copyWith(isLoading: true);
     try {
-      final restored = await _api.restoreSession();
+      final restored = await _api.restoreSession().timeout(const Duration(seconds: 8));
       if (restored) {
         state = state.copyWith(
           isLoading: false,
@@ -59,7 +59,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
         state = state.copyWith(isLoading: false);
       }
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Session restore failed: ${e.toString()}');
+      await _api.clearSession();
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Session restore failed. Please sign in again.',
+      );
     }
   }
 

@@ -22,13 +22,13 @@ class SchoolProfileModel {
 
   factory SchoolProfileModel.fromJson(Map<String, dynamic> json) {
     return SchoolProfileModel(
-      schoolName: json['school_name'] as String? ?? 'School',
+      schoolName: (json['school_name'] ?? json['name'] ?? 'School').toString(),
       motto: json['motto'] as String?,
       logoUrl: json['logo_url'] as String?,
       contactEmail: json['contact_email'] as String?,
       contactNumber: json['contact_number'] as String?,
       website: json['website'] as String?,
-      address: json['address'] as String?,
+      address: (json['address'] ?? json['location'])?.toString(),
     );
   }
 

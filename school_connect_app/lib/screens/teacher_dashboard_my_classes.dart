@@ -44,6 +44,11 @@ class _TeacherDashboardMyClassesState extends ConsumerState<TeacherDashboardMyCl
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
+                          'Welcome, ${user?.fullName.isNotEmpty == true ? user!.fullName : 'Teacher'}',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
                           'My Classes',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                         ),

@@ -62,12 +62,12 @@ class GoogleSheetsService {
   };
 
   /// Make a GET request to the backend.
-  Future<Map<String, dynamic>> _get(String path, [Map<String, String>? params]) async {
+  Future<dynamic> _get(String path, [Map<String, String>? params]) async {
     final uri = Uri.parse('${ApiConfig.backendBaseUrl}/api/method/$path')
         .replace(queryParameters: params);
     late final http.Response response;
     try {
-      response = await http.get(uri, headers: _headers).timeout(ApiConfig.connectionTimeout);
+        response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 12));
     } on SocketException catch (e) {
       throw Exception('Cannot connect to $uri: ${e.message}');
     } on TimeoutException {
@@ -77,12 +77,12 @@ class GoogleSheetsService {
   }
 
   /// Make a POST request to the backend.
-  Future<Map<String, dynamic>> _post(String path, [Map<String, dynamic>? body]) async {
+  Future<dynamic> _post(String path, [Map<String, dynamic>? body]) async {
     final uri = Uri.parse('${ApiConfig.backendBaseUrl}/api/method/$path');
     late final http.Response response;
     try {
-      response = await http.post(uri, headers: _headers, body: jsonEncode(body ?? {}))
-          .timeout(ApiConfig.connectionTimeout);
+        response = await http.post(uri, headers: _headers, body: jsonEncode(body ?? {}))
+          .timeout(const Duration(seconds: 12));
     } on SocketException catch (e) {
       throw Exception('Cannot connect to $uri: ${e.message}');
     } on TimeoutException {
@@ -92,7 +92,7 @@ class GoogleSheetsService {
   }
 
   /// Handle HTTP response, extract session cookie, parse JSON.
-  Map<String, dynamic> _handleResponse(http.Response response) {
+  dynamic _handleResponse(http.Response response) {
     // Extract session cookie from Set-Cookie header
     final setCookie = response.headers['set-cookie'];
     if (setCookie != null) {
@@ -113,7 +113,10 @@ class GoogleSheetsService {
     }
 
     // Backend wraps responses in { message: ... }
-    return body is Map<String, dynamic> ? (body['message'] ?? body) : body;
+    if (body is Map<String, dynamic> && body.containsKey('message')) {
+      return body['message'];
+    }
+    return body;
   }
 
   // ─────────────────────────────────────────────────────────────────────

@@ -29,12 +29,12 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['name'] ?? json['id'] ?? '',
-      email: json['email'] ?? '',
-      fullName: json['full_name'] ?? json['first_name'] ?? '',
+      id: (json['name'] ?? json['id'] ?? '').toString(),
+      email: (json['email'] ?? '').toString(),
+      fullName: (json['full_name'] ?? json['fullName'] ?? json['first_name'] ?? '').toString(),
       role: _parseRole(json['role'] ?? json['user_type']),
-      schoolId: json['school'],
-      schoolName: json['school_name'],
+      schoolId: json['school']?.toString() ?? json['school_id']?.toString(),
+      schoolName: json['school_name']?.toString() ?? json['schoolName']?.toString(),
       token: json['token'],
       studentId: json['student_id'],
       studentGroups: (json['student_groups'] as List?)?.cast<String>() ?? const [],
