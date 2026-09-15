@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/colors.dart';
 import '../state/teacher_provider.dart';
 import '../models/attendance_model.dart';
-import '../services/google_sheets_service.dart';
+import '../services/google_sheets_service.dart' show AttendanceRecord;
 import '../services/export_service.dart';
 import '../widgets/export_sheet.dart';
 import 'package:flutter_animate/flutter_animate.dart';

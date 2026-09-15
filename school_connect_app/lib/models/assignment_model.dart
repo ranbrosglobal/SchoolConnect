@@ -63,36 +63,38 @@ class AssignmentModel {
     final submissionMap =
         submission is Map<String, dynamic> ? submission : null;
 
+    DateTime? parseDate(dynamic value) => value == null ? null : DateTime.tryParse(value.toString());
+    double? parseDouble(dynamic value) => value == null ? null : double.tryParse(value.toString());
+    int parseInt(dynamic value) => int.tryParse(value.toString()) ?? 0;
+
     return AssignmentModel(
-      id: json['name'] ?? '',
-      title: json['title'] ?? '',
+      id: (json['name'] ?? json['id'] ?? '').toString(),
+      title: (json['title'] ?? '').toString(),
       description: json['description'],
       course: json['course'],
       courseName: json['course_name'],
-      studentGroup: json['student_group'],
-      studentGroupName: json['student_group_name'],
+      studentGroup: json['student_group'] ?? json['class_id'],
+      studentGroupName: json['student_group_name'] ?? json['class_name'],
       instructor: json['instructor'],
       instructorName: json['instructor_name'],
-      dueDate: json['due_date'] != null ? DateTime.parse(json['due_date']) : null,
+      dueDate: parseDate(json['due_date']),
       fromTime: json['from_time'],
       toTime: json['to_time'],
-      creation: json['creation'] != null ? DateTime.parse(json['creation']) : null,
+      creation: parseDate(json['creation']),
       attachment: json['attachment'],
       attachmentName: json['attachment_name'],
       submitted: json['submitted'] == true ||
           (submissionMap != null && submissionMap['status'] != 'Returned'),
-      grade: submissionMap?['grade']?.toDouble() ?? json['grade']?.toDouble(),
+      grade: parseDouble(submissionMap?['grade'] ?? json['grade']),
       feedback: submissionMap?['feedback'] ?? json['feedback'],
       submissionStatus:
           submissionMap?['status'] ?? json['submission_status'],
       submissionFile: submissionMap?['file'],
       submissionFileName: submissionMap?['file_name'],
-      submittedAt: submissionMap?['submitted_at'] != null
-          ? DateTime.tryParse(submissionMap!['submitted_at'])
-          : null,
-      totalStudents: json['total_students'] ?? 0,
-      submittedCount: json['submitted_count'] ?? 0,
-      gradedCount: json['graded_count'] ?? 0,
+        submittedAt: parseDate(submissionMap?['submitted_at']),
+        totalStudents: parseInt(json['total_students']),
+        submittedCount: parseInt(json['submitted_count']),
+        gradedCount: parseInt(json['graded_count']),
     );
   }
 

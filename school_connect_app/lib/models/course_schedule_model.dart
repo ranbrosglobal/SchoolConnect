@@ -31,11 +31,11 @@ class CourseScheduleModel {
 
   factory CourseScheduleModel.fromJson(Map<String, dynamic> json) {
     return CourseScheduleModel(
-      id: json['name'] ?? '',
+      id: (json['name'] ?? json['id'] ?? '').toString(),
       course: json['course'],
-      courseName: json['course_name'],
-      studentGroup: json['student_group'],
-      studentGroupName: json['student_group_name'],
+      courseName: json['course_name'] ?? json['course'],
+      studentGroup: json['student_group'] ?? json['class_id'] ?? json['id'],
+      studentGroupName: json['student_group_name'] ?? json['name'],
       instructor: json['instructor'],
       instructorName: json['instructor_name'],
       school: json['school'],

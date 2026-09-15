@@ -4,7 +4,7 @@ import '../models/student_model.dart';
 import '../models/attendance_model.dart';
 import '../models/assignment_model.dart';
 import '../models/assignment_submission_model.dart';
-import '../services/frappe_api_service.dart';
+import '../services/google_sheets_service.dart';
 import 'auth_provider.dart';
 
 class TeacherState {
@@ -60,7 +60,7 @@ class TeacherState {
 }
 
 class TeacherNotifier extends StateNotifier<TeacherState> {
-  final FrappeApiService _api;
+  final GoogleSheetsService _api;
 
   TeacherNotifier(this._api) : super(TeacherState());
 
@@ -138,12 +138,15 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
     List<int>? fileBytes,
   }) async {
     state = state.copyWith(isSubmitting: true, error: null);
-    try {        await _api.createAssignment(
+    try {
+      await _api.createAssignment(
         title: title,
         course: course,
         studentGroup: studentGroup,
         dueDate: dueDate,
         description: description,
+        filePath: filePath,
+        fileBytes: fileBytes,
       );
       await loadAssignments();
       return true;
@@ -169,12 +172,15 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
     state = state.copyWith(isSubmitting: true, error: null);
     try {
       await _api.updateAssignment(
-        name: assignmentId,
+        assignmentId: assignmentId,
         title: title,
         course: course,
         studentGroup: studentGroup,
         dueDate: dueDate,
         description: description,
+        filePath: filePath,
+        fileBytes: fileBytes,
+        clearAttachment: clearAttachment,
       );
       await loadAssignments();
       return true;

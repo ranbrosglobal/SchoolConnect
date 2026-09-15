@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/attendance_model.dart';
 import '../models/assignment_model.dart';
-import '../services/frappe_api_service.dart';
+import '../services/google_sheets_service.dart';
 import 'auth_provider.dart';
 
 class StudentState {
@@ -41,7 +41,7 @@ class StudentState {
 }
 
 class StudentNotifier extends StateNotifier<StudentState> {
-  final FrappeApiService _api;
+  final GoogleSheetsService _api;
 
   StudentNotifier(this._api) : super(StudentState());
 

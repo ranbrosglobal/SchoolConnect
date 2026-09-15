@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:io' show File, Platform;
+import 'dart:async' show TimeoutException;
+import 'dart:io' show File, Platform, SocketException;
 import 'dart:typed_data' show Uint8List;
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -64,15 +65,29 @@ class GoogleSheetsService {
   Future<Map<String, dynamic>> _get(String path, [Map<String, String>? params]) async {
     final uri = Uri.parse('${ApiConfig.backendBaseUrl}/api/method/$path')
         .replace(queryParameters: params);
-    final response = await http.get(uri, headers: _headers).timeout(ApiConfig.connectionTimeout);
+    late final http.Response response;
+    try {
+      response = await http.get(uri, headers: _headers).timeout(ApiConfig.connectionTimeout);
+    } on SocketException catch (e) {
+      throw Exception('Cannot connect to $uri: ${e.message}');
+    } on TimeoutException {
+      throw Exception('Connection timed out: $uri');
+    }
     return _handleResponse(response);
   }
 
   /// Make a POST request to the backend.
   Future<Map<String, dynamic>> _post(String path, [Map<String, dynamic>? body]) async {
     final uri = Uri.parse('${ApiConfig.backendBaseUrl}/api/method/$path');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode(body ?? {}))
-        .timeout(ApiConfig.connectionTimeout);
+    late final http.Response response;
+    try {
+      response = await http.post(uri, headers: _headers, body: jsonEncode(body ?? {}))
+          .timeout(ApiConfig.connectionTimeout);
+    } on SocketException catch (e) {
+      throw Exception('Cannot connect to $uri: ${e.message}');
+    } on TimeoutException {
+      throw Exception('Connection timed out: $uri');
+    }
     return _handleResponse(response);
   }
 
@@ -246,6 +261,8 @@ class GoogleSheetsService {
     required String password,
     String? gender,
     String? studentGroup,
+    String? school,
+    String? program,
     String? city,
     String? state,
     String? country,
@@ -396,7 +413,10 @@ class GoogleSheetsService {
   Future<List<CourseScheduleModel>> getMyClasses() async {
     final result = await _get('school_connect.api.mobile.get_teacher_classes');
     final list = result is List ? result : [];
-    return (list as List).map((c) => CourseScheduleModel.fromJson(c)).toList();
+    return (list as List)
+        .whereType<Map>()
+        .map((c) => CourseScheduleModel.fromJson(Map<String, dynamic>.from(c)))
+        .toList();
   }
 
   Future<List<StudentModel>> getClassStudents(String courseSchedule) async {
@@ -491,8 +511,13 @@ class GoogleSheetsService {
   Future<List<AssignmentModel>> getMyTeacherAssignments() async {
     final result = await _get('school_connect.api.mobile.get_teacher_assignments');
     final list = result is List ? result : [];
-    return (list as List).map((a) => AssignmentModel.fromJson(a)).toList();
+    return (list as List)
+        .whereType<Map>()
+        .map((a) => AssignmentModel.fromJson(Map<String, dynamic>.from(a)))
+        .toList();
   }
+
+  Future<List<AssignmentModel>> getTeacherAssignments() => getMyTeacherAssignments();
 
   Future<AssignmentModel> createAssignment({
     required String title,
@@ -634,10 +659,12 @@ class GoogleSheetsService {
     required String assignment,
     required String fileName,
     String? fileUrl,
+    List<int>? fileBytes,
   }) async {
     await _post('school_connect.api.mobile.submit_assignment', {
       'assignment_id': assignment,
       'file_name': fileName,
+      if (fileBytes != null && fileBytes.isNotEmpty) 'file_data': base64Encode(fileBytes),
     });
   }
 

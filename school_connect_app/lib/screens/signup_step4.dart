@@ -28,7 +28,6 @@ class _SignupStep4State extends ConsumerState<SignupStep4> {
       city: data['city'] as String?,
       userState: data['state'] as String?,
       country: data['country'] as String?,
-      school: data['school'] as String,
       studentGroup: data['studentGroup'] as String?,
     );
 

@@ -8,9 +8,17 @@ import 'screens/6_login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // Firebase is only needed for Google/Apple sign-in (demo mode).
+  // The live build uses the SQLite-backed API with email/password auth and does
+  // not require Firebase. Wrap in try/catch so a missing SHA fingerprint or
+  // misconfigured google-services.json does not crash the entire app.
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    ).timeout(const Duration(seconds: 8));
+  } catch (e) {
+    debugPrint('Firebase init skipped: $e');
+  }
   runApp(
     const ProviderScope(
       child: SchoolConnectApp(),

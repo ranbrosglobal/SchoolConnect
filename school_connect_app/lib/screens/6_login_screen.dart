@@ -382,6 +382,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final toggleWidth = screenWidth - 88;
     final halfWidth = toggleWidth / 2;
 
+    Widget roleButton({required bool teacher}) {
+      final selected = _isTeacherSelected == teacher;
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            setState(() => _isTeacherSelected = teacher);
+          },
+          child: SizedBox.expand(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  teacher ? Icons.person_rounded : Icons.school_rounded,
+                  size: 15,
+                  color: selected ? Colors.white : AppColors.outline,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  teacher ? 'Teacher' : 'Student',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: selected ? Colors.white : AppColors.outline,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Container(
       height: 44,
       decoration: BoxDecoration(
@@ -390,7 +424,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       ),
       child: Stack(
         children: [
-          // Sliding pill
           AnimatedPositioned(
             duration: const Duration(milliseconds: 260),
             curve: Curves.easeInOut,
@@ -398,104 +431,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             top: 3,
             bottom: 3,
             width: halfWidth - 3,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: _isTeacherSelected
-                      ? [AppColors.primary, AppColors.darkTeal]
-                      : [AppColors.secondary, const Color(0xFF5C6BC0)],
-                ),
-                borderRadius: BorderRadius.circular(19),
-                boxShadow: [
-                  BoxShadow(
-                    color: (_isTeacherSelected
-                            ? AppColors.primary
-                            : AppColors.secondary)
-                        .withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: _isTeacherSelected
+                        ? [AppColors.primary, AppColors.darkTeal]
+                        : [AppColors.secondary, const Color(0xFF5C6BC0)],
                   ),
-                ],
-              ),
-            ),
-          ),
-          // Teacher
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: halfWidth,
-            child: GestureDetector(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                setState(() => _isTeacherSelected = true);
-              },
-              child: Container(
-                alignment: Alignment.center,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.person_rounded,
-                      size: 15,
-                      color:
-                          _isTeacherSelected ? Colors.white : AppColors.outline,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      'Teacher',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: _isTeacherSelected
-                            ? Colors.white
-                            : AppColors.outline,
-                      ),
+                  borderRadius: BorderRadius.circular(19),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (_isTeacherSelected
+                              ? AppColors.primary
+                              : AppColors.secondary)
+                          .withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
               ),
             ),
           ),
-          // Student
-          Positioned(
-            right: 0,
-            top: 0,
-            bottom: 0,
-            width: halfWidth,
-            child: GestureDetector(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                setState(() => _isTeacherSelected = false);
-              },
-              child: Container(
-                alignment: Alignment.center,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.school_rounded,
-                      size: 15,
-                      color: !_isTeacherSelected
-                          ? Colors.white
-                          : AppColors.outline,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      'Student',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: !_isTeacherSelected
-                            ? Colors.white
-                            : AppColors.outline,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          Positioned(left: 0, top: 0, bottom: 0, width: halfWidth, child: roleButton(teacher: true)),
+          Positioned(right: 0, top: 0, bottom: 0, width: halfWidth, child: roleButton(teacher: false)),
         ],
       ),
     );
@@ -545,11 +505,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                  color: AppColors.primary, width: 1.5),
+              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
             ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           ),
         ),
       ],

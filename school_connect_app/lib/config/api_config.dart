@@ -6,8 +6,8 @@
 ///
 /// URLs are driven by environment variables so the same app binary runs
 /// against localhost dev benches and against deployed hosts:
-///   SC_BACKEND_URL     - school site base URL (default http://localhost:8000)
-///   SC_SUPERADMIN_URL  - super-admin registry site (default http://localhost:8002)
+///   SC_BACKEND_URL     - schooladmin API base URL (default http://13.205.212.64)
+///   SC_SUPERADMIN_URL  - super-admin registry site (default http://13.205.212.64)
 ///   SC_WEB_ADMIN_URL   - school admin web dashboard (default http://localhost:5173)
 /// No plaintext secrets live in this file. The JWT signing key is a Frappe
 /// site-config value (`sc_auth_jwt_secret`), set per site — never shipped
@@ -15,31 +15,43 @@
 class ApiConfig {
   static String get backendHost {
     return const String.fromEnvironment('SC_BACKEND_URL',
-        defaultValue: 'http://localhost')
+      defaultValue: 'http://13.205.212.64')
         .replaceAll('\\', '/');
   }
 
   static int get backendPort {
     return int.tryParse(
-        const String.fromEnvironment('SC_BACKEND_PORT', defaultValue: '8000')) ?? 8000;
+        const String.fromEnvironment('SC_BACKEND_PORT', defaultValue: '5173')) ?? 5173;
   }
 
   /// Full backend base URL for the mobile app (the school site that
   /// authenticated the current user).
-  static String get backendBaseUrl => '$backendHost:$backendPort';
+  static String get backendBaseUrl {
+    final uri = Uri.tryParse(backendHost);
+    if (uri != null && uri.hasScheme && uri.host.isNotEmpty) {
+      return uri.hasPort ? backendHost : '$backendHost:$backendPort';
+    }
+    return '$backendHost:$backendPort';
+  }
 
   static String get superAdminHost {
     return const String.fromEnvironment('SC_SUPERADMIN_URL',
-        defaultValue: 'http://localhost')
+      defaultValue: 'http://13.205.212.64')
         .replaceAll('\\', '/');
   }
 
   static int get superAdminPort {
     return int.tryParse(
-        const String.fromEnvironment('SC_SUPERADMIN_PORT', defaultValue: '8002')) ?? 8002;
+        const String.fromEnvironment('SC_SUPERADMIN_PORT', defaultValue: '5175')) ?? 5175;
   }
 
-  static String get superAdminBaseUrl => '$superAdminHost:$superAdminPort';
+  static String get superAdminBaseUrl {
+    final uri = Uri.tryParse(superAdminHost);
+    if (uri != null && uri.hasScheme && uri.host.isNotEmpty) {
+      return uri.hasPort ? superAdminHost : '$superAdminHost:$superAdminPort';
+    }
+    return '$superAdminHost:$superAdminPort';
+  }
 
   /// Web admin dashboard URL (for the mobile redirect screen).
   static String get webAdminUrl {

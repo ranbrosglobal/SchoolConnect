@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_model.dart';
-import '../services/frappe_api_service.dart';
+import '../services/google_sheets_service.dart';
 
 /// Auth state for the live (Frappe + sc_auth) build.
 ///
@@ -39,7 +39,7 @@ class AuthState {
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  final FrappeApiService _api;
+  final GoogleSheetsService _api;
 
   AuthNotifier(this._api) : super(AuthState()) {
     _init();
@@ -99,6 +99,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   /// Sign up a new student (creates User + Student + enrollment, auto-login).
+  /// [age] is accepted for UI compatibility but is not sent to the backend,
+  /// which does not currently store age on signup.
   Future<bool> signupStudent({
     required String fullName,
     required String email,
@@ -107,8 +109,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     String? city,
     String? userState,
     String? country,
+    String? school,
     String? studentGroup,
     String? program,
+    int? age,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -117,6 +121,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         email: email,
         password: password,
         gender: gender,
+        school: school,
         studentGroup: studentGroup,
         program: program,
         city: city,
@@ -197,7 +202,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 /// The live data service (Frappe + sc_auth).
-final apiServiceProvider = Provider<FrappeApiService>((ref) => FrappeApiService());
+final apiServiceProvider = Provider<GoogleSheetsService>((ref) => GoogleSheetsService());
 
 /// Auth state notifier.
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {

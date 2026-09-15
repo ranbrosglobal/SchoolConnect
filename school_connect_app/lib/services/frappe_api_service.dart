@@ -413,6 +413,9 @@ class FrappeApiService {
     return (list as List).map((a) => AssignmentModel.fromJson(a)).toList();
   }
 
+  /// Alias kept for screens that previously used the Google Sheets service name.
+  Future<List<AssignmentModel>> getMyTeacherAssignments() => getTeacherAssignments();
+
   Future<AssignmentModel> createAssignment({
     required String title,
     required String course,
@@ -712,7 +715,7 @@ class FrappeApiService {
 
   Future<List<StudentGroupModel>> getStudentGroups() async {
     final result = await _get('sc_auth.api.data.student_groups');
-    final list = result is List ? result : [];
+    final list = result is List ? result : (result['classes'] ?? result['student_groups'] ?? []);
     return (list as List).map((g) => StudentGroupModel.fromJson(g)).toList();
   }
 
@@ -720,6 +723,160 @@ class FrappeApiService {
     final result = await _get('sc_auth.api.data.programs');
     final list = result is List ? result : [];
     return (list as List).map((p) => SchoolModel.fromJson(p)).toList();
+  }
+
+  // --------------------------------------------------------------------------
+  // Teacher class/subject/student management (admin CRUD)
+  // --------------------------------------------------------------------------
+
+  Future<void> createStudentGroup({
+    required String name,
+    String? program,
+  }) async {
+    await _post('sc_auth.api.data.create_student_group', {
+      'name': name,
+      if (program != null) 'program': program,
+    });
+  }
+
+  Future<void> updateStudentGroup({
+    required String groupId,
+    required String name,
+    String? program,
+  }) async {
+    await _post('sc_auth.api.data.update_student_group', {
+      'group_id': groupId,
+      'name': name,
+      if (program != null) 'program': program,
+    });
+  }
+
+  Future<void> deleteStudentGroup(String groupId) async {
+    await _post('sc_auth.api.data.delete_student_group', {
+      'group_id': groupId,
+    });
+  }
+
+  Future<List<CourseScheduleModel>> getCourseSchedulesForGroup(String groupId) async {
+    final result = await _get('sc_auth.api.data.get_course_schedules_for_group', {
+      'group_id': groupId,
+    });
+    final list = result is List ? result : [];
+    return (list as List).map((e) => CourseScheduleModel.fromJson(e)).toList();
+  }
+
+  Future<void> createCourseSchedule({
+    required String course,
+    required String courseName,
+    required String groupId,
+    String? room,
+    String? fromTime,
+    String? toTime,
+  }) async {
+    await _post('sc_auth.api.data.create_course_schedule', {
+      'course': course,
+      'student_group': groupId,
+      'room': room,
+      'from_time': fromTime,
+      'to_time': toTime,
+    });
+  }
+
+  Future<void> updateCourseSchedule({
+    required String scheduleId,
+    String? course,
+    String? courseName,
+    String? groupId,
+    String? room,
+    String? fromTime,
+    String? toTime,
+  }) async {
+    await _post('sc_auth.api.data.update_course_schedule', {
+      'schedule_id': scheduleId,
+      if (course != null) 'course': course,
+      if (groupId != null) 'student_group': groupId,
+      if (room != null) 'room': room,
+      if (fromTime != null) 'from_time': fromTime,
+      if (toTime != null) 'to_time': toTime,
+    });
+  }
+
+  Future<void> deleteCourseSchedule(String scheduleId) async {
+    await _post('sc_auth.api.data.delete_course_schedule', {
+      'schedule_id': scheduleId,
+    });
+  }
+
+  Future<List<StudentModel>> getAllStudents() async {
+    final result = await _get('sc_auth.api.data.admin_dashboard');
+    final students = result['students'] ?? [];
+    return (students as List).map((s) => StudentModel.fromJson(s)).toList();
+  }
+
+  Future<void> createStudent({
+    required String name,
+    String? email,
+    required String groupId,
+    int? rollNumber,
+    int? age,
+    String? gender,
+  }) async {
+    await _post('sc_auth.api.data.create_student', {
+      'name': name,
+      'email': email,
+      'class_id': groupId,
+      'roll_number': rollNumber,
+    });
+  }
+
+  Future<void> updateStudent({
+    required String studentId,
+    String? name,
+    String? email,
+    String? groupId,
+    int? rollNumber,
+    int? age,
+    String? gender,
+  }) async {
+    await _post('sc_auth.api.data.update_student', {
+      'student_id': studentId,
+      if (name != null) 'name': name,
+      if (email != null) 'email': email,
+      if (groupId != null) 'class_id': groupId,
+      if (rollNumber != null) 'roll_number': rollNumber,
+    });
+  }
+
+  Future<void> deleteStudent(String studentId) async {
+    await _post('sc_auth.api.data.delete_student', {
+      'student_id': studentId,
+    });
+  }
+
+  /// Attendance detail for one course schedule (teacher view).
+  /// Calls sc_auth.api.data.course_attendance and reshapes the response
+  /// so existing screens can keep rendering without changing their UI code.
+  Future<Map<String, dynamic>> getCourseAttendance(String courseSchedule) async {
+    final result = await _get('sc_auth.api.data.course_attendance', {'course_schedule': courseSchedule});
+    return {
+      'course_schedule': courseSchedule,
+      'course_name': result['course_name'] ?? result['course'] ?? '',
+      'student_group_name': result['student_group_name'] ?? '',
+      'instructor_name': result['instructor_name'] ?? '',
+      'room': result['room'] ?? '',
+      'from_time': result['from_time'] ?? '',
+      'to_time': result['to_time'] ?? '',
+      'students': (result['students'] ?? []).map((r) {
+        return {
+          'student': r['student'] ?? '',
+          'student_name': r['student_name'] ?? '',
+          'percentage': (r['percentage'] ?? 0.0).toDouble(),
+          'records': (r['records'] ?? [])
+              .map<Map<String, dynamic>>((x) => Map<String, dynamic>.from(x))
+              .toList(),
+        };
+      }).toList(),
+    };
   }
 
   void dispose() {

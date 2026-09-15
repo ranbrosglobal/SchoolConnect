@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../../state/auth_provider.dart';
 import '../../state/student_provider.dart';
 import '../../services/export_service.dart' show ExportService;
+import '../../models/assignment_model.dart';
+import '../../models/timetable_model.dart';
 
 /// Study Assistant — a context-aware chatbot for students.
 ///
@@ -104,7 +106,7 @@ class _StudentMessagesTabState extends ConsumerState<StudentMessagesTab> {
     setState(() => _chat.add(ChatMessage(role: ChatRole.user, text: text)));
     _scrollToBottom();
 
-    final answer = _generateResponse(text);
+    final answer = await _generateResponse(text);
     setState(() => _chat.add(ChatMessage(role: ChatRole.bot, text: answer)));
     _scrollToBottom();
   }
@@ -413,8 +415,9 @@ class _StudentMessagesTabState extends ConsumerState<StudentMessagesTab> {
     final startDate = weekStart != null
         ? DateFormat('MMM d').format(weekStart)
         : '?';
-    final endDate = t.weekEnd != null
-        ? DateFormat('MMM d, yyyy').format(t.weekEnd)
+    final weekEnd = t.weekEnd;
+    final endDate = weekEnd != null
+      ? DateFormat('MMM d, yyyy').format(weekEnd)
         : DateFormat('MMM d, yyyy').format(DateTime.now());
     return 'This week ($startDate – $endDate): ';
   }

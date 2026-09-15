@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/school_profile_model.dart';
-import '../services/frappe_api_service.dart';
+import '../services/google_sheets_service.dart';
 import 'auth_provider.dart';
 
 /// School profile state — the public school info (name / logo / contact)
@@ -34,7 +34,7 @@ class SchoolState {
 }
 
 class SchoolNotifier extends StateNotifier<SchoolState> {
-  final FrappeApiService _api;
+  final GoogleSheetsService _api;
 
   SchoolNotifier(this._api) : super(const SchoolState());
 
