@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../config/api_config.dart';
 import '../theme/colors.dart';
 import '../state/auth_provider.dart';
 import '../models/user_model.dart';
@@ -364,9 +365,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             _buildSignUpLink(),
             const SizedBox(height: 12),
 
-            // Demo button
-            _buildDemoButton(),
-            if (_showDemoPanel) ...[
+            // Demo button — only when demo credentials were configured at
+            // build time, so we never offer accounts the server does not have.
+            if (ApiConfig.hasDemoAccounts) _buildDemoButton(),
+            if (_showDemoPanel && ApiConfig.hasDemoAccounts) ...[
               const SizedBox(height: 12),
               _buildDemoPanel(),
             ],
@@ -663,25 +665,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(
-                child: _demoAccountChip(
-                  label: 'Student',
-                  icon: Icons.school_rounded,
-                  color: AppColors.secondary,
-                  onTap: () => _fillDemo(
-                      'alex.smith@school.com', 'Student@123', false),
+              if (ApiConfig.hasDemoStudent)
+                Expanded(
+                  child: _demoAccountChip(
+                    label: 'Student',
+                    icon: Icons.school_rounded,
+                    color: AppColors.secondary,
+                    onTap: () => _fillDemo(
+                        ApiConfig.demoStudentEmail,
+                        ApiConfig.demoStudentPassword,
+                        false),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _demoAccountChip(
-                  label: 'Teacher',
-                  icon: Icons.person_rounded,
-                  color: AppColors.primary,
-                  onTap: () => _fillDemo(
-                      'robert.johnson@school.com', 'Teacher@123', true),
+              if (ApiConfig.hasDemoStudent && ApiConfig.hasDemoTeacher)
+                const SizedBox(width: 8),
+              if (ApiConfig.hasDemoTeacher)
+                Expanded(
+                  child: _demoAccountChip(
+                    label: 'Teacher',
+                    icon: Icons.person_rounded,
+                    color: AppColors.primary,
+                    onTap: () => _fillDemo(
+                        ApiConfig.demoTeacherEmail,
+                        ApiConfig.demoTeacherPassword,
+                        true),
+                  ),
                 ),
-              ),
             ],
           ),
         ],

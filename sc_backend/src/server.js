@@ -188,17 +188,7 @@ function createSuperadminTables(db) {
   )`)
 }
 
-export function seedSchooladmin(db) {
-  createSchooladminTables(db)
-  if (db.prepare('SELECT COUNT(*) as n FROM users').get().n > 0) return
-}
-
-export function seedSuperadmin(db) {
-  createSuperadminTables(db)
-  if (db.prepare('SELECT COUNT(*) as n FROM users').get().n > 0) return
-  db.prepare('INSERT INTO schools (id, name, location, status, established, teacher_count, class_count, student_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run('demo-school', 'Demo School', 'Mumbai', 'Active', 2023, 0, 0, 0)
-  db.prepare('INSERT INTO users (id, email, password, full_name, role, school_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)').run('u-admin', 'admin', hashPassword('ranbrosglobal'), 'Administrator', 'Administrator', null, 'Active')
-}
+// Note: seed functions are in seed.js — imported by the entrypoint.
 
 // ─── Sync outbox (from sync.js) ──────────────────────────────────────
 

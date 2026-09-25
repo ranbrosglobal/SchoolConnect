@@ -59,6 +59,10 @@ class GoogleSheetsService {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     if (_sessionCookie != null) 'Cookie': 'sid=$_sessionCookie',
+    // The consoles authenticate writes with a CSRF token equal to the user id.
+    // The app drives some of the same admin endpoints (managing students and
+    // classes), so it must present that token too or those writes 403.
+    if (_currentUser != null) 'X-CSRF-Token': _currentUser!.id,
   };
 
   /// Make a GET request to the backend.
@@ -299,20 +303,22 @@ class GoogleSheetsService {
       final storedCookie = await _storage.read(key: 'session_cookie');
       final storedUser = await _storage.read(key: 'user_data');
 
-      if (storedCookie != null && storedUser != null) {
-        _sessionCookie = storedCookie;
+      if (storedUser != null) {
+        if (storedCookie != null) _sessionCookie = storedCookie;
         _currentUser = UserModel.fromJson(jsonDecode(storedUser));
 
-        // Verify session is still valid
+        // Verify the session with the server. A missing stored cookie is not
+        // fatal: on the web the HttpOnly session cookie lives in the browser's
+        // cookie jar and is never readable from Dart.
         try {
           final result = await _get('school_connect.api.auth.get_session');
-          if (result['isLoggedIn'] == true) {
-            _currentUser = UserModel.fromJson(result);
+          if (result is Map && result['isLoggedIn'] == true) {
+            _currentUser = UserModel.fromJson(Map<String, dynamic>.from(result));
             await _saveSession(_currentUser!);
             return true;
           }
         } catch (_) {
-          // Session expired, fall through
+          // Expired session or a network hiccup — fall through and clear.
         }
       }
 
@@ -321,7 +327,7 @@ class GoogleSheetsService {
       _currentUser = null;
       await _storage.delete(key: 'user_data');
       await _storage.delete(key: 'session_cookie');
-      
+
       return false;
     } catch (e) {
       debugPrint('Session restore error: $e');
@@ -445,12 +451,13 @@ class GoogleSheetsService {
     required String studentGroup,
     required DateTime date,
     required List<AttendanceRecord> records,
+    String? courseName,
   }) async {
     final dateStr = date.toIso8601String().split('T')[0];
     await _post('school_connect.api.mobile.mark_attendance', {
       'class_id': studentGroup,
       'date': dateStr,
-      'course': courseSchedule,
+      'course': courseName ?? courseSchedule,
       'records': records.map((r) => {
         'student_id': r.studentId,
         'status': r.statusString,
@@ -458,21 +465,80 @@ class GoogleSheetsService {
     });
   }
 
+  /// Attendance roster for a class on [date] (teacher view). Returns the
+  /// students already marked that day, which the marking screen uses to
+  /// prefill the current statuses.
+  Future<List<AttendanceModel>> getClassAttendanceRoster(
+    String classId, {
+    DateTime? date,
+    String? course,
+  }) async {
+    final d = date ?? DateTime.now();
+    final result = await _get('school_connect.api.mobile.get_class_attendance', {
+      'class_id': classId,
+      'date': d.toIso8601String().split('T')[0],
+      if (course != null && course.isNotEmpty) 'course': course,
+    });
+    final roster = (result is Map && result['roster'] is List)
+        ? result['roster'] as List
+        : const [];
+    return roster
+        .whereType<Map>()
+        .where((r) => r['status'] != null)
+        .map((r) => AttendanceModel(
+              id: (r['record'] ?? '${classId}-${r['student']}').toString(),
+              student: r['student']?.toString(),
+              studentName: r['student_name']?.toString(),
+              studentGroup: classId,
+              courseName: course,
+              date: d,
+              status: AttendanceModel.statusFromString(r['status']?.toString()),
+            ))
+        .toList();
+  }
+
+  /// Full class roster with each student's status and running percentage.
+  Future<List<Map<String, dynamic>>> getClassAttendanceRosterDetailed(
+    String classId, {
+    DateTime? date,
+  }) async {
+    final d = date ?? DateTime.now();
+    final result = await _get('school_connect.api.mobile.get_class_attendance', {
+      'class_id': classId,
+      'date': d.toIso8601String().split('T')[0],
+    });
+    final roster = (result is Map && result['roster'] is List)
+        ? result['roster'] as List
+        : const [];
+    return roster.whereType<Map>().map((r) => Map<String, dynamic>.from(r)).toList();
+  }
+
   Future<List<AttendanceModel>> getAttendanceReport({
     String? courseSchedule,
     DateTime? date,
   }) async {
     final result = await _get('school_connect.api.mobile.get_my_attendance');
-    final records = result['records'] is List ? result['records'] as List : [];
-    return records.map((r) => AttendanceModel.fromJson(r)).toList();
+    final records = (result is Map && result['records'] is List)
+        ? result['records'] as List
+        : const [];
+    return records.map((r) => AttendanceModel.fromJson(r as Map<String, dynamic>)).toList();
   }
 
   Future<AttendanceSummary> getMyAttendanceSummary() async {
     final result = await _get('school_connect.api.mobile.get_my_attendance');
-    final summary = result['summary'] ?? {};
+    final summary = result is Map ? (result['summary'] ?? {}) : {};
+    final courseWiseRaw = summary is Map ? (summary['course_wise'] ?? {}) : {};
+    final courseWise = <String, double>{};
+    if (courseWiseRaw is Map) {
+      courseWiseRaw.forEach((key, value) {
+        if (key is String) {
+          courseWise[key] = (value ?? 0).toDouble();
+        }
+      });
+    }
     return AttendanceSummary(
       overallPercentage: (summary['overall'] ?? 0).toDouble(),
-      courseWisePercentage: {},
+      courseWisePercentage: courseWise,
       monthlyAttendance: [],
     );
   }
@@ -493,12 +559,13 @@ class GoogleSheetsService {
         .toList();
   }
 
+  /// Attendance detail for a class/course the teacher teaches. Accepts a
+  /// class id or a schedule id — the backend resolves either.
   Future<Map<String, dynamic>> getCourseAttendance(String courseSchedule) async {
-    final result = await _get('school_connect.api.mobile.get_my_attendance');
-    return {
-      'course_schedule': courseSchedule,
-      'students': result['records'] ?? [],
-    };
+    final result = await _get('school_connect.api.mobile.get_course_attendance', {
+      'schedule_id': courseSchedule,
+    });
+    return result is Map ? Map<String, dynamic>.from(result) : <String, dynamic>{};
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -696,12 +763,11 @@ class GoogleSheetsService {
   // ─────────────────────────────────────────────────────────────────────
 
   Future<StudentDetailModel> getStudentDetail(String studentId, {String? course}) async {
-    final result = await _get('school_connect.api.mobile.get_class_students', {
-      'class_id': studentId,
+    final result = await _get('school_connect.api.mobile.get_student_detail', {
+      'student_id': studentId,
     });
-    final students = result['students'] is List ? result['students'] as List : [];
-    if (students.isEmpty) throw Exception('Student not found');
-    return StudentDetailModel.fromJson(students.first);
+    if (result is! Map) throw Exception('Student not found');
+    return StudentDetailModel.fromJson(Map<String, dynamic>.from(result));
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -797,13 +863,25 @@ class GoogleSheetsService {
   // Timetable
   // ─────────────────────────────────────────────────────────────────────
 
+  /// Weekly timetable for whoever is signed in — the backend returns the
+  /// teacher's own classes for staff and the class schedule for students,
+  /// including weekday/time slots and the teacher/subject groupings.
   Future<TimetableModel> getMyTimetable({DateTime? weekStart}) async {
-    final result = await _get('school_connect.api.mobile.get_student_schedule');
-    final entries = result is List ? result : [];
-    return TimetableModel.fromJson({
-      'timetable': entries,
-      'teachers': [],
-    });
+    final result = await _get('school_connect.api.mobile.get_my_timetable');
+    if (result is! Map) return TimetableModel.fromJson(const {});
+    final json = Map<String, dynamic>.from(result);
+    // Normalise the rows so the grid can key on weekday + from_time.
+    final rows = (json['timetable'] as List? ?? const [])
+        .whereType<Map>()
+        .map((r) => Map<String, dynamic>.from(r))
+        .toList();
+    return TimetableModel.fromJson({...json, 'timetable': rows});
+  }
+
+  /// Today's + this week's class summary for the signed-in user.
+  Future<Map<String, dynamic>> getNextClass() async {
+    final result = await _get('school_connect.api.mobile.get_next_class');
+    return result is Map ? Map<String, dynamic>.from(result) : <String, dynamic>{};
   }
 
   // ─────────────────────────────────────────────────────────────────────

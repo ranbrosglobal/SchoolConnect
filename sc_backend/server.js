@@ -4,11 +4,15 @@
  * Each frontend and its API share one origin, so the browser only needs the
  * public frontend ports 5173 and 5175. The API is available at /api on each
  * origin and does not require cross-origin requests.
+ *
+ * Usage:
+ *   node server.js            — start both servers (seed if empty)
+ *   node server.js --reset    — wipe databases, reseed, then start
  */
 
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { closeDatabases, createServer } from './src/server.js'
+import { openDatabases, closeDatabases, createServer } from './src/server.js'
 import { seedSchooladmin, seedSuperadmin } from './src/seed.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -16,6 +20,22 @@ const HOST = process.env.SC_HOST || '13.205.212.64'
 const SCHOOLADMIN_PORT = Number(process.env.SC_SA_PORT || 5173)
 const SUPERADMIN_PORT = Number(process.env.SC_SU_PORT || 5175)
 const syncSecret = process.env.SC_SYNC_SECRET || 'schoolconnect-sync'
+
+const reset = process.argv.includes('--reset')
+
+// Reset databases if requested
+if (reset) {
+  console.log('Resetting databases...')
+  const { sa, su } = openDatabases()
+  for (const db of [sa, su]) {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all()
+    for (const t of tables) {
+      db.exec(`DELETE FROM ${t.name}`)
+    }
+  }
+  closeDatabases()
+  console.log('Databases reset. Re-seeding on startup...')
+}
 
 const schooladmin = createServer({
   consoleName: 'schooladmin',
@@ -36,6 +56,10 @@ const superadmin = createServer({
 console.log('SchoolConnect production server ready!')
 console.log(`  School Admin: http://${HOST}:${SCHOOLADMIN_PORT}`)
 console.log(`  Super Admin:  http://${HOST}:${SUPERADMIN_PORT}`)
+console.log(`  Demo accounts:`)
+console.log(`    School Admin: admin@springfield.edu / admin123`)
+console.log(`    Teacher:      robert.johnson@school.com / Teacher@123`)
+console.log(`    Student:      alex.smith@school.com / Student@123`)
 
 function shutdown() {
   schooladmin.close()

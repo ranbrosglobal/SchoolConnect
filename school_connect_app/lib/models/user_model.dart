@@ -48,13 +48,19 @@ class UserModel {
   static UserRole _parseRole(String? roleStr) {
     if (roleStr == null) return UserRole.student;
     
-    switch (roleStr.toLowerCase()) {
+    // Accept both the backend's display names ('School Admin', 'Teacher') and
+    // the enum names we write to local storage in toJson() ('schoolAdmin'),
+    // otherwise a restored session silently demotes admins to students.
+    switch (roleStr.toLowerCase().replaceAll('_', ' ').trim()) {
       case 'super admin':
+      case 'superadmin':
         return UserRole.superAdmin;
       case 'system manager':
       case 'administrator':
+      case 'admin':
         return UserRole.admin;
       case 'school admin':
+      case 'schooladmin':
         return UserRole.schoolAdmin;
       case 'instructor':
       case 'teacher':

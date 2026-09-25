@@ -31,9 +31,9 @@ class CourseScheduleModel {
 
   factory CourseScheduleModel.fromJson(Map<String, dynamic> json) {
     return CourseScheduleModel(
-      id: (json['name'] ?? json['id'] ?? '').toString(),
+      id: (json['id'] ?? json['name'] ?? '').toString(),
       course: json['course'],
-      courseName: json['course_name'] ?? json['course'],
+      courseName: json['course_name'] ?? json['course'] ?? json['program'],
       studentGroup: json['student_group'] ?? json['class_id'] ?? json['id'],
       studentGroupName: json['student_group_name'] ?? json['name'],
       instructor: json['instructor'],

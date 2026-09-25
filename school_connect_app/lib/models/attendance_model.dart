@@ -42,13 +42,19 @@ class AttendanceModel {
     );
   }
 
-  static AttendanceStatus _parseStatus(String? status) {
+  static AttendanceStatus _parseStatus(String? status) => statusFromString(status);
+
+  /// Maps a backend status string ("Present", "Absent", "Late", "Half Day",
+  /// "Leave") onto [AttendanceStatus]. "Late" counts as present for totals.
+  static AttendanceStatus statusFromString(String? status) {
     switch (status?.toLowerCase()) {
       case 'present':
+      case 'late':
         return AttendanceStatus.present;
       case 'absent':
         return AttendanceStatus.absent;
       case 'half day':
+      case 'halfday':
         return AttendanceStatus.halfDay;
       case 'leave':
         return AttendanceStatus.leave;

@@ -84,8 +84,11 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
         if (ra != null && rb != null) return ra.compareTo(rb);
         return (a.rollNumber ?? '').compareTo(b.rollNumber ?? '');
       });
-      final attendance = await _api.getMyAttendance(
-        course: courseSchedule.course,
+      // Today's existing marks for this class — a teacher cannot use the
+      // student-facing "my attendance" endpoint, so read the class roster.
+      final attendance = await _api.getClassAttendanceRoster(
+        courseSchedule.studentGroup ?? courseSchedule.id,
+        course: courseSchedule.courseName ?? courseSchedule.course,
       );
       state = state.copyWith(
         isLoading: false,
@@ -104,11 +107,13 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
   }) async {
     if (state.selectedClass == null) return false;
     state = state.copyWith(isLoading: true, error: null);
-    try {        await _api.markAttendance(
+    try {
+      await _api.markAttendance(
         courseSchedule: state.selectedClass!.id,
         studentGroup: studentGroup,
         date: date,
         records: records,
+        courseName: state.selectedClass!.courseName ?? state.selectedClass!.course,
       );
       await selectClass(state.selectedClass!);
       return true;

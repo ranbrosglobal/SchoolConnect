@@ -101,6 +101,13 @@ function checkCsrf(req, user, path) {
   // The session cookie is SameSite=Lax, which already blocks cross-site
   // browser requests, so this does not weaken protection for the consoles.
   if (typeof path === 'string' && path.startsWith('school_connect.api.mobile.')) return true
+  // The app also drives the admin endpoints (add/edit students & classes), and
+  // those live under school_connect.api.admin.*. Native clients never send an
+  // Origin header — browsers always do on state-changing requests — so a
+  // missing Origin identifies a non-browser caller that cannot be CSRF'd.
+  // SameSite=Lax still keeps the session cookie off cross-site POSTs.
+  const origin = req.headers?.origin
+  if (!origin) return true
   const token = req.headers['x-csrf-token']
   return token === user.id
 }
@@ -157,6 +164,12 @@ function mobileLogin(db, params) {
   // First check users table (teachers, admins)
   let user = getOne(db, 'users', 'email', normalizedEmail)
   
+  // A student's password lives in the students table; their `users` row is only
+  // a session anchor and may hold a stale hash. Verifying it here would have
+  // locked a student out as soon as they signed in once, so skip past it and
+  // let the students-table branch below do the check.
+  if (user && user.role === 'Student') user = null
+
   if (user) {
     // Verify password against the stored hash
     if (!verifyPassword(password, user.password)) {
@@ -196,7 +209,9 @@ function mobileLogin(db, params) {
       insert(db, 'users', {
         id: student.id,
         email: student.email,
-        password: password ? hashPassword(password) : '',
+        // Mirror the students table: an empty value means "any password is
+        // accepted", which is how the admin portal bulk-adds students.
+        password: student.password || '',
         full_name: student.name,
         role: 'Student',
         school_id: student.school_id || '',
@@ -677,6 +692,7 @@ function mobileGetTeacherClasses(db, params, user) {
     return {
       id: c.id, name: c.name, program: c.program, room: c.room,
       school_id: c.school_id, student_count: students.length, teachers: teacherNames,
+      course_name: c.program || 'General',
     }
   })
 }
@@ -717,7 +733,7 @@ function mobileGetStudentSchedule(db, params, user) {
   if (!student) {
     // Try by id
     const byId = getById(db, 'students', user.id)
-    if (!byId) return { entries: [] }
+    if (!byId) return []
     const entries = getAll(db, 'timetable', 'class_id = ?', byId.class_id)
     return entries
   }
@@ -735,6 +751,381 @@ function mobileGetStudentSchedule(db, params, user) {
     return d !== 0 ? d : a.period - b.period
   })
   return enriched
+}
+
+// ─── Class attendance & student detail (teacher views) ───────────────
+
+/**
+ * Resolve a timetable entry id OR a class id into the class row it belongs to.
+ * The mobile UI passes a class id in some screens and a schedule id in others,
+ * so both must work.
+ */
+function resolveClass(db, key) {
+  if (!key) return { cls: null, entry: null }
+  const cls = getById(db, 'classes', key)
+  if (cls) return { cls, entry: null }
+  const entry = getById(db, 'timetable', key)
+  if (entry) return { cls: getById(db, 'classes', entry.class_id), entry }
+  return { cls: null, entry: null }
+}
+
+/** Attendance records for one student, newest first. */
+function studentAttendanceFor(db, studentId, classId = null) {
+  const all = getAll(db, 'attendance_log', 'student_id = ?', studentId)
+  const scoped = classId ? all.filter(r => r.class_id === classId) : all
+  return scoped.sort((a, b) => String(b.date).localeCompare(String(a.date)))
+}
+
+function attendanceStats(records) {
+  const present = records.filter(r => r.status === 'Present').length
+  return {
+    total: records.length,
+    present,
+    percentage: records.length ? Math.round(present / records.length * 100) : 0,
+  }
+}
+
+/**
+ * Mobile: attendance roster for a class on a date (teacher view).
+ * Returns every student in the class with their status for that date
+ * (`null` when not marked yet) plus running overall percentages.
+ */
+function mobileGetClassAttendance(db, params, user) {
+  assertTeacherOrAdmin(user)
+  const { cls } = resolveClass(db, params.class_id || params.id || params.course_schedule)
+  if (!cls) throw { status: 404, message: 'Class not found' }
+  const date = params.date || new Date().toISOString().split('T')[0]
+
+  const students = getAll(db, 'students', 'class_id = ?', cls.id)
+    .sort((a, b) => (a.roll_number || 0) - (b.roll_number || 0))
+  const dayRecords = getAll(db, 'attendance_log', 'class_id = ? AND date = ?', cls.id, date)
+
+  const roster = students.map(s => {
+    const rec = dayRecords.find(r => r.student_id === s.id)
+    const stats = attendanceStats(studentAttendanceFor(db, s.id, cls.id))
+    return {
+      student: s.id,
+      student_name: s.name,
+      student_email_id: s.email || null,
+      roll_number: s.roll_number ?? null,
+      status: rec ? rec.status : null,
+      record: rec?.id || null,
+      total: stats.total,
+      present: stats.present,
+      percentage: stats.total ? stats.percentage : (s.attendance_pct || 0),
+    }
+  })
+
+  const marked = roster.filter(r => r.status != null)
+  const presentCount = marked.filter(r => r.status === 'Present').length
+  const countBy = st => marked.filter(r => r.status === st).length
+
+  return {
+    class_id: cls.id,
+    class_name: cls.name,
+    date,
+    course: params.course || cls.program || '',
+    roster,
+    summary: {
+      total_students: roster.length,
+      marked: marked.length,
+      unmarked: roster.length - marked.length,
+      present: presentCount,
+      absent: countBy('Absent'),
+      late: countBy('Late'),
+      leave: countBy('Leave'),
+      percentage: marked.length ? Math.round(presentCount / marked.length * 100) : 0,
+    },
+  }
+}
+
+/**
+ * Mobile: attendance for a class/course, grouped per student with the
+ * student's full record list — the shape the teacher's attendance detail
+ * screen renders.
+ */
+function mobileGetCourseAttendance(db, params, user) {
+  assertTeacherOrAdmin(user)
+  const key = params.schedule_id || params.course_schedule || params.class_id || params.id
+  const { cls, entry } = resolveClass(db, key)
+  if (!cls) throw { status: 404, message: 'Class not found' }
+  const teacher = entry ? getById(db, 'users', entry.teacher_id) : null
+
+  const students = getAll(db, 'students', 'class_id = ?', cls.id)
+    .sort((a, b) => (a.roll_number || 0) - (b.roll_number || 0))
+
+  const grouped = students.map(s => {
+    const recs = studentAttendanceFor(db, s.id, cls.id)
+    const stats = attendanceStats(recs)
+    return {
+      student: s.id,
+      student_name: s.name,
+      student_email_id: s.email || null,
+      roll_number: s.roll_number ?? null,
+      percentage: stats.total ? stats.percentage : (s.attendance_pct || 0),
+      total: stats.total,
+      present: stats.present,
+      records: recs.map(r => ({
+        name: r.id,
+        student_attendance_date: r.date,
+        date: r.date,
+        status: r.status,
+        course_name: r.course || null,
+      })),
+    }
+  })
+
+  return {
+    name: entry?.id || cls.id,
+    course_name: entry?.subject || params.course || cls.program || cls.name,
+    subject: entry?.subject || null,
+    student_group: cls.id,
+    student_group_name: cls.name,
+    instructor_name: teacher?.full_name || user.full_name || null,
+    room: cls.room || null,
+    day: entry?.day || null,
+    period: entry?.period ?? null,
+    students: grouped,
+    summary: {
+      total_students: grouped.length,
+      with_records: grouped.filter(g => g.total > 0).length,
+      percentage: grouped.length
+        ? Math.round(grouped.reduce((a, g) => a + g.percentage, 0) / grouped.length)
+        : 0,
+    },
+  }
+}
+
+/** Mobile: full profile for one student (teacher views a student). */
+function mobileGetStudentDetail(db, params, user) {
+  if (!user) throw { status: 401, message: 'Not signed in' }
+  const id = params.student_id || params.student || params.id
+  if (!id) throw { status: 400, message: 'student_id is required' }
+  const s = getById(db, 'students', id)
+  if (!s) throw { status: 404, message: 'Student not found' }
+
+  const cls = s.class_id ? getById(db, 'classes', s.class_id) : null
+  const school = s.school_id ? getById(db, 'schools', s.school_id) : null
+
+  const records = studentAttendanceFor(db, s.id, cls?.id || null)
+  const stats = attendanceStats(records)
+
+  // Course-wise breakdown from the attendance_log.course column
+  const courseStats = {}
+  for (const r of records) {
+    const course = r.course || 'General'
+    courseStats[course] = courseStats[course] || { total: 0, present: 0 }
+    courseStats[course].total++
+    if (r.status === 'Present') courseStats[course].present++
+  }
+  const course_wise_attendance = {}
+  for (const [course, st] of Object.entries(courseStats)) {
+    course_wise_attendance[course] = st.total ? Math.round(st.present / st.total * 100) : 0
+  }
+
+  // Grades from this student's submissions
+  const submissions = getAll(db, 'submissions', 'student_id = ?', s.id)
+  const grades = submissions.map(sub => {
+    const assignment = getById(db, 'assignments', sub.assignment_id)
+    const grade = sub.score !== '' && sub.score != null ? Number(sub.score) : null
+    return {
+      assignment: sub.assignment_id,
+      title: assignment?.title || 'Assignment',
+      course_name: assignment?.course || null,
+      due_date: assignment?.due_date || null,
+      grade: Number.isFinite(grade) ? grade : null,
+      feedback: sub.feedback || null,
+      status: sub.status || 'Submitted',
+      submitted_at: sub.submitted_at || null,
+    }
+  })
+
+  const classAssignments = cls ? getAll(db, 'assignments', 'class_id = ?', cls.id) : []
+
+  return {
+    name: s.id,
+    student: s.id,
+    student_name: s.name,
+    student_email_id: s.email || null,
+    email: s.email || null,
+    school: s.school_id || null,
+    school_name: school?.name || null,
+    student_group: cls?.id || null,
+    student_group_name: cls?.name || null,
+    class_name: cls?.name || null,
+    room: cls?.room || null,
+    roll_number: s.roll_number ?? null,
+    parent_name: s.parent_name || null,
+    parent_phone: s.parent_phone || null,
+    parent_email: s.parent_email || null,
+    address: s.address || null,
+    status: s.status || 'Active',
+    overall_attendance: stats.total ? stats.percentage : (s.attendance_pct || 0),
+    attendance_total: stats.total,
+    attendance_present: stats.present,
+    course_wise_attendance,
+    grades,
+    assignments_total: classAssignments.length,
+    assignments_submitted: submissions.filter(x => x.status !== 'Returned').length,
+    assignments_graded: submissions.filter(x => x.status === 'Graded').length,
+    attendance_records: records.slice(0, 30).map(r => ({
+      name: r.id,
+      student_attendance_date: r.date,
+      date: r.date,
+      status: r.status,
+      course_name: r.course || null,
+    })),
+  }
+}
+
+// ─── Timetable (role-aware) ─────────────────────────────────────────
+
+const DAY_INDEX = {
+  Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6,
+}
+const DAY_NAMES = Object.keys(DAY_INDEX)
+
+/** '8:00' / '2:30 pm' → 'HH:MM:SS' (or null). */
+function normalizeTime(str) {
+  if (!str) return null
+  const m = String(str).trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?$/i)
+  if (!m) return null
+  let h = Number(m[1])
+  const min = m[2]
+  const sec = m[3] || '00'
+  const ap = (m[4] || '').toLowerCase()
+  if (ap === 'pm' && h < 12) h += 12
+  if (ap === 'am' && h === 12) h = 0
+  return `${String(h).padStart(2, '0')}:${min}:${sec}`
+}
+
+/** Resolve a school's configured period number into start/end times. */
+function periodRange(school, period) {
+  let periods = []
+  try { periods = school?.periods ? JSON.parse(school.periods) : [] } catch (_e) { periods = [] }
+  const row = Array.isArray(periods) ? periods.find(p => Number(p.n) === Number(period)) : null
+  if (!row?.time) return { from: null, to: null }
+  const parts = String(row.time).split(/[-–—]/).map(s => s.trim())
+  return { from: normalizeTime(parts[0]), to: normalizeTime(parts[1]) }
+}
+
+function mondayOf(date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const shift = (d.getDay() + 6) % 7 // Monday = 0
+  d.setDate(d.getDate() - shift)
+  return d
+}
+
+function isoDate(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/**
+ * Mobile: the weekly timetable for whoever is signed in — a teacher sees the
+ * classes they teach, a student sees their own class. Includes week_start /
+ * week_end, per-row weekday + times so the client grid renders correctly,
+ * plus the teacher/subject groupings the timetable screen lists.
+ */
+function mobileGetMyTimetable(db, params, user) {
+  if (!user) throw { status: 401, message: 'Not signed in' }
+  const isStaff = user.role === 'Teacher' || user.role === 'School Admin'
+
+  let entries = []
+  if (isStaff) {
+    entries = getAll(db, 'timetable', 'teacher_id = ?', user.id)
+    if (!entries.length) {
+      const stored = JSON.parse(user.class_ids || '[]')
+      const assigned = getAll(db, 'classes')
+        .filter(c => JSON.parse(c.teacher_ids || '[]').includes(user.id))
+        .map(c => c.id)
+      for (const cid of [...new Set([...stored, ...assigned])]) {
+        entries = entries.concat(getAll(db, 'timetable', 'class_id = ?', cid))
+      }
+    }
+  } else {
+    const student = getOne(db, 'students', 'email', user.email) || getById(db, 'students', user.id)
+    if (student?.class_id) entries = getAll(db, 'timetable', 'class_id = ?', student.class_id)
+  }
+
+  const weekStart = mondayOf(new Date())
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 6)
+
+  const rows = entries.map(e => {
+    const cls = getById(db, 'classes', e.class_id)
+    const teacher = getById(db, 'users', e.teacher_id)
+    const school = cls?.school_id ? getById(db, 'schools', cls.school_id) : null
+    const range = periodRange(school, e.period)
+    const weekday = DAY_INDEX[e.day] ?? 0
+    const date = new Date(weekStart); date.setDate(date.getDate() + weekday)
+    return {
+      name: e.id,
+      id: e.id,
+      date: isoDate(date),
+      weekday,
+      day: e.day,
+      period: e.period,
+      from_time: range.from || `0${8 + Math.max(0, (Number(e.period) || 1) - 1)}:00:00`,
+      to_time: range.to || `0${9 + Math.max(0, (Number(e.period) || 1) - 1)}:00:00`,
+      course: e.subject || null,
+      course_name: e.subject || 'Class',
+      subject: e.subject || 'Class',
+      room: cls?.room || null,
+      class_id: e.class_id,
+      class_name: cls?.name || null,
+      student_group_name: cls?.name || null,
+      teacher_name: teacher?.full_name || null,
+      instructor_name: teacher?.full_name || null,
+      teacher_id: e.teacher_id || null,
+    }
+  })
+  rows.sort((a, b) => (a.weekday - b.weekday) || ((Number(a.period) || 0) - (Number(b.period) || 0)))
+
+  // Group by subject → teachers, and by teacher → subjects
+  const bySubject = new Map()
+  const byTeacher = new Map()
+  for (const r of rows) {
+    if (!bySubject.has(r.course_name)) bySubject.set(r.course_name, new Map())
+    if (r.teacher_name) bySubject.get(r.course_name).set(r.teacher_id || r.teacher_name, r.teacher_name)
+
+    const tKey = r.teacher_id || r.teacher_name
+    if (tKey && r.teacher_name) {
+      if (!byTeacher.has(tKey)) byTeacher.set(tKey, { name: tKey, instructor_name: r.teacher_name, courses: new Map() })
+      byTeacher.get(tKey).courses.set(r.course_name, { course: r.course, course_name: r.course_name })
+    }
+  }
+
+  return {
+    week_start: isoDate(weekStart),
+    week_end: isoDate(weekEnd),
+    timetable: rows,
+    teachers: [...byTeacher.values()].map(t => ({ ...t, courses: [...t.courses.values()] })),
+    subjects: [...bySubject.entries()].map(([courseName, teachers]) => ({
+      course: courseName,
+      course_name: courseName,
+      teachers: [...teachers.entries()].map(([id, name]) => ({ name: id, instructor_name: name })),
+    })),
+  }
+}
+
+/** Mobile: upcoming/next class for the signed-in user (dashboard summary). */
+function mobileGetNextClass(db, params, user) {
+  if (!user) throw { status: 401, message: 'Not signed in' }
+  const today = DAY_NAMES[(new Date().getDay() + 6) % 7]
+  const timetable = mobileGetMyTimetable(db, params, user)
+  const isStaff = user.role === 'Teacher' || user.role === 'School Admin'
+  const rows = timetable.timetable || []
+  const todayRows = rows.filter(r => r.day === today)
+  return {
+    today,
+    is_teacher: isStaff,
+    today_classes: todayRows,
+    class_count_today: todayRows.length,
+    week_count: rows.length,
+    next_class: todayRows[0] || rows[0] || null,
+  }
 }
 
 // ─── Assignment / submission helpers ─────────────────────────────────
@@ -775,6 +1166,7 @@ function serializeAssignment(db, row, student = null) {
     title: row.title,
     description: row.description || null,
     course: row.course || null,
+    course_name: row.course || null,
     student_group: row.class_id || null,
     student_group_name: cls?.name || null,
     instructor: row.created_by || null,
@@ -833,13 +1225,27 @@ function mobileGetStudentAssignments(db, params, user) {
 function mobileGetMyAttendance(db, params, user) {
   if (!user) throw { status: 401, message: 'Not signed in' }
   const student = getOne(db, 'students', 'email', user.email) || getById(db, 'students', user.id)
-  if (!student) return { records: [], summary: { overall: 0, total: 0, present: 0 } }
+  if (!student) return { records: [], summary: { overall: 0, total: 0, present: 0, course_wise: {} } }
 
   const records = getAll(db, 'attendance_log', 'student_id = ?', student.id)
   const present = records.filter(r => r.status === 'Present').length
+
+  // Compute course-wise attendance breakdown
+  const courseStats = {}
+  for (const r of records) {
+    const course = r.course || 'General'
+    if (!courseStats[course]) courseStats[course] = { total: 0, present: 0 }
+    courseStats[course].total++
+    if (r.status === 'Present') courseStats[course].present++
+  }
+  const course_wise = {}
+  for (const [course, stats] of Object.entries(courseStats)) {
+    course_wise[course] = stats.total ? Math.round(stats.present / stats.total * 100) : 0
+  }
+
   return {
     records,
-    summary: { overall: records.length ? Math.round(present / records.length * 100) : 0, total: records.length, present },
+    summary: { overall: records.length ? Math.round(present / records.length * 100) : 0, total: records.length, present, course_wise },
   }
 }
 
@@ -1383,6 +1789,11 @@ const SA_HANDLERS = {
   'school_connect.api.mobile.get_class_students': mobileGetClassStudents,
   'school_connect.api.mobile.get_teacher_schedule': mobileGetTeacherSchedule,
   'school_connect.api.mobile.get_student_schedule': mobileGetStudentSchedule,
+  'school_connect.api.mobile.get_my_timetable': mobileGetMyTimetable,
+  'school_connect.api.mobile.get_next_class': mobileGetNextClass,
+  'school_connect.api.mobile.get_class_attendance': mobileGetClassAttendance,
+  'school_connect.api.mobile.get_course_attendance': mobileGetCourseAttendance,
+  'school_connect.api.mobile.get_student_detail': mobileGetStudentDetail,
   'school_connect.api.mobile.get_student_assignments': mobileGetStudentAssignments,
   'school_connect.api.mobile.get_my_attendance': mobileGetMyAttendance,
   'school_connect.api.mobile.mark_attendance': mobileMarkAttendance,
