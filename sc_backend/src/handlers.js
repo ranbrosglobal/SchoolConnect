@@ -1254,10 +1254,15 @@ function mobileMarkAttendance(db, params, user) {
   if (!user || (user.role !== 'Teacher' && user.role !== 'School Admin')) {
     throw { status: 403, message: 'Access denied' }
   }
-  const { class_id, date, records } = params
-  if (!class_id || !date || !Array.isArray(records)) {
+  const { class_id, records } = params
+  // Accept both `date` (ISO) and `attendance_date`; normalize to YYYY-MM-DD so
+  // a full ISO timestamp from the client can never split one day across two
+  // keys and create duplicate rows for the same student/day.
+  const rawDate = params.date || params.attendance_date
+  if (!class_id || !rawDate || !Array.isArray(records)) {
     throw { status: 400, message: 'class_id, date, and records array are required' }
   }
+  const date = String(rawDate).split('T')[0]
   for (const r of records) {
     const existing = getAll(db, 'attendance_log', 'student_id = ? AND date = ?', r.student_id, date)
     const existingInClass = existing.find(e => e.class_id === class_id)
@@ -1271,7 +1276,136 @@ function mobileMarkAttendance(db, params, user) {
       })
     }
   }
-  return { message: 'Attendance marked', count: records.length }
+  // New day, fresh slate: each date gets its own blank roster in the app, and
+  // re-marking a date overwrites instead of stacking duplicates.
+  return { message: 'Attendance marked', count: records.length, date }
+}
+
+/**
+ * Mobile: attendance history for a class over a date range (teacher view).
+ * Powers the week / month / quarter / year / custom-range history browser.
+ * Returns one row per marked student-day (newest first) plus per-student and
+ * per-day summaries so the UI can render both list and calendar layouts.
+ */
+function mobileGetAttendanceHistory(db, params, user) {
+  if (!user || (user.role !== 'Teacher' && user.role !== 'School Admin')) {
+    throw { status: 403, message: 'Access denied' }
+  }
+  const { cls } = resolveClass(db, params.class_id || params.id || params.course_schedule)
+  if (!cls) throw { status: 404, message: 'Class not found' }
+
+  const today = new Date().toISOString().split('T')[0]
+  const from = String(params.from || params.start_date || '').split('T')[0]
+  const to = String(params.to || params.end_date || '').split('T')[0]
+  if (!/\d{4}-\d{2}-\d{2}/.test(from) || !/\d{4}-\d{2}-\d{2}/.test(to) || from > to) {
+    throw { status: 400, message: 'from and to (YYYY-MM-DD) are required and must be a valid range' }
+  }
+
+  const students = getAll(db, 'students', 'class_id = ?', cls.id)
+    .sort((a, b) => (a.roll_number || 0) - (b.roll_number || 0))
+  const nameById = new Map(students.map(s => [s.id, s.name]))
+  const rollById = new Map(students.map(s => [s.id, s.roll_number ?? null]))
+
+  const all = getAll(db, 'attendance_log', 'class_id = ?', cls.id)
+    .filter(r => r.date >= from && r.date <= to)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+
+  const records = all.map(r => ({
+    id: r.id,
+    student: r.student_id,
+    student_name: nameById.get(r.student_id) || 'Unknown student',
+    roll_number: rollById.get(r.student_id) ?? null,
+    student_attendance_date: r.date,
+    date: r.date,
+    status: r.status,
+    course: r.course || null,
+  }))
+
+  const days = [...new Set(all.map(r => r.date))].sort((a, b) => b.localeCompare(a))
+  const perStudent = students.map(s => {
+    const recs = all.filter(r => r.student_id === s.id)
+    const present = recs.filter(r => r.status === 'Present').length
+    return {
+      student: s.id,
+      student_name: s.name,
+      roll_number: s.roll_number ?? null,
+      total: recs.length,
+      present,
+      absent: recs.filter(r => r.status === 'Absent').length,
+      percentage: recs.length ? Math.round(present / recs.length * 100) : null,
+    }
+  })
+
+  const totalPresent = all.filter(r => r.status === 'Present').length
+  return {
+    class_id: cls.id,
+    class_name: cls.name,
+    from,
+    to,
+    generated_on: today,
+    summary: {
+      total_records: all.length,
+      marked_days: days.length,
+      present: totalPresent,
+      absent: all.filter(r => r.status === 'Absent').length,
+      late: all.filter(r => r.status === 'Late').length,
+      leave: all.filter(r => r.status === 'Leave').length,
+      half_day: all.filter(r => r.status === 'Half Day').length,
+      percentage: all.length ? Math.round(totalPresent / all.length * 100) : 0,
+    },
+    days: days.map(d => {
+      const dayRecs = all.filter(r => r.date === d)
+      const present = dayRecs.filter(r => r.status === 'Present').length
+      return {
+        date: d,
+        marked: dayRecs.length,
+        present,
+        absent: dayRecs.filter(r => r.status === 'Absent').length,
+        percentage: dayRecs.length ? Math.round(present / dayRecs.length * 100) : 0,
+      }
+    }),
+    students: perStudent,
+    records,
+  }
+}
+
+/**
+ * Mobile: change password for any signed-in role. Students keep their hash in
+ * the students table (the users row is only a session anchor), so write both.
+ */
+function mobileChangePassword(db, params, user) {
+  if (!user) throw { status: 401, message: 'Not signed in' }
+  if (!params.current_password || !params.new_password) {
+    throw { status: 400, message: 'current_password and new_password are required' }
+  }
+  if (String(params.new_password).length < 6) {
+    throw { status: 400, message: 'New password must be at least 6 characters long' }
+  }
+  if (String(params.new_password) === String(params.current_password)) {
+    throw { status: 400, message: 'New password must be different from the current password' }
+  }
+
+  const userRow = getById(db, 'users', user.id)
+  if (!userRow) throw { status: 404, message: 'Account not found' }
+
+  if (userRow.role === 'Student') {
+    const student = getOne(db, 'students', 'email', userRow.email) || getById(db, 'students', user.id)
+    if (!student) throw { status: 404, message: 'Student profile not found' }
+    // Empty stored hash means "any password accepted" (bulk-added accounts).
+    if (student.password && !verifyPassword(params.current_password, student.password)) {
+      throw { status: 400, message: 'Current password is incorrect' }
+    }
+    const hash = hashPassword(params.new_password)
+    updateById(db, 'students', student.id, { password: hash })
+    try { updateById(db, 'users', userRow.id, { password: hash }) } catch (_e) { /* anchor row may not exist */ }
+    return { message: 'Password updated successfully' }
+  }
+
+  if (!verifyPassword(params.current_password, userRow.password)) {
+    throw { status: 400, message: 'Current password is incorrect' }
+  }
+  updateById(db, 'users', userRow.id, { password: hashPassword(params.new_password) })
+  return { message: 'Password updated successfully' }
 }
 
 /** Mobile: teacher creates assignment (optionally with an uploaded attachment) */
@@ -1797,6 +1931,9 @@ const SA_HANDLERS = {
   'school_connect.api.mobile.get_student_assignments': mobileGetStudentAssignments,
   'school_connect.api.mobile.get_my_attendance': mobileGetMyAttendance,
   'school_connect.api.mobile.mark_attendance': mobileMarkAttendance,
+  'school_connect.api.mobile.get_attendance_history': mobileGetAttendanceHistory,
+  'school_connect.api.auth.change_password': mobileChangePassword,
+  'school_connect.api.mobile.change_password': mobileChangePassword,
   'school_connect.api.mobile.create_assignment': mobileCreateAssignment,
   'school_connect.api.mobile.update_assignment': mobileUpdateAssignment,
   'school_connect.api.mobile.delete_assignment': mobileDeleteAssignment,

@@ -5,8 +5,7 @@ import '../theme/colors.dart';
 import '../state/auth_provider.dart';
 import '../state/school_provider.dart';
 import '../models/user_model.dart';
-import 'teacher/teacher_manage_students_screen.dart';
-import 'teacher/teacher_manage_classes_screen.dart';
+import '../widgets/info_sheets.dart';
 
 class StudentProfile extends ConsumerWidget {
   const StudentProfile({super.key});
@@ -140,18 +139,6 @@ class StudentProfile extends ConsumerWidget {
               context,
               title: 'Settings',
               children: [
-                if (user?.role == UserRole.instructor) ...[
-                  _buildActionTile(context, Icons.people_outline, 'Edit Students', () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const TeacherManageStudentsScreen()),
-                    );
-                  }),
-                  _buildActionTile(context, Icons.class_outlined, 'Edit Classes & Subjects', () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const TeacherManageClassesScreen()),
-                    );
-                  }),
-                ],
                 _buildActionTile(context, Icons.calendar_month_outlined, 'My Timetable', () {
                   Navigator.pushNamed(context, '/MyTimetable');
                 }),
@@ -159,14 +146,10 @@ class StudentProfile extends ConsumerWidget {
                   Navigator.pushNamed(context, '/ChangePasswordModal');
                 }),
                 _buildActionTile(context, Icons.notifications_outlined, 'Notifications', () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('No new notifications. You are all caught up!')),
-                  );
+                  showNotificationsSheet(context);
                 }),
                 _buildActionTile(context, Icons.help_outline, 'Help & Support', () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Reach out to your school admin for assistance.')),
-                  );
+                  showHelpSupportSheet(context);
                 }),
               ],
             ),

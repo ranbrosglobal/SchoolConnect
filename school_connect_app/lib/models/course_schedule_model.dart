@@ -12,6 +12,8 @@ class CourseScheduleModel {
   final String? endTime;
   final String? room;
   final bool? isCompleted;
+  /// Enrolled-student count when the backend includes it (teacher classes list).
+  final int? studentCount;
 
   CourseScheduleModel({
     required this.id,
@@ -27,6 +29,7 @@ class CourseScheduleModel {
     this.endTime,
     this.room,
     this.isCompleted,
+    this.studentCount,
   });
 
   factory CourseScheduleModel.fromJson(Map<String, dynamic> json) {
@@ -46,6 +49,7 @@ class CourseScheduleModel {
       endTime: json['to_time'],
       room: json['room'],
       isCompleted: json['is_completed'],
+      studentCount: (json['student_count'] as num?)?.toInt(),
     );
   }
 

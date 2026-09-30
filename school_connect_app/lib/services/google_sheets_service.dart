@@ -352,13 +352,13 @@ class GoogleSheetsService {
     await _storage.delete(key: 'user_data');
   }
 
-  /// Change password via backend.
+  /// Change password via backend (works for teachers, admins and students).
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
   }) async {
     try {
-      await _post('school_connect.api.auth.change_password', {
+      await _post('school_connect.api.mobile.change_password', {
         'current_password': currentPassword,
         'new_password': newPassword,
       });
@@ -566,6 +566,23 @@ class GoogleSheetsService {
       'schedule_id': courseSchedule,
     });
     return result is Map ? Map<String, dynamic>.from(result) : <String, dynamic>{};
+  }
+
+  /// Attendance history for a class over a date range (teacher view).
+  /// Powers the week / month / quarter / year / custom-range browser.
+  Future<AttendanceHistory> getAttendanceHistory(
+    String classId, {
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    final result = await _get('school_connect.api.mobile.get_attendance_history', {
+      'class_id': classId,
+      'from': from.toIso8601String().split('T')[0],
+      'to': to.toIso8601String().split('T')[0],
+    });
+    return AttendanceHistory.fromJson(
+      result is Map ? Map<String, dynamic>.from(result) : const {},
+    );
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -1126,6 +1143,147 @@ class AdminDashboardData {
       classes: (json['classes'] ?? [])
           .map<StudentGroupModel>((c) => StudentGroupModel.fromJson(c))
           .toList(),
+    );
+  }
+}
+
+/// Teacher-facing attendance history for one class over a date range.
+/// Returned by `school_connect.api.mobile.get_attendance_history`.
+class AttendanceHistory {
+  final String classId;
+  final String className;
+  final DateTime from;
+  final DateTime to;
+  final AttendanceHistorySummary summary;
+  final List<AttendanceHistoryDay> days;
+  final List<AttendanceHistoryStudent> students;
+  final List<AttendanceModel> records;
+
+  AttendanceHistory({
+    this.classId = '',
+    this.className = 'Class',
+    required this.from,
+    required this.to,
+    this.summary = const AttendanceHistorySummary(),
+    this.days = const [],
+    this.students = const [],
+    this.records = const [],
+  });
+
+  factory AttendanceHistory.fromJson(Map<String, dynamic> json) {
+    return AttendanceHistory(
+      classId: json['class_id']?.toString() ?? '',
+      className: json['class_name']?.toString() ?? 'Class',
+      from: DateTime.tryParse(json['from']?.toString() ?? '') ?? DateTime.now(),
+      to: DateTime.tryParse(json['to']?.toString() ?? '') ?? DateTime.now(),
+      summary: AttendanceHistorySummary.fromJson(
+        (json['summary'] ?? const {}).cast<String, dynamic>(),
+      ),
+      days: ((json['days'] ?? const []) as List)
+          .whereType<Map>()
+          .map((d) => AttendanceHistoryDay.fromJson(Map<String, dynamic>.from(d)))
+          .toList(),
+      students: ((json['students'] ?? const []) as List)
+          .whereType<Map>()
+          .map((s) => AttendanceHistoryStudent.fromJson(Map<String, dynamic>.from(s)))
+          .toList(),
+      records: ((json['records'] ?? const []) as List)
+          .whereType<Map>()
+          .map((r) => AttendanceModel.fromJson(Map<String, dynamic>.from(r)))
+          .toList(),
+    );
+  }
+}
+
+class AttendanceHistorySummary {
+  final int totalRecords;
+  final int markedDays;
+  final int present;
+  final int absent;
+  final int late;
+  final int leave;
+  final int halfDay;
+  final int percentage;
+
+  const AttendanceHistorySummary({
+    this.totalRecords = 0,
+    this.markedDays = 0,
+    this.present = 0,
+    this.absent = 0,
+    this.late = 0,
+    this.leave = 0,
+    this.halfDay = 0,
+    this.percentage = 0,
+  });
+
+  factory AttendanceHistorySummary.fromJson(Map<String, dynamic> json) {
+    return AttendanceHistorySummary(
+      totalRecords: (json['total_records'] as num?)?.toInt() ?? 0,
+      markedDays: (json['marked_days'] as num?)?.toInt() ?? 0,
+      present: (json['present'] as num?)?.toInt() ?? 0,
+      absent: (json['absent'] as num?)?.toInt() ?? 0,
+      late: (json['late'] as num?)?.toInt() ?? 0,
+      leave: (json['leave'] as num?)?.toInt() ?? 0,
+      halfDay: (json['half_day'] as num?)?.toInt() ?? 0,
+      percentage: (json['percentage'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class AttendanceHistoryDay {
+  final DateTime date;
+  final int marked;
+  final int present;
+  final int absent;
+  final int percentage;
+
+  AttendanceHistoryDay({
+    required this.date,
+    this.marked = 0,
+    this.present = 0,
+    this.absent = 0,
+    this.percentage = 0,
+  });
+
+  factory AttendanceHistoryDay.fromJson(Map<String, dynamic> json) {
+    return AttendanceHistoryDay(
+      date: DateTime.tryParse(json['date']?.toString() ?? '') ?? DateTime.now(),
+      marked: (json['marked'] as num?)?.toInt() ?? 0,
+      present: (json['present'] as num?)?.toInt() ?? 0,
+      absent: (json['absent'] as num?)?.toInt() ?? 0,
+      percentage: (json['percentage'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class AttendanceHistoryStudent {
+  final String student;
+  final String studentName;
+  final String? rollNumber;
+  final int total;
+  final int present;
+  final int absent;
+  final int? percentage;
+
+  AttendanceHistoryStudent({
+    required this.student,
+    required this.studentName,
+    this.rollNumber,
+    this.total = 0,
+    this.present = 0,
+    this.absent = 0,
+    this.percentage,
+  });
+
+  factory AttendanceHistoryStudent.fromJson(Map<String, dynamic> json) {
+    return AttendanceHistoryStudent(
+      student: json['student']?.toString() ?? '',
+      studentName: json['student_name']?.toString() ?? 'Unknown',
+      rollNumber: json['roll_number']?.toString(),
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      present: (json['present'] as num?)?.toInt() ?? 0,
+      absent: (json['absent'] as num?)?.toInt() ?? 0,
+      percentage: (json['percentage'] as num?)?.toInt(),
     );
   }
 }

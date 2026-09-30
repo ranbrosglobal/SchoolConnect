@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../state/auth_provider.dart';
+import '../change_password_modal.dart';
+import '../student_timetable.dart';
+import '../../widgets/info_sheets.dart';
 import 'teacher_settings_screen.dart';
 
 class TeacherProfileTab extends ConsumerWidget {
@@ -35,7 +38,7 @@ class TeacherProfileTab extends ConsumerWidget {
         child: Column(
           children: [
             const SizedBox(height: 16),
-            _buildProfileHeader(context, user?.fullName ?? 'Mr. Arjun Sharma', user?.email ?? 'arjun.sharma@school.com'),
+            _buildProfileHeader(context, user?.fullName ?? 'Teacher', user?.email ?? '', user?.schoolName),
             const SizedBox(height: 32),
             _buildMenuItems(context, ref),
           ],
@@ -44,7 +47,7 @@ class TeacherProfileTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context, String name, String email) {
+  Widget _buildProfileHeader(BuildContext context, String name, String email, String? schoolName) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -70,13 +73,14 @@ class TeacherProfileTab extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  'Mathematics Teacher',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
+                if (schoolName != null && schoolName.isNotEmpty)
+                  Text(
+                    schoolName,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
-                ),
                 const SizedBox(height: 4),
                 Text(
                   email,
@@ -115,31 +119,32 @@ class TeacherProfileTab extends ConsumerWidget {
     return Column(
       children: [
         _buildMenuItem(
-          icon: Icons.person_outline,
-          title: 'Personal Information',
-        ),
-        _buildMenuItem(
-          icon: Icons.book_outlined,
-          title: 'Subjects',
-          subtitle: 'Mathematics',
-        ),
-        _buildMenuItem(
-          icon: Icons.class_outlined,
-          title: 'Classes',
-          subtitle: '4 Classes',
-        ),
-        const Divider(height: 32, thickness: 1, indent: 24, endIndent: 24),
-        _buildMenuItem(
-          icon: Icons.notifications_none,
-          title: 'Notification Settings',
+          icon: Icons.calendar_month_outlined,
+          title: 'My Timetable',
+          subtitle: 'Uploaded by your school admin',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const StudentTimetable()),
+          ),
         ),
         _buildMenuItem(
           icon: Icons.lock_outline,
-          title: 'Privacy & Security',
+          title: 'Change Password',
+          onTap: () => Navigator.pushNamed(context, '/ChangePasswordModal'),
+        ),
+        _buildMenuItem(
+          icon: Icons.notifications_none,
+          title: 'Notifications',
+          onTap: () => showNotificationsSheet(context),
         ),
         _buildMenuItem(
           icon: Icons.help_outline,
           title: 'Help & Support',
+          onTap: () => showHelpSupportSheet(context),
+        ),
+        _buildMenuItem(
+          icon: Icons.settings_outlined,
+          title: 'Settings',
+          onTap: () => _openSettings(context),
         ),
         const Divider(height: 32, thickness: 1, indent: 24, endIndent: 24),
         _buildMenuItem(

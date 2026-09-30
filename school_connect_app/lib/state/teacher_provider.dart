@@ -18,6 +18,14 @@ class TeacherState {
   final List<AssignmentSubmissionModel> submissions;
   final AssignmentModel? selectedAssignment;
   final bool isSubmitting;
+  /// The date the currently loaded [currentAttendance] belongs to. Attendance
+  /// is per-day: a new day starts from an unmarked (default present) roster.
+  final DateTime? attendanceDate;
+  /// Loading flag for the per-date roster fetch (separate from [isLoading] so
+  /// switching dates doesn't blank the whole screen).
+  final bool isLoadingAttendance;
+  /// Date-range history for the selected class (history browser screen).
+  final AttendanceHistory? attendanceHistory;
 
   TeacherState({
     this.isLoading = false,
@@ -30,6 +38,9 @@ class TeacherState {
     this.submissions = const [],
     this.selectedAssignment,
     this.isSubmitting = false,
+    this.attendanceDate,
+    this.isLoadingAttendance = false,
+    this.attendanceHistory,
   });
 
   TeacherState copyWith({
@@ -43,6 +54,10 @@ class TeacherState {
     List<AssignmentSubmissionModel>? submissions,
     AssignmentModel? selectedAssignment,
     bool? isSubmitting,
+    DateTime? attendanceDate,
+    bool? isLoadingAttendance,
+    AttendanceHistory? attendanceHistory,
+    bool clearAttendanceHistory = false,
   }) {
     return TeacherState(
       isLoading: isLoading ?? this.isLoading,
@@ -55,6 +70,11 @@ class TeacherState {
       submissions: submissions ?? this.submissions,
       selectedAssignment: selectedAssignment ?? this.selectedAssignment,
       isSubmitting: isSubmitting ?? this.isSubmitting,
+      attendanceDate: attendanceDate ?? this.attendanceDate,
+      isLoadingAttendance: isLoadingAttendance ?? this.isLoadingAttendance,
+      attendanceHistory: clearAttendanceHistory
+          ? null
+          : (attendanceHistory ?? this.attendanceHistory),
     );
   }
 }
@@ -74,7 +94,7 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
     }
   }
 
-  Future<void> selectClass(CourseScheduleModel courseSchedule) async {
+  Future<void> selectClass(CourseScheduleModel courseSchedule, {DateTime? date}) async {
     state = state.copyWith(isLoading: true, selectedClass: courseSchedule, error: null);
     try {
       final students = await _api.getClassStudents(courseSchedule.id);
@@ -84,19 +104,72 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
         if (ra != null && rb != null) return ra.compareTo(rb);
         return (a.rollNumber ?? '').compareTo(b.rollNumber ?? '');
       });
-      // Today's existing marks for this class — a teacher cannot use the
-      // student-facing "my attendance" endpoint, so read the class roster.
-      final attendance = await _api.getClassAttendanceRoster(
-        courseSchedule.studentGroup ?? courseSchedule.id,
-        course: courseSchedule.courseName ?? courseSchedule.course,
-      );
       state = state.copyWith(
         isLoading: false,
         currentClassStudents: students,
-        currentAttendance: attendance,
+        // Start from an empty sheet for the requested day; the per-date loader
+        // fills in whatever has already been marked for that date.
+        currentAttendance: const [],
+        attendanceDate: date,
+      );
+      await loadAttendanceForDate(
+        courseSchedule,
+        date: date ?? DateTime.now(),
+        students: students,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  /// Load the already-marked attendance for one specific date. Attendance is
+  /// per-day: each new day starts from an unmarked roster, and picking a past
+  /// date shows exactly what was recorded then. Students already loaded are
+  /// reused so switching dates doesn't refetch the roster.
+  Future<void> loadAttendanceForDate(
+    CourseScheduleModel courseSchedule, {
+    required DateTime date,
+    List<StudentModel>? students,
+  }) async {
+    state = state.copyWith(isLoadingAttendance: true, attendanceDate: date, error: null);
+    try {
+      final roster = students ??
+          (state.currentClassStudents.isNotEmpty
+              ? state.currentClassStudents
+              : await _api.getClassStudents(courseSchedule.id));
+      final attendance = await _api.getClassAttendanceRoster(
+        courseSchedule.studentGroup ?? courseSchedule.id,
+        date: date,
+        course: courseSchedule.courseName ?? courseSchedule.course,
+      );
+      state = state.copyWith(
+        isLoadingAttendance: false,
+        currentClassStudents: roster,
+        currentAttendance: attendance,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoadingAttendance: false, error: e.toString());
+    }
+  }
+
+  /// Fetch attendance history for the selected class over a date range.
+  Future<bool> loadAttendanceHistory({
+    required CourseScheduleModel courseSchedule,
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null, clearAttendanceHistory: true);
+    try {
+      final history = await _api.getAttendanceHistory(
+        courseSchedule.studentGroup ?? courseSchedule.id,
+        from: from,
+        to: to,
+      );
+      state = state.copyWith(isLoading: false, attendanceHistory: history);
+      return true;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return false;
     }
   }
 
@@ -115,7 +188,13 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
         records: records,
         courseName: state.selectedClass!.courseName ?? state.selectedClass!.course,
       );
-      await selectClass(state.selectedClass!);
+      // Re-read the roster for the date just saved so the UI reflects reality.
+      await loadAttendanceForDate(
+        state.selectedClass!,
+        date: date,
+        students: state.currentClassStudents,
+      );
+      state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());

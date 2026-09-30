@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../state/auth_provider.dart';
-import '../../models/student_model.dart';
-import 'teacher_class_detail_screen.dart';
+import '../../models/course_schedule_model.dart';
+import 'teacher_class_hub_screen.dart';
 
-/// Shows the teacher's classes loaded from the local database.
+/// Shows the teacher's classes loaded from the live backend.
 class TeacherClassesTab extends ConsumerStatefulWidget {
   const TeacherClassesTab({super.key});
 
@@ -27,19 +27,16 @@ class _TeacherClassesTabState extends ConsumerState<TeacherClassesTab> {
     try {
       final service = ref.read(sheetsServiceProvider);
       final groups = await service.getMyClasses();
-      final allStudents = <StudentModel>[];
-      for (final group in groups) {
-        allStudents.addAll(await service.getClassStudents(group.id));
-      }
 
+      // Student counts come straight from the backend payload.
       final result = <Map<String, dynamic>>[];
       for (final g in groups) {
-        final count = allStudents.where((s) => s.studentGroup == g.id).length;
         result.add({
           'id': g.id,
           'name': g.studentGroupName ?? g.displayName,
           'program': g.courseName ?? g.course ?? '',
-          'studentCount': count,
+          'studentCount': g.studentCount ?? 0,
+          'schedule': g,
         });
       }
 
@@ -53,6 +50,8 @@ class _TeacherClassesTabState extends ConsumerState<TeacherClassesTab> {
       setState(() => _loading = false);
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -97,6 +96,7 @@ class _TeacherClassesTabState extends ConsumerState<TeacherClassesTab> {
                         className: cls['name'],
                         subject: cls['program'],
                         studentsCount: cls['studentCount'],
+                        schedule: cls['schedule'],
                       );
                     },
                   ),
@@ -109,6 +109,7 @@ class _TeacherClassesTabState extends ConsumerState<TeacherClassesTab> {
     required String className,
     required String subject,
     required int studentsCount,
+    required CourseScheduleModel schedule,
   }) {
     // Pick a color based on the class name hash
     final colors = [
@@ -142,9 +143,9 @@ class _TeacherClassesTabState extends ConsumerState<TeacherClassesTab> {
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => TeacherClassDetailScreen(
-                  className: className,
-                  subject: subject,
+                builder: (_) => TeacherClassHubScreen(
+                  courseSchedule: schedule,
+                  studentCount: studentsCount,
                 ),
               ),
             );

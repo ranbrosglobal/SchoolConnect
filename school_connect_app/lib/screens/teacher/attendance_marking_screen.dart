@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import '../../state/teacher_provider.dart';
@@ -11,6 +10,15 @@ import '../../services/google_sheets_service.dart';
 import '../../services/export_service.dart';
 import '../../widgets/export_sheet.dart';
 
+/// How far back a teacher may go to view or correct attendance.
+const _maxHistoryDays = 730;
+
+/// Mark / edit attendance for one class on one specific day.
+///
+/// Attendance is per-day: each day starts from an unmarked roster (defaulting
+/// to present), and teachers can navigate back to any past day to review or
+/// correct what was recorded. Saving always writes the full roster for the
+/// selected date — re-marking a day overwrites it.
 class AttendanceMarkingScreen extends ConsumerStatefulWidget {
   final CourseScheduleModel courseSchedule;
 
@@ -24,62 +32,103 @@ class AttendanceMarkingScreen extends ConsumerStatefulWidget {
       _AttendanceMarkingScreenState();
 }
 
-class _AttendanceMarkingScreenState extends ConsumerState<AttendanceMarkingScreen> {
+class _AttendanceMarkingScreenState
+    extends ConsumerState<AttendanceMarkingScreen> {
   DateTime _selectedDate = DateTime.now();
   final Map<String, AttendanceStatus> _attendanceMap = {};
   bool _isSubmitting = false;
+  /// The date the local [_attendanceMap] was last initialized for, so a date
+  /// switch re-seeds the map from that day's saved records.
+  DateTime? _initializedForDate;
+
+  bool get _isToday => _dateKey(_selectedDate) == _dateKey(DateTime.now());
+  bool get _isFuture => _dateKey(_selectedDate).isAfter(_dateKey(DateTime.now()));
+
+  static DateTime _dateKey(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  static String _dateKeyStr(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(teacherProvider.notifier).selectClass(widget.courseSchedule);
+      ref.read(teacherProvider.notifier).selectClass(
+            widget.courseSchedule,
+            date: _selectedDate,
+          );
     });
   }
 
-  Widget _buildSvgPicture(String asset, {double? height, double? width, Key? key}) {
-    return SvgPicture.asset(
-      asset,
-      key: key,
-      height: height,
-      width: width,
-      placeholderBuilder: (context) => Container(
-        height: height,
-        width: width,
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Icon(Icons.image, color: Colors.grey),
-      ),
-    );
+  // ------------------------------------------------------------------
+  // Data plumbing
+  // ------------------------------------------------------------------
+
+  /// Seed the local status map for [_selectedDate]: statuses already saved on
+  /// the server for that date, or "present" for an unmarked day.
+  void _syncMapForDate(TeacherState state) {
+    if (state.isLoadingAttendance) return;
+    if (state.currentClassStudents.isEmpty) return;
+    if (_initializedForDate != null &&
+        _dateKey(_initializedForDate!) == _dateKey(state.attendanceDate ?? _selectedDate)) {
+      return;
+    }
+    _attendanceMap.clear();
+    for (final student in state.currentClassStudents) {
+      final saved = state.currentAttendance.where((a) => a.student == student.id);
+      _attendanceMap[student.id] =
+          saved.isNotEmpty ? saved.first.status : AttendanceStatus.present;
+    }
+    _initializedForDate = state.attendanceDate ?? _selectedDate;
   }
 
-  void _initializeAttendance(List<StudentModel> students, List<AttendanceModel> existing) {
-    // Initialize with existing attendance or default to present
-    for (var student in students) {
-      final existingRecord = existing.firstWhere(
-        (a) => a.student == student.id,
-        orElse: () => AttendanceModel(
-          id: '',
-          student: student.id,
-          status: AttendanceStatus.present,
-        ),
-      );
-      _attendanceMap[student.id] = existingRecord.status;
-    }
+  Future<void> _changeDate(DateTime date) async {
+    final newDate = _dateKey(date);
+    if (_dateKey(_selectedDate) == newDate) return;
+    setState(() {
+      _selectedDate = newDate;
+      _initializedForDate = null;
+      _attendanceMap.clear();
+    });
+    await ref.read(teacherProvider.notifier).loadAttendanceForDate(
+          widget.courseSchedule,
+          date: newDate,
+          students: ref.read(teacherProvider).currentClassStudents,
+        );
   }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      firstDate: DateTime.now().subtract(const Duration(days: _maxHistoryDays)),
       lastDate: DateTime.now(),
+      helpText: 'Select attendance date',
     );
-    if (picked != null && mounted) {
-      setState(() => _selectedDate = picked);
+    if (picked != null && mounted) await _changeDate(picked);
+  }
+
+  void _shiftDay(int delta) {
+    final target = _selectedDate.add(Duration(days: delta));
+    if (_isFutureKey(target)) return;
+    _changeDate(target);
+  }
+
+  bool _isFutureKey(DateTime d) => _dateKey(d).isAfter(_dateKey(DateTime.now()));
+
+  // ------------------------------------------------------------------
+  // Save
+  // ------------------------------------------------------------------
+
+  int _changedCount(TeacherState state) {
+    var changed = 0;
+    for (final student in state.currentClassStudents) {
+      final saved = state.currentAttendance.where((a) => a.student == student.id);
+      final serverStatus =
+          saved.isNotEmpty ? saved.first.status : AttendanceStatus.present;
+      if (_attendanceMap[student.id] != serverStatus) changed++;
     }
+    return changed;
   }
 
   Future<void> _submitAttendance() async {
@@ -93,12 +142,12 @@ class _AttendanceMarkingScreenState extends ConsumerState<AttendanceMarkingScree
     setState(() => _isSubmitting = true);
 
     try {
-      final records = _attendanceMap.entries.map((entry) {
-        return AttendanceRecord(
-          studentId: entry.key,
-          status: entry.value,
-        );
-      }).toList();
+      final records = _attendanceMap.entries
+          .map((entry) => AttendanceRecord(
+                studentId: entry.key,
+                status: entry.value,
+              ))
+          .toList();
 
       final success = await ref.read(teacherProvider.notifier).markAttendance(
         studentGroup: widget.courseSchedule.studentGroup ?? '',
@@ -108,38 +157,67 @@ class _AttendanceMarkingScreenState extends ConsumerState<AttendanceMarkingScree
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Attendance saved successfully!'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _isToday
+                        ? 'Attendance saved for today'
+                        : 'Attendance saved for ${DateFormat('d MMM yyyy').format(_selectedDate)}',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF16A34A),
           ),
         );
-        Navigator.of(context).pop();
+      } else if (mounted) {
+        final error = ref.read(teacherProvider).error;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Text(error ?? 'Could not save attendance. Try again.'),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             content: Text('Error saving attendance: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: const Color(0xFFDC2626),
           ),
         );
       }
     } finally {
-      setState(() => _isSubmitting = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
   // ------------------------------------------------------------------
   // Export (PDF / CSV / Excel → download, share, print)
   // ------------------------------------------------------------------
+
   AttendanceExportData _buildExportData(TeacherState state) {
     final students = state.currentClassStudents;
-    final saved = state.currentAttendance;
     return AttendanceExportData(
       className: widget.courseSchedule.studentGroupName ??
           widget.courseSchedule.studentGroup ??
           'Class',
-      subject: widget.courseSchedule.courseName ?? widget.courseSchedule.course ?? 'Subject',
+      subject:
+          widget.courseSchedule.courseName ?? widget.courseSchedule.course ?? 'Subject',
       teacher: widget.courseSchedule.instructorName ?? 'Teacher',
       room: widget.courseSchedule.room ?? '',
       date: _selectedDate,
@@ -148,28 +226,24 @@ class _AttendanceMarkingScreenState extends ConsumerState<AttendanceMarkingScree
           AttendanceExportRow(
             roll: students[i].rollNumber ?? '${i + 1}',
             name: students[i].name,
-            status: _statusFor(students[i], saved),
+            status: _statusLabel(_attendanceMap[students[i].id] ??
+                AttendanceStatus.present),
           ),
       ],
     );
   }
 
-  String _statusFor(StudentModel student, List<AttendanceModel> saved) {
-    final live = _attendanceMap[student.id];
-    if (live != null) {
-      switch (live) {
-        case AttendanceStatus.present:
-          return 'Present';
-        case AttendanceStatus.absent:
-          return 'Absent';
-        case AttendanceStatus.halfDay:
-          return 'Half Day';
-        case AttendanceStatus.leave:
-          return 'Leave';
-      }
+  String _statusLabel(AttendanceStatus status) {
+    switch (status) {
+      case AttendanceStatus.present:
+        return 'Present';
+      case AttendanceStatus.absent:
+        return 'Absent';
+      case AttendanceStatus.halfDay:
+        return 'Half Day';
+      case AttendanceStatus.leave:
+        return 'Leave';
     }
-    final recs = saved.where((a) => a.student == student.id).toList();
-    return recs.isNotEmpty ? recs.first.statusString : 'Present';
   }
 
   Future<void> _showExportSheet() async {
@@ -180,121 +254,55 @@ class _AttendanceMarkingScreenState extends ConsumerState<AttendanceMarkingScree
       );
       return;
     }
-    final data = _buildExportData(state);
-    await showExportSheet(context, data);
+    await showExportSheet(context, _buildExportData(state));
   }
+
+  // ------------------------------------------------------------------
+  // UI
+  // ------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     final teacherState = ref.watch(teacherProvider);
+    _syncMapForDate(teacherState);
 
-    // Initialize attendance map when students are loaded
-    if (teacherState.currentClassStudents.isNotEmpty && _attendanceMap.isEmpty) {
-      _initializeAttendance(
-        teacherState.currentClassStudents,
-        teacherState.currentAttendance,
-      );
-    }
+    final marked = teacherState.currentAttendance;
+    final dayMarked = marked.isNotEmpty;
+    final changed = _changedCount(teacherState);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF6F8FC),
       appBar: AppBar(
-        title: const Text(
-          'Mark Attendance',
-          style: TextStyle(fontSize: 17),
-        ),
+        backgroundColor: const Color(0xFFF6F8FC),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: const Text('Mark Attendance', style: TextStyle(fontSize: 17)),
         actions: [
-          // Export — same option sheet as the roster screen (PDF / CSV /
-          // Excel / share / print).
           Padding(
             padding: const EdgeInsets.only(right: 4),
             child: OutlinedButton.icon(
               onPressed: _isSubmitting ? null : _showExportSheet,
               icon: const Icon(Icons.ios_share, size: 16, color: Color(0xFF1E3A8A)),
-              label: const Text(
-                'Export',
-                style: TextStyle(color: Color(0xFF1E3A8A), fontSize: 13),
-              ),
+              label: const Text('Export',
+                  style: TextStyle(color: Color(0xFF1E3A8A), fontSize: 13)),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilledButton.icon(
-              onPressed: _isSubmitting ? null : _submitAttendance,
-              icon: _isSubmitting
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check, size: 18),
-              label: Text(_isSubmitting ? 'Saving...' : 'Save'),
-            ),
-          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
-          // Class info header
-          _buildClassHeader().animate().fadeIn(duration: 400.ms).slideY(begin: -0.2),
-
-          // Date picker
-          _buildDatePicker().animate().fadeIn(delay: 150.ms),
-
-          // Quick actions
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _attendanceMap.updateAll((_, __) => AttendanceStatus.present);
-                      });
-                    },
-                    icon: const Icon(Icons.check_circle_outline, size: 18),
-                    label: const Text('All Present'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _attendanceMap.updateAll((_, __) => AttendanceStatus.absent);
-                      });
-                    },
-                    icon: const Icon(Icons.cancel_outlined, size: 18),
-                    label: const Text('All Absent'),
-                  ),
-                ),
-              ],
-            ),
-          ).animate().fadeIn(delay: 250.ms),
-
-          // Legend
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildLegendDot(Colors.green, 'Present'),
-                const SizedBox(width: 16),
-                _buildLegendDot(Colors.red, 'Absent'),
-                const SizedBox(width: 16),
-                _buildLegendDot(Colors.orange, 'Half Day'),
-                const SizedBox(width: 16),
-                _buildLegendDot(Colors.blue, 'Leave'),
-              ],
-            ),
-          ).animate().fadeIn(delay: 300.ms),
-
-          const SizedBox(height: 4),
-
-          // Student list
+          _buildClassHeader()
+              .animate()
+              .fadeIn(duration: 350.ms)
+              .slideY(begin: -0.15),
+          _buildDateBar(dayMarked: dayMarked)
+              .animate()
+              .fadeIn(delay: 100.ms),
           Expanded(
-            child: _buildStudentList(teacherState),
+            child: _buildBody(teacherState),
           ),
+          _buildSaveBar(teacherState, changed),
         ],
       ),
     );
@@ -302,20 +310,20 @@ class _AttendanceMarkingScreenState extends ConsumerState<AttendanceMarkingScree
 
   Widget _buildClassHeader() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1976D2), Color(0xFF0D47A1)],
+          colors: [Color(0xFF2563EB), Color(0xFF1E3A8A)],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1976D2).withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -324,10 +332,10 @@ class _AttendanceMarkingScreenState extends ConsumerState<AttendanceMarkingScree
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.class_, color: Colors.white),
+            child: const Icon(Icons.menu_book_rounded, color: Colors.white, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -342,6 +350,7 @@ class _AttendanceMarkingScreenState extends ConsumerState<AttendanceMarkingScree
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   widget.courseSchedule.studentGroupName ?? 'Unknown Group',
                   style: TextStyle(
@@ -352,8 +361,7 @@ class _AttendanceMarkingScreenState extends ConsumerState<AttendanceMarkingScree
               ],
             ),
           ),
-          if (widget.courseSchedule.room != null) ...[
-            const SizedBox(width: 8),
+          if ((widget.courseSchedule.room ?? '').isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
@@ -363,52 +371,96 @@ class _AttendanceMarkingScreenState extends ConsumerState<AttendanceMarkingScree
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.room,
-                    size: 14,
-                    color: Colors.white.withValues(alpha: 0.9),
-                  ),
+                  Icon(Icons.room, size: 14, color: Colors.white.withValues(alpha: 0.9)),
                   const SizedBox(width: 4),
                   Text(
                     widget.courseSchedule.room!,
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
             ),
-          ],
         ],
       ),
     );
   }
 
-  Widget _buildDatePicker() {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+  /// Date navigation: ◀ [Mon, 23 Sep ▾] ▶ + "today" badge.
+  Widget _buildDateBar({required bool dayMarked}) {
+    final fmt = DateFormat('EEE, d MMM yyyy');
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today, size: 18, color: Colors.grey[600]),
-            const SizedBox(width: 8),
+            IconButton(
+              onPressed: () => _shiftDay(-1),
+              icon: const Icon(Icons.chevron_left, size: 22),
+              tooltip: 'Previous day',
+            ),
             Expanded(
-              child: Text(
-                DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate),
-                style: Theme.of(context).textTheme.bodyMedium,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: _pickDate,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.event_available_outlined,
+                              size: 17, color: Colors.grey.shade600),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              fmt.format(_selectedDate),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 14),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.keyboard_arrow_down_rounded,
+                              size: 18, color: Colors.grey.shade500),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _isToday
+                            ? (dayMarked ? 'Today · marked' : 'Today · not marked yet')
+                            : (_isFuture
+                                ? 'Future date'
+                                : (dayMarked ? 'Past day · saved' : 'Past day · not marked')),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: dayMarked
+                              ? const Color(0xFF16A34A)
+                              : Colors.orange.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-            TextButton.icon(
-              onPressed: _pickDate,
-              icon: const Icon(Icons.edit_calendar_outlined, size: 18),
-              label: const Text('Change'),
+            IconButton(
+              onPressed: _isToday || _isFuture ? null : () => _shiftDay(1),
+              icon: Icon(
+                Icons.chevron_right,
+                size: 22,
+                color: _isToday || _isFuture ? Colors.grey.shade300 : null,
+              ),
+              tooltip: 'Next day',
             ),
           ],
         ),
@@ -416,28 +468,7 @@ class _AttendanceMarkingScreenState extends ConsumerState<AttendanceMarkingScree
     );
   }
 
-  Widget _buildLegendDot(Color color, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStudentList(TeacherState state) {
+  Widget _buildBody(TeacherState state) {
     if (state.isLoading && state.currentClassStudents.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -447,100 +478,417 @@ class _AttendanceMarkingScreenState extends ConsumerState<AttendanceMarkingScree
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildSvgPicture(
-              'assets/images/attendance_character.svg',
-              height: 120,
-              width: 120,
-            ).animate().fadeIn(duration: 600.ms).scale(begin: const Offset(0.8, 0.8)),
-            const SizedBox(height: 24),
+            Icon(Icons.group_off_outlined,
+                size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
             Text(
               'No Students Found',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ).animate().fadeIn(delay: 200.ms),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             Text(
               'This class has no students enrolled.',
               style: TextStyle(color: Colors.grey[600]),
-            ).animate().fadeIn(delay: 300.ms),
+            ),
           ],
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      itemCount: state.currentClassStudents.length,
-      itemBuilder: (context, index) {
-        final student = state.currentClassStudents[index];
-        final currentStatus = _attendanceMap[student.id] ?? AttendanceStatus.present;
-        final statusColor = _getStatusColor(currentStatus);
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          elevation: 1,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: BorderSide(
-              color: statusColor.withValues(alpha: 0.3),
-              width: 1.2,
-            ),
-          ),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: statusColor.withValues(alpha: 0.15),
-              child: Text(
-                student.name.substring(0, 1).toUpperCase(),
-                style: TextStyle(
-                  color: statusColor,
-                  fontWeight: FontWeight.bold,
+    return RefreshIndicator(
+      onRefresh: () => _changeDate(_selectedDate),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        children: [
+          if (state.isLoadingAttendance) _buildLoadingStrip(),
+          _buildSummaryChips(state),
+          const SizedBox(height: 10),
+          if (!_isToday && !_isFuture)
+            _buildPastEditBanner()
+          else if (_isFuture)
+            _buildFutureBanner(),
+          const SizedBox(height: 10),
+          _buildQuickActions(state),
+          const SizedBox(height: 12),
+          ...state.currentClassStudents.asMap().entries.map(
+                (e) => _buildStudentCard(
+                  e.value,
+                  index: e.key,
+                  state: state,
                 ),
               ),
-            ),
-            title: Text(
-              student.name,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              student.id,
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-            trailing: _buildStatusToggle(student.id, currentStatus),
-          ),
-        );
-      },
+          const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 
-  Widget _buildStatusToggle(String studentId, AttendanceStatus currentStatus) {
-    return SegmentedButton<AttendanceStatus>(
-      segments: const [
-        ButtonSegment(
-          value: AttendanceStatus.present,
-          label: Text('P'),
+  Widget _buildLoadingStrip() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            'Loading records for ${DateFormat('d MMM').format(_selectedDate)}…',
+            style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPastEditBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFED7AA)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.history_edu_outlined,
+              size: 18, color: Colors.orange.shade800),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'You are editing a past day (${DateFormat('d MMM yyyy').format(_selectedDate)}). '
+              'Saving updates that day\u2019s records.',
+              style: TextStyle(
+                  fontSize: 12.5, color: Colors.orange.shade900, height: 1.3),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFutureBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.event_busy_outlined, size: 18, color: Colors.blue.shade800),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Attendance can only be marked once the class has happened. '
+              'Saving is disabled for future dates.',
+              style: TextStyle(fontSize: 12.5, color: Color(0xFF1E40AF), height: 1.3),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryChips(TeacherState state) {
+    int count(AttendanceStatus s) =>
+        _attendanceMap.values.where((v) => v == s).length;
+    final present = count(AttendanceStatus.present);
+    final absent = count(AttendanceStatus.absent);
+    final half = count(AttendanceStatus.halfDay);
+    final leave = count(AttendanceStatus.leave);
+
+    return Row(
+      children: [
+        _summaryCard('Present', present, const Color(0xFF16A34A),
+            Icons.check_circle_outline),
+        const SizedBox(width: 8),
+        _summaryCard('Absent', absent, const Color(0xFFDC2626),
+            Icons.cancel_outlined),
+        const SizedBox(width: 8),
+        _summaryCard('Half', half, const Color(0xFFEA580C),
+            Icons.wb_twighlight),
+        const SizedBox(width: 8),
+        _summaryCard('Leave', leave, const Color(0xFF2563EB),
+            Icons.airline_seat_individual_suite_outlined),
+      ],
+    );
+  }
+
+  Widget _summaryCard(String label, int value, Color color, IconData icon) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.18)),
         ),
-        ButtonSegment(
-          value: AttendanceStatus.absent,
-          label: Text('A'),
+        child: Column(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(height: 4),
+            Text('$value',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: color)),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade600)),
+          ],
         ),
-        ButtonSegment(
-          value: AttendanceStatus.halfDay,
-          label: Text('H'),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(TeacherState state) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => setState(() => _attendanceMap
+                .updateAll((_, __) => AttendanceStatus.present)),
+            icon: const Icon(Icons.done_all, size: 17),
+            label: const Text('All Present'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF16A34A),
+              side: BorderSide(color: const Color(0xFF16A34A).withValues(alpha: 0.4)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
         ),
-        ButtonSegment(
-          value: AttendanceStatus.leave,
-          label: Text('L'),
+        const SizedBox(width: 8),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => setState(() => _attendanceMap
+                .updateAll((_, __) => AttendanceStatus.absent)),
+            icon: const Icon(Icons.remove_done, size: 17),
+            label: const Text('All Absent'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+              side: BorderSide(color: const Color(0xFFDC2626).withValues(alpha: 0.4)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
         ),
       ],
-      selected: {currentStatus},
-      onSelectionChanged: (Set<AttendanceStatus> selected) {
-        setState(() {
-          _attendanceMap[studentId] = selected.first;
-        });
-      },
-      style: ButtonStyle(
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+
+  Widget _buildStudentCard(
+    StudentModel student, {
+    required int index,
+    required TeacherState state,
+  }) {
+    final currentStatus =
+        _attendanceMap[student.id] ?? AttendanceStatus.present;
+    final statusColor = _getStatusColor(currentStatus);
+    final isUnsaved =
+        _changedCount(state) > 0 && _isModified(student, state);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isUnsaved
+              ? statusColor.withValues(alpha: 0.55)
+              : const Color(0xFFE2E8F0),
+          width: isUnsaved ? 1.4 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 19,
+            backgroundColor: statusColor.withValues(alpha: 0.13),
+            child: Text(
+              student.name.isNotEmpty
+                  ? student.name.substring(0, 1).toUpperCase()
+                  : '?',
+              style: TextStyle(
+                  color: statusColor,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15),
+            ),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  student.name,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  (student.rollNumber?.isNotEmpty ?? false)
+                      ? 'Roll ${student.rollNumber}'
+                      : student.id,
+                  style: TextStyle(
+                      color: Colors.grey.shade500, fontSize: 11.5),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          _buildStatusChips(student.id, currentStatus),
+        ],
+      ),
+    ).animate().fadeIn(
+        duration: 250.ms,
+        delay: Duration(milliseconds: (30 * index).clamp(0, 400)));
+  }
+
+  bool _isModified(StudentModel student, TeacherState state) {
+    final saved = state.currentAttendance.where((a) => a.student == student.id);
+    final serverStatus =
+        saved.isNotEmpty ? saved.first.status : AttendanceStatus.present;
+    return _attendanceMap[student.id] != serverStatus;
+  }
+
+  Widget _buildStatusChips(String studentId, AttendanceStatus currentStatus) {
+    Widget chip(AttendanceStatus status, String label, Color color) {
+      final selected = currentStatus == status;
+      return InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => setState(() => _attendanceMap[studentId] = status),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+          decoration: BoxDecoration(
+            color: selected ? color : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected ? color : Colors.grey.shade300,
+              width: selected ? 1.4 : 1,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: selected ? Colors.white : Colors.grey.shade600,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        chip(AttendanceStatus.present, 'P', const Color(0xFF16A34A)),
+        const SizedBox(width: 5),
+        chip(AttendanceStatus.absent, 'A', const Color(0xFFDC2626)),
+        const SizedBox(width: 5),
+        chip(AttendanceStatus.halfDay, 'H', const Color(0xFFEA580C)),
+        const SizedBox(width: 5),
+        chip(AttendanceStatus.leave, 'L', const Color(0xFF2563EB)),
+      ],
+    );
+  }
+
+  Widget _buildSaveBar(TeacherState state, int changed) {
+    final canSave = !_isFuture &&
+        state.currentClassStudents.isNotEmpty &&
+        !_isSubmitting &&
+        !state.isLoadingAttendance;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+          16, 12, 16, 12 + MediaQuery.of(context).padding.bottom * 0.4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${_attendanceMap.length} students · ${DateFormat('d MMM yyyy').format(_selectedDate)}',
+                  style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF334155)),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _isFuture
+                      ? 'Future date — saving disabled'
+                      : (changed > 0
+                          ? '$changed unsaved change${changed == 1 ? '' : 's'}'
+                          : (state.currentAttendance.isNotEmpty
+                              ? 'All changes saved'
+                              : 'Not marked yet — defaults to Present')),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: changed > 0
+                        ? const Color(0xFFEA580C)
+                        : const Color(0xFF16A34A),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          FilledButton.icon(
+            onPressed: canSave ? _submitAttendance : null,
+            icon: _isSubmitting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.save_outlined, size: 18),
+            label: Text(_isSubmitting ? 'Saving…' : 'Save'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF1E3A8A),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -548,13 +896,13 @@ class _AttendanceMarkingScreenState extends ConsumerState<AttendanceMarkingScree
   Color _getStatusColor(AttendanceStatus status) {
     switch (status) {
       case AttendanceStatus.present:
-        return Colors.green;
+        return const Color(0xFF16A34A);
       case AttendanceStatus.absent:
-        return Colors.red;
+        return const Color(0xFFDC2626);
       case AttendanceStatus.halfDay:
-        return Colors.orange;
+        return const Color(0xFFEA580C);
       case AttendanceStatus.leave:
-        return Colors.blue;
+        return const Color(0xFF2563EB);
     }
   }
 }
