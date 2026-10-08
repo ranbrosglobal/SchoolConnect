@@ -37,8 +37,23 @@ class StudentModel {
 
   factory StudentModel.fromJson(Map<String, dynamic> json) {
     return StudentModel(
-      id: json['name'] ?? json['id'] ?? '',
-      name: json['student_name'] ?? json['name'] ?? '',
+      // Real id keys first. The backend's student rows carry the primary key in
+      // `id` and the human name in `name`; reading `name` first (Frappe's
+      // doc-name convention) gave every student an id equal to their display
+      // name. Attendance was then saved under an id no roster could read back —
+      // "saved, but nothing saved" — and the server now rejects those writes.
+      // `name` stays the last resort for payloads that only ship a doc name.
+      id: (json['id'] ??
+              json['student'] ??
+              json['student_id'] ??
+              json['name'] ??
+              '')
+          .toString(),
+      name: (json['student_name'] ??
+              json['full_name'] ??
+              json['name'] ??
+              '')
+          .toString(),
       email: json['student_email_id'] ?? json['email'],
       school: json['school'] ?? json['school_id'],
       schoolName: json['school_name'],
@@ -51,7 +66,8 @@ class StudentModel {
       city: json['city'],
       state: json['state'],
       country: json['country'],
-      rollNumber: json['roll_number']?.toString() ?? json['group_roll_number']?.toString(),
+      rollNumber: json['roll_number']?.toString() ??
+          json['group_roll_number']?.toString(),
       isEnabled: json['disabled'] != true && json['status'] != 'Inactive',
     );
   }

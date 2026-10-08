@@ -8,6 +8,7 @@
 import crypto from 'node:crypto'
 import { getOne, getAll, getById, insert, updateById, deleteById, deleteWhere, count, genId } from './db.js'
 import { verifyPassword, hashPassword, storeFileBlob } from './seed.js'
+import { normalizeName, idByName } from './attendance_repair.js'
 
 // ─── Session helpers ────────────────────────────────────────────────
 
@@ -1291,7 +1292,22 @@ function mobileMarkAttendance(db, params, user) {
 
   // Refuse records for students who are not in this class: writing them would
   // bury the mark under a class the teacher's roster never reads.
-  const roster = new Set(getAll(db, 'students', 'class_id = ?', cls.id).map(s => s.id))
+  const classStudents = getAll(db, 'students', 'class_id = ?', cls.id)
+  const roster = new Set(classStudents.map(s => s.id))
+
+  // Older app builds sent the student's NAME as student_id (their model read
+  // the display name out of the row's `name` column). Such a write used to
+  // land where no roster could read it back; refusing it outright would just
+  // block teachers on an un-updated APK from marking at all. Resolve an
+  // unambiguous name within this class to the real id instead, and reject
+  // only ids that match nobody.
+  const nameToId = idByName(classStudents)
+  for (const r of records) {
+    if (roster.has(r.student_id)) continue
+    const resolved = nameToId.get(normalizeName(r.student_id))
+    if (resolved) r.student_id = resolved
+  }
+
   const strangers = records.filter(r => !roster.has(r.student_id)).map(r => r.student_id)
   if (strangers.length) {
     throw {

@@ -204,6 +204,31 @@ if (firstClassId) {
       fail++; console.log(`  FAIL  mark_attendance accepted an outsider student (${JSON.stringify(outsider)})`)
     }
 
+    // Old APKs post the student's NAME as student_id (their model read the
+    // display name out of the row's `name` column). The write must land on the
+    // real id anyway — otherwise teachers on an un-updated build are simply
+    // locked out of marking, and the mark stays invisible to every read.
+    const nameDay = '2024-06-05'
+    sa.prepare('DELETE FROM attendance_log WHERE class_id = ? AND date = ?')
+      .run(firstClassId, nameDay)
+    const byName = call('school_connect.api.mobile.mark_attendance', {
+      method: 'POST', sid: tsid,
+      body: { class_id: firstClassId, date: nameDay, records: [{ student_id: student.name, status: 'Present' }] },
+    })
+    const byNameRoster = call('school_connect.api.mobile.get_class_attendance', {
+      sid: tsid, params: { class_id: firstClassId, date: nameDay },
+    })
+    const byNameStatus = byNameRoster.ok
+      ? (byNameRoster.data.roster || []).find(r => r.student === student.id)?.status
+      : null
+    if (byName.ok && byNameStatus === 'Present') {
+      pass++; console.log('  PASS  mark_attendance re-keys a legacy name-based student_id to the real id')
+    } else {
+      fail++; console.log(`  FAIL  name-based student_id not normalized (ok=${byName.ok}, status=${byNameStatus})`)
+    }
+    sa.prepare('DELETE FROM attendance_log WHERE class_id = ? AND date = ?')
+      .run(firstClassId, nameDay)
+
   }
 
   // Create an assignment in that class

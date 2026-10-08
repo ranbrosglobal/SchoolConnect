@@ -14,6 +14,7 @@ import { seedSchooladmin, seedSuperadmin } from './seed.js'
 import { createServer } from './server.js'
 import { createOutbox } from './sync.js'
 import { runDailyAbsenceSweep } from './handlers.js'
+import { repairLegacyAttendance as repairAttendanceRows } from './attendance_repair.js'
 
 const SA_PORT = Number(process.env.SC_SA_PORT || 3000)
 const SU_PORT = Number(process.env.SC_SU_PORT || 3001)
@@ -98,23 +99,13 @@ function startupSync() {
 
 /**
  * Repair attendance rows written by older app builds: they posted a full ISO
- * timestamp (`2026-10-07T14:30:00.000Z`) instead of a calendar day, so a
- * teacher's saved register looked unmarked forever — the read matched
- * `date = '2026-10-07'` and never found the timestamped row.
- * Idempotent: rows already stored as YYYY-MM-DD are left untouched.
+ * timestamp (`2026-10-07T14:30:00.000Z`) instead of a calendar day and the
+ * student's NAME instead of their id, so a teacher's saved register looked
+ * unmarked forever. Idempotent; see src/attendance_repair.js.
  */
-function normalizeAttendanceDates() {
+function repairLegacyAttendance() {
   const { sa } = openDatabases()
-  const legacy = sa
-    .prepare("SELECT id, date FROM attendance_log WHERE length(date) > 10")
-    .all()
-  if (!legacy.length) {
-    console.log('[attendance] Date check: all rows already store a calendar day.')
-    return
-  }
-  const upd = sa.prepare('UPDATE attendance_log SET date = ? WHERE id = ?')
-  for (const row of legacy) upd.run(String(row.date).split('T')[0], row.id)
-  console.log(`[attendance] Normalized ${legacy.length} legacy timestamped date(s) to calendar days.`)
+  repairAttendanceRows(sa)
 }
 
 // Set up cross-backend sync (sync moved to after servers start)
@@ -146,7 +137,7 @@ const suServer = createServer({
 
 // Run startup sync AFTER servers are created (seeding happens in createServer)
 try { startupSync() } catch (e) { console.error('[sync] Startup sync failed:', e.message) }
-try { normalizeAttendanceDates() } catch (e) { console.error('[attendance] Date normalization failed:', e.message) }
+try { repairLegacyAttendance() } catch (e) { console.error('[attendance] Legacy attendance repair failed:', e.message) }
 
 // ─── Daily auto-absent sweep (7:00 PM) ───────────────────────────────
 // Classes whose teacher never marked attendance get every student recorded

@@ -29,8 +29,14 @@ class StudentGroupModel {
 
   factory StudentGroupModel.fromJson(Map<String, dynamic> json) {
     return StudentGroupModel(
-      id: json['name'] ?? json['id'] ?? '',
-      name: json['student_group_name'] ?? json['name'] ?? '',
+      // Same id/name hazard as StudentModel: class rows ship the real key in
+      // `id` and the display name in `name`.
+      id: (json['id'] ?? json['name'] ?? '').toString(),
+      name: (json['student_group_name'] ??
+              json['class_name'] ??
+              json['name'] ??
+              '')
+          .toString(),
       program: json['program'],
       programName: json['program_name'],
       course: json['course'],

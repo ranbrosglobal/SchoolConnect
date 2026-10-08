@@ -2,6 +2,7 @@
 // Run: node --experimental-sqlite scripts/verify-clear-and-sweep.mjs
 import { openDatabases, closeDatabases } from '../src/server.js'
 import { handleRequest, runDailyAbsenceSweep } from '../src/handlers.js'
+import { repairLegacyAttendance } from '../src/attendance_repair.js'
 
 const { sa, su } = openDatabases()
 const bothDbs = { sa, su }
@@ -129,6 +130,65 @@ const badClear = call('school_connect.api.mobile.clear_attendance', {
   method: 'POST', body: { class_id: cls.id, date: today },
 })
 check('clear: rejects missing session', !badClear.ok && badClear.status === 403)
+
+// ── Legacy rows written by old app builds get repaired ───────────────
+// Old builds stored the student's NAME as student_id and a full ISO timestamp
+// as the date. Both must be repaired to the real id / calendar day, or the
+// teacher's saved register stays invisible after the fix ships.
+const insertLegacy = sa.prepare(
+  'INSERT INTO attendance_log (id, student_id, class_id, school_id, date, status, recorded_by, course) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+)
+const repairDay = '2024-06-03'
+const dupDay = '2024-06-04'
+const legacyRowId = 'att-repair-legacy'
+const dupRowId = 'att-repair-dup'
+const correctRowId = 'att-repair-correct'
+sa.prepare('DELETE FROM attendance_log WHERE id IN (?, ?, ?)')
+  .run(legacyRowId, dupRowId, correctRowId)
+sa.prepare('DELETE FROM attendance_log WHERE class_id = ? AND date IN (?, ?)')
+  .run(cls.id, repairDay, dupDay)
+
+insertLegacy.run(legacyRowId, students[0].name, cls.id, students[0].school_id || '',
+  `${repairDay}T08:00:00.000Z`, 'Present', 'verify', 'Verify')
+// A correctly-keyed row for the same student/day plus a name-keyed duplicate:
+// the duplicate must be dropped, never kept as a second record for one day.
+insertLegacy.run(correctRowId, students[0].id, cls.id, students[0].school_id || '',
+  dupDay, 'Absent', 'verify', 'Verify')
+insertLegacy.run(dupRowId, students[0].name, cls.id, students[0].school_id || '',
+  `${dupDay}T09:30:00.000Z`, 'Absent', 'verify', 'Verify')
+
+const repaired = repairLegacyAttendance(sa, { log: () => {} })
+const legacyFixed = sa.prepare('SELECT student_id, date FROM attendance_log WHERE id = ?').get(legacyRowId)
+check('repair: name-based student_id re-keyed to the real id',
+  legacyFixed?.student_id === students[0].id, `(${legacyFixed?.student_id})`)
+check('repair: timestamped date normalized to a calendar day',
+  legacyFixed?.date === repairDay, `(${legacyFixed?.date})`)
+check('repair: duplicate name-keyed row dropped',
+  repaired.idsDropped >= 1 &&
+    !sa.prepare('SELECT id FROM attendance_log WHERE id = ?').get(dupRowId))
+const stillCorrect = sa.prepare('SELECT student_id, date FROM attendance_log WHERE id = ?').get(correctRowId)
+check('repair: already-correct row untouched',
+  stillCorrect?.student_id === students[0].id && stillCorrect?.date === dupDay)
+
+// The day roster must now find the repaired row by its real id.
+sa.prepare('DELETE FROM attendance_log WHERE class_id = ? AND date = ? AND id != ?')
+  .run(cls.id, repairDay, legacyRowId)
+const repairedRoster = call('school_connect.api.mobile.get_class_attendance', {
+  sid: tSid, params: { class_id: cls.id, date: repairDay },
+})
+const repairedStatus = repairedRoster.ok
+  ? repairedRoster.data.roster.find(r => r.student === students[0].id)?.status
+  : null
+check('repair: repaired row is readable by the day roster',
+  repairedStatus === 'Present', `(${repairedStatus})`)
+
+const secondPass = repairLegacyAttendance(sa, { log: () => {} })
+check('repair: idempotent (second pass changes nothing)',
+  secondPass.datesFixed === 0 && secondPass.idsFixed === 0 && secondPass.idsDropped === 0,
+  JSON.stringify(secondPass))
+
+sa.prepare('DELETE FROM attendance_log WHERE id IN (?, ?, ?)')
+  .run(legacyRowId, dupRowId, correctRowId)
 
 closeDatabases({ sa, su })
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`)
