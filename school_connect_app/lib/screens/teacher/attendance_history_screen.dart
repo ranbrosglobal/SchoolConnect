@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import '../../config/api_config.dart';
 import '../../models/course_schedule_model.dart';
 import '../../models/attendance_model.dart';
+import '../../models/school_profile_model.dart';
+import '../../services/export_service.dart';
 import '../../services/google_sheets_service.dart';
+import '../../state/school_provider.dart';
 import '../../state/teacher_provider.dart';
+import '../../widgets/export_sheet.dart';
+import 'attendance_marking_screen.dart';
 
 /// Attendance history for one class across a selectable date range:
 /// This Week / This Month / This Quarter / This Year / Custom.
@@ -25,6 +31,75 @@ class AttendanceHistoryScreen extends ConsumerStatefulWidget {
 
 enum _RangePreset { week, month, quarter, year, custom }
 
+/// Builds the export payload for a date-range attendance report.
+///
+/// Shared by this screen and the attendance marking screen's "which period?"
+/// export, so one report layout serves every caller. Days nobody marked are
+/// carried only by [AttendanceHistoryExportData.from]/[to] — the PDF lists
+/// them blank rather than inventing a status.
+AttendanceHistoryExportData buildHistoryExportData({
+  required AttendanceHistory history,
+  required CourseScheduleModel courseSchedule,
+  SchoolProfileModel? profile,
+  DateTime? from,
+  DateTime? to,
+}) {
+  return AttendanceHistoryExportData(
+    className: courseSchedule.studentGroupName ??
+        courseSchedule.studentGroup ??
+        history.className,
+    subject:
+        courseSchedule.courseName ?? courseSchedule.course ?? 'Subject',
+    teacher: courseSchedule.instructorName ?? 'Teacher',
+    room: courseSchedule.room ?? '',
+    from: from ?? history.from,
+    to: to ?? history.to,
+    totalRecords: history.summary.totalRecords,
+    markedDays: history.summary.markedDays,
+    presentCount: history.summary.present,
+    absentCount: history.summary.absent,
+    lateCount: history.summary.late,
+    leaveCount: history.summary.leave,
+    halfDayCount: history.summary.halfDay,
+    percentage: history.summary.percentage,
+    days: [
+      for (final d in history.days)
+        AttendanceHistoryExportDay(
+          date: d.date,
+          marked: d.marked,
+          present: d.present,
+          absent: d.absent,
+          percentage: d.percentage,
+        ),
+    ],
+    students: [
+      for (final s in history.students)
+        AttendanceHistoryExportStudent(
+          roll: s.rollNumber ?? '—',
+          name: s.studentName,
+          total: s.total,
+          present: s.present,
+          absent: s.absent,
+          percentage: s.percentage,
+        ),
+    ],
+    records: [
+      for (final r in history.records)
+        AttendanceHistoryExportRecord(
+          date: r.date ?? DateTime.now(),
+          name: r.studentName ?? 'Unknown',
+          status: r.statusString,
+        ),
+    ],
+    schoolName: profile?.schoolName ?? '',
+    schoolMotto: profile?.motto ?? '',
+    schoolEmail: profile?.contactEmail ?? '',
+    schoolPhone: profile?.contactNumber ?? '',
+    schoolWebsite: profile?.website ?? '',
+    schoolAddress: profile?.address ?? '',
+  );
+}
+
 class _AttendanceHistoryScreenState
     extends ConsumerState<AttendanceHistoryScreen> {
   _RangePreset _preset = _RangePreset.month;
@@ -32,6 +107,7 @@ class _AttendanceHistoryScreenState
   late DateTime _to;
   String? _error;
   bool _loading = false;
+  bool _isExporting = false;
 
   final DateFormat _df = DateFormat('d MMM yyyy');
   int _tabIndex = 0; // 0 days · 1 students · 2 records
@@ -83,8 +159,7 @@ class _AttendanceHistoryScreenState
     setState(() {
       _loading = true;
       _error = null;
-    });
-    final ok = await ref.read(teacherProvider.notifier).loadAttendanceHistory(
+    });        final ok = await ref.read(teacherProvider.notifier).loadAttendanceHistory(
       courseSchedule: widget.courseSchedule,
       from: _from,
       to: _to,
@@ -170,6 +245,33 @@ class _AttendanceHistoryScreenState
     return true;
   }
 
+  // ------------------------------------------------------------------
+  // Export (range PDF → download, share, print)
+  // ------------------------------------------------------------------
+
+  Future<void> _showExportSheet() async {
+    final history = ref.read(teacherProvider).attendanceHistory;
+    if (history == null) return;
+    setState(() => _isExporting = true);
+    try {
+      // Best-effort school branding for the report header.
+      SchoolProfileModel? profile;
+      try {
+        profile = await ref.read(schoolProvider.notifier).load();
+      } catch (_) {}
+      final data = buildHistoryExportData(
+        history: history,
+        courseSchedule: widget.courseSchedule,
+        profile: profile,
+      );
+      await ExportService.instance.applySchoolBranding(data, profile);
+      if (!mounted) return;
+      await showHistoryExportSheet(context, data);
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(teacherProvider);
@@ -182,6 +284,20 @@ class _AttendanceHistoryScreenState
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: const Text('Attendance History', style: TextStyle(fontSize: 17)),
+        actions: [
+          if (history != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: OutlinedButton.icon(
+                onPressed: _isExporting ? null : _showExportSheet,
+                icon: const Icon(Icons.ios_share,
+                    size: 16, color: Color(0xFF1E3A8A)),
+                label: const Text('Export',
+                    style:
+                        TextStyle(color: Color(0xFF1E3A8A), fontSize: 13)),
+              ),
+            ),
+        ],
       ),
       body: _loading && history == null
           ? const Center(child: CircularProgressIndicator())
@@ -481,21 +597,47 @@ class _AttendanceHistoryScreenState
 
   // ── Tab 1: days ──────────────────────────────────────────────────────
 
+  /// Open the marking screen on one specific day to view or fix it up;
+  /// reload the history when the teacher comes back.
+  Future<void> _openDay(DateTime date) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AttendanceMarkingScreen(
+          courseSchedule: widget.courseSchedule,
+          initialDate: date,
+        ),
+      ),
+    );
+    if (mounted) _load();
+  }
+
   Widget _buildDays(AttendanceHistory history) {
     if (history.days.isEmpty) {
       return _empty('No attendance was marked in this range',
           'Pick a different range from the selector above.');
     }
     return Column(
-      children: history.days.asMap().entries.map((e) {
-        final day = e.value;
-        final weekday = DateFormat('EEEE').format(day.date);
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'Tap a day to view or edit its attendance',
+            style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600),
+          ),
+        ),
+        ...history.days.asMap().entries.map((e) {
+          final day = e.value;
+          final weekday = DateFormat('EEEE').format(day.date);
         final color = day.percentage >= 75
             ? const Color(0xFF16A34A)
             : day.percentage >= 50
                 ? const Color(0xFFEA580C)
                 : const Color(0xFFDC2626);
-        return Container(
+        return InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => _openDay(day.date),
+          child: Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           decoration: BoxDecoration(
@@ -542,19 +684,24 @@ class _AttendanceHistoryScreenState
                   ],
                 ),
               ),
-              Text('$day.percentage%',
+              Text('${day.percentage}%',
                   style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 13.5,
                       color: color)),
+              const SizedBox(width: 2),
+              Icon(Icons.chevron_right_rounded,
+                  size: 18, color: Colors.grey.shade400),
             ],
           ),
+        ),
         )
             .animate()
             .fadeIn(
                 duration: 220.ms,
                 delay: Duration(milliseconds: (30 * e.key).clamp(0, 400)));
-      }).toList(),
+        }),
+      ],
     );
   }
 

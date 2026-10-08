@@ -10,7 +10,6 @@ import 'screens/create_assignment.dart';
 import 'screens/class_students_roster.dart';
 import 'screens/assignment_submissions.dart';
 import 'screens/attendance_detail_math.dart';
-import 'screens/mark_attendance.dart';
 import 'screens/teacher_assignments.dart';
 import 'screens/assignments_list.dart';
 import 'screens/my_results.dart';
@@ -43,7 +42,6 @@ class AppRoutes {
     '/ClassStudentsRoster': (context) => const ClassStudentsRoster(),
     '/AssignmentSubmissions': (context) => const AssignmentSubmissions(),
     '/AttendanceDetailMath': (context) => const AttendanceDetailMath(),
-    '/MarkAttendance': (context) => const MarkAttendance(),
     '/TeacherAssignments': (context) => const TeacherAssignments(),
     '/AssignmentsList': (context) => const AssignmentsList(),
     '/MyResults': (context) => const MyResults(),

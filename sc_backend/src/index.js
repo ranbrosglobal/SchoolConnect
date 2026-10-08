@@ -13,6 +13,7 @@ import { openDatabases, closeDatabases } from './db.js'
 import { seedSchooladmin, seedSuperadmin } from './seed.js'
 import { createServer } from './server.js'
 import { createOutbox } from './sync.js'
+import { runDailyAbsenceSweep } from './handlers.js'
 
 const SA_PORT = Number(process.env.SC_SA_PORT || 3000)
 const SU_PORT = Number(process.env.SC_SU_PORT || 3001)
@@ -95,6 +96,27 @@ function startupSync() {
   console.log(`[sync] Synced ${suSchools.length} schools, ${suAdmins.length} school admins.`)
 }
 
+/**
+ * Repair attendance rows written by older app builds: they posted a full ISO
+ * timestamp (`2026-10-07T14:30:00.000Z`) instead of a calendar day, so a
+ * teacher's saved register looked unmarked forever — the read matched
+ * `date = '2026-10-07'` and never found the timestamped row.
+ * Idempotent: rows already stored as YYYY-MM-DD are left untouched.
+ */
+function normalizeAttendanceDates() {
+  const { sa } = openDatabases()
+  const legacy = sa
+    .prepare("SELECT id, date FROM attendance_log WHERE length(date) > 10")
+    .all()
+  if (!legacy.length) {
+    console.log('[attendance] Date check: all rows already store a calendar day.')
+    return
+  }
+  const upd = sa.prepare('UPDATE attendance_log SET date = ? WHERE id = ?')
+  for (const row of legacy) upd.run(String(row.date).split('T')[0], row.id)
+  console.log(`[attendance] Normalized ${legacy.length} legacy timestamped date(s) to calendar days.`)
+}
+
 // Set up cross-backend sync (sync moved to after servers start)
 const saOutbox = createOutbox({
   consoleName: 'schooladmin',
@@ -124,6 +146,46 @@ const suServer = createServer({
 
 // Run startup sync AFTER servers are created (seeding happens in createServer)
 try { startupSync() } catch (e) { console.error('[sync] Startup sync failed:', e.message) }
+try { normalizeAttendanceDates() } catch (e) { console.error('[attendance] Date normalization failed:', e.message) }
+
+// ─── Daily auto-absent sweep (7:00 PM) ───────────────────────────────
+// Classes whose teacher never marked attendance get every student recorded
+// Absent, so the register is always complete for history and percentages.
+const ABSENCE_SWEEP_HOUR = 19
+
+function startAbsenceSweep() {
+  const { sa } = openDatabases()
+
+  // On startup: catch up if we're past 7pm and today hasn't been swept yet.
+  // A server restart at 9am must not sweep the day early, so the startup run
+  // only fires when the local hour is past the cutoff.
+  const now = new Date()
+  if (now.getHours() >= ABSENCE_SWEEP_HOUR) {
+    try {
+      runDailyAbsenceSweep(sa, now.toISOString().split('T')[0], { when: 'startup' })
+    } catch (e) {
+      console.error('[attendance] Startup absence sweep failed:', e.message)
+    }
+  }
+
+  // Tick every 5 minutes; sweep once per local day after the cutoff.
+  let lastSweptDate = now.toISOString().split('T')[0]
+  setInterval(() => {
+    try {
+      const t = new Date()
+      const date = t.toISOString().split('T')[0]
+      if (date === lastSweptDate) return
+      if (t.getHours() < ABSENCE_SWEEP_HOUR) return
+      lastSweptDate = date
+      runDailyAbsenceSweep(openDatabases().sa, date)
+    } catch (e) {
+      console.error('[attendance] Scheduled absence sweep failed:', e.message)
+    }
+  }, 5 * 60 * 1000).unref()
+  console.log(`[attendance] Auto-absent scheduler armed: unmarked classes close at ${ABSENCE_SWEEP_HOUR}:00 daily`)
+}
+
+try { startAbsenceSweep() } catch (e) { console.error('[attendance] Scheduler failed to start:', e.message) }
 
 console.log(`\nSchoolConnect backend ready!`)
 console.log(`  School Admin: http://${SERVER_IP}:${SA_PORT}`)

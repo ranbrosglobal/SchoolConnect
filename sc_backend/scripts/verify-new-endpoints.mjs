@@ -134,6 +134,12 @@ const sRevert = call('school_connect.api.mobile.change_password', {
 })
 check('student pw reverted', sRevert.ok)
 
+// This test's change leaves a real hash behind, but this dev account's
+// original state is an EMPTY password (any-password accepted). Restore it so
+// other harnesses (e2e-mobile.mjs) keep their 'any password' assumptions.
+sa.prepare("UPDATE students SET password = '' WHERE email = 'kunal.singh2@student.edu'").run()
+sa.prepare("UPDATE users SET password = '' WHERE email = 'kunal.singh2@student.edu'").run()
+
 closeDatabases({ sa, su })
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`)
 process.exit(fail ? 1 : 0)

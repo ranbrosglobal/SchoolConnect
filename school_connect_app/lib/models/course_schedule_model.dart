@@ -68,4 +68,16 @@ class CourseScheduleModel {
   }
 
   String get displayName => '${courseName ?? "Unknown"} - ${studentGroupName ?? "Unknown"}';
+
+  /// The class id to use for attendance reads AND writes.
+  ///
+  /// [studentGroup] comes straight from the API and has been seen empty (the
+  /// payload carried `student_group: ''` next to a real name), which made the
+  /// app save a register under class `''` and then read the real class back as
+  /// empty — "saved, but nothing saved" on the same screen. Never return a
+  /// blank key: fall back to the schedule/class [id].
+  String get classKey {
+    final group = studentGroup?.trim() ?? '';
+    return group.isNotEmpty ? group : id.trim();
+  }
 }

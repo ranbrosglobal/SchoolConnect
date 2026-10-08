@@ -94,12 +94,116 @@ if (firstClassId) {
 
   // Mark attendance for two students
   if (tStudents.ok && tStudents.data?.students?.length) {
+    const today = new Date().toISOString().split('T')[0]
     const recs = tStudents.data.students.slice(0, 2).map(s => ({ student_id: s.id, status: 'Present' }))
     const mark = call('school_connect.api.mobile.mark_attendance', {
       method: 'POST', sid: tsid,
-      body: { class_id: firstClassId, date: new Date().toISOString().split('T')[0], course: 'Mathematics', records: recs },
+      body: { class_id: firstClassId, date: today, course: 'Mathematics', records: recs },
     })
     report('mark_attendance', mark, mark.ok ? summarize(mark.data) : '')
+
+    // Read-back: a saved day must come back from the day roster, or the app
+    // shows "nothing saved yet" for a register the teacher just saved.
+    const readBack = call('school_connect.api.mobile.get_class_attendance', {
+      sid: tsid, params: { class_id: firstClassId, date: today },
+    })
+    const markedCount = readBack.ok
+      ? (readBack.data.roster || []).filter(r => r.status != null).length
+      : -1
+    if (markedCount >= 2) {
+      pass++; console.log(`  PASS  day roster reads back the marks just saved (${markedCount} marked)`)
+    } else {
+      fail++; console.log(`  FAIL  day roster shows ${markedCount} marked rows after saving ${recs.length}`)
+    }
+
+    // Legacy rows: older builds stored a full ISO timestamp as the date. Both
+    // the day roster and the range history must still find that calendar day.
+    const student = tStudents.data.students[0]
+    const legacyId = `att-legacy-${Date.now()}`
+    // Use a day that has NO records yet, so a pass can only come from the
+    // timestamped row (seed data already covers the recent school days).
+    let legacyDay = null
+    for (let back = 3; back <= 60 && legacyDay === null; back++) {
+      const probe = new Date(Date.now() - back * 864e5).toISOString().split('T')[0]
+      const check = call('school_connect.api.mobile.get_class_attendance', {
+        sid: tsid, params: { class_id: firstClassId, date: probe },
+      })
+      const marked = check.ok ? (check.data.roster || []).filter(r => r.status != null).length : -1
+      if (marked === 0) legacyDay = probe
+    }
+
+    if (legacyDay === null) {
+      fail++; console.log('  FAIL  no unmarked day found to plant a legacy timestamped row')
+    } else {
+      sa.prepare('INSERT INTO attendance_log (id, student_id, class_id, school_id, date, status, recorded_by, course) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(legacyId, student.id, firstClassId, student.school_id || '', `${legacyDay}T09:15:00.000Z`, 'Absent', 'e2e-legacy', 'E2E')
+
+      const legacyRead = call('school_connect.api.mobile.get_class_attendance', {
+        sid: tsid, params: { class_id: firstClassId, date: legacyDay },
+      })
+      const legacyStatus = legacyRead.ok
+        ? (legacyRead.data.roster || []).find(r => r.student === student.id)?.status
+        : null
+      if (legacyStatus === 'Absent') {
+        pass++; console.log(`  PASS  timestamped (legacy) row is found by the day roster (${legacyDay})`)
+      } else {
+        fail++; console.log(`  FAIL  legacy timestamped row not found by the day roster on ${legacyDay} (status=${legacyStatus})`)
+      }
+
+      // What the app falls back to on an un-redeployed backend: the class-wide
+      // record list, matched by calendar-day prefix on the client.
+      const courseAtt = call('school_connect.api.mobile.get_course_attendance', {
+        sid: tsid, params: { schedule_id: firstClassId },
+      })
+      const legacyRec = courseAtt.ok
+        ? (courseAtt.data.students || [])
+            .flatMap(s => (s.records || []).map(r => ({ ...r, student: s.student })))
+            .find(r => String(r.date || r.student_attendance_date || '').startsWith(legacyDay))
+        : null
+      if (legacyRec && legacyRec.student === student.id) {
+        pass++; console.log('  PASS  class-wide records expose the timestamped day (app fallback match)')
+      } else {
+        fail++; console.log('  FAIL  class-wide records do not expose the timestamped day')
+      }
+
+      const legacyHistory = call('school_connect.api.mobile.get_attendance_history', {
+        sid: tsid, params: { class_id: firstClassId, from: legacyDay, to: legacyDay },
+      })
+      const inHistory = legacyHistory.ok
+        ? (legacyHistory.data.records || []).some(r => r.id === legacyId && r.date === legacyDay)
+        : false
+      if (inHistory) {
+        pass++; console.log('  PASS  timestamped row appears in the range history on its calendar day')
+      } else {
+        fail++; console.log('  FAIL  timestamped row missing from the range history')
+      }
+
+      sa.prepare('DELETE FROM attendance_log WHERE id = ?').run(legacyId)
+    }
+
+    // A write with no class id must be refused instead of silently landing in a
+    // blank class (where the teacher's roster would never find it again).
+    const blankClass = call('school_connect.api.mobile.mark_attendance', {
+      method: 'POST', sid: tsid,
+      body: { class_id: '', date: legacyDay, records: [{ student_id: student.id, status: 'Present' }] },
+    })
+    if (!blankClass.ok && blankClass.status === 400) {
+      pass++; console.log('  PASS  mark_attendance rejects a blank class_id')
+    } else {
+      fail++; console.log(`  FAIL  mark_attendance accepted a blank class_id (${JSON.stringify(blankClass)})`)
+    }
+
+    // …and a student who is not enrolled in the class must be refused too.
+    const outsider = call('school_connect.api.mobile.mark_attendance', {
+      method: 'POST', sid: tsid,
+      body: { class_id: firstClassId, date: legacyDay, records: [{ student_id: 'st-not-in-this-class', status: 'Present' }] },
+    })
+    if (!outsider.ok && outsider.status === 400) {
+      pass++; console.log('  PASS  mark_attendance rejects students outside the class')
+    } else {
+      fail++; console.log(`  FAIL  mark_attendance accepted an outsider student (${JSON.stringify(outsider)})`)
+    }
+
   }
 
   // Create an assignment in that class

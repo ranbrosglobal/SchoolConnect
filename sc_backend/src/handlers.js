@@ -769,6 +769,25 @@ function resolveClass(db, key) {
   return { cls: null, entry: null }
 }
 
+/** Calendar-day part of an attendance date (YYYY-MM-DD). */
+function dayKey(value) {
+  return String(value || '').split('T')[0]
+}
+
+/**
+ * Every attendance row for a class on ONE calendar day.
+ *
+ * Older app builds posted `DateTime.toIso8601String()` as the date, so rows
+ * exist with values like `2026-10-07T14:30:00.000Z`. A plain `date = ?` match
+ * misses those and the day looks unmarked even though the teacher saved it.
+ * Compare calendar days instead, so every row written for that day counts.
+ */
+function attendanceRowsForDay(db, classId, date) {
+  const day = dayKey(date)
+  return getAll(db, 'attendance_log', 'class_id = ?', classId)
+    .filter(r => dayKey(r.date) === day)
+}
+
 /** Attendance records for one student, newest first. */
 function studentAttendanceFor(db, studentId, classId = null) {
   const all = getAll(db, 'attendance_log', 'student_id = ?', studentId)
@@ -798,7 +817,7 @@ function mobileGetClassAttendance(db, params, user) {
 
   const students = getAll(db, 'students', 'class_id = ?', cls.id)
     .sort((a, b) => (a.roll_number || 0) - (b.roll_number || 0))
-  const dayRecords = getAll(db, 'attendance_log', 'class_id = ? AND date = ?', cls.id, date)
+  const dayRecords = attendanceRowsForDay(db, cls.id, date)
 
   const roster = students.map(s => {
     const rec = dayRecords.find(r => r.student_id === s.id)
@@ -1254,24 +1273,44 @@ function mobileMarkAttendance(db, params, user) {
   if (!user || (user.role !== 'Teacher' && user.role !== 'School Admin')) {
     throw { status: 403, message: 'Access denied' }
   }
-  const { class_id, records } = params
+  const { records } = params
   // Accept both `date` (ISO) and `attendance_date`; normalize to YYYY-MM-DD so
   // a full ISO timestamp from the client can never split one day across two
   // keys and create duplicate rows for the same student/day.
   const rawDate = params.date || params.attendance_date
-  if (!class_id || !rawDate || !Array.isArray(records)) {
+  if (!params.class_id || !rawDate || !Array.isArray(records)) {
     throw { status: 400, message: 'class_id, date, and records array are required' }
   }
-  const date = String(rawDate).split('T')[0]
+  // Resolve first: a schedule/timetable id and a class id can both arrive here,
+  // and writes MUST land on the same key the reads use (the class id) or the
+  // saved register is invisible the moment the screen reloads.
+  const { cls } = resolveClass(db, params.class_id)
+  if (!cls) throw { status: 404, message: 'Class not found' }
+  const class_id = cls.id
+  const date = dayKey(rawDate)
+
+  // Refuse records for students who are not in this class: writing them would
+  // bury the mark under a class the teacher's roster never reads.
+  const roster = new Set(getAll(db, 'students', 'class_id = ?', cls.id).map(s => s.id))
+  const strangers = records.filter(r => !roster.has(r.student_id)).map(r => r.student_id)
+  if (strangers.length) {
+    throw {
+      status: 400,
+      message: `Not in class ${class_id}: ${strangers.slice(0, 5).join(', ')}`,
+    }
+  }
+
   for (const r of records) {
-    const existing = getAll(db, 'attendance_log', 'student_id = ? AND date = ?', r.student_id, date)
-    const existingInClass = existing.find(e => e.class_id === class_id)
+    // Match on the calendar day so a row saved by an older build (full ISO
+    // timestamp) is updated instead of duplicated.
+    const existingInClass = attendanceRowsForDay(db, class_id, date)
+      .find(e => e.student_id === r.student_id)
     if (existingInClass) {
-      updateById(db, 'attendance_log', existingInClass.id, { status: r.status })
+      updateById(db, 'attendance_log', existingInClass.id, { status: r.status, date })
     } else {
       insert(db, 'attendance_log', {
         id: genId('att-'),
-        student_id: r.student_id, class_id, school_id: user.school_id || '',
+        student_id: r.student_id, class_id, school_id: cls.school_id || user.school_id || '',
         date, status: r.status, recorded_by: user.id, course: params.course || '',
       })
     }
@@ -1279,6 +1318,77 @@ function mobileMarkAttendance(db, params, user) {
   // New day, fresh slate: each date gets its own blank roster in the app, and
   // re-marking a date overwrites instead of stacking duplicates.
   return { message: 'Attendance marked', count: records.length, date }
+}
+
+/**
+ * Mobile: clear every attendance record for a class on a date (teacher fix-up).
+ * Used by the "Clear Attendance" action — resets the day back to unmarked so
+ * the teacher can start over (or leave it for the 7pm auto-absent sweep).
+ */
+function mobileClearAttendance(db, params, user) {
+  if (!user || (user.role !== 'Teacher' && user.role !== 'School Admin')) {
+    throw { status: 403, message: 'Access denied' }
+  }
+  const rawDate = params.date || params.attendance_date
+  if (!params.class_id || !rawDate) {
+    throw { status: 400, message: 'class_id and date are required' }
+  }
+  // Resolve to the class id so the delete hits the same rows the roster reads.
+  const { cls } = resolveClass(db, params.class_id)
+  if (!cls) throw { status: 404, message: 'Class not found' }
+  const date = dayKey(rawDate)
+  const rows = attendanceRowsForDay(db, cls.id, date)
+  // LIKE '<day>%' also clears rows stored with a legacy full-ISO timestamp.
+  db.prepare('DELETE FROM attendance_log WHERE class_id = ? AND date LIKE ?')
+    .run(cls.id, `${date}%`)
+  return { message: 'Attendance cleared', count: rows.length, date }
+}
+
+/**
+ * Auto-absent sweep: any class that has NO attendance records for `date` gets
+ * a row per enrolled student marked Absent. Intended to run daily at 19:00 —
+ * classes the teacher never got to are recorded as absent instead of
+ * silently vanishing from the register.
+ *
+ * `options.when` — 'startup' (catch-up: sweep regardless of hour) or
+ * 'scheduled' (only after the 7pm cutoff).
+ * Exported for the scheduler in index.js and for tests.
+ * @returns {{classesSwept: number, studentsMarked: number, skippedClasses: number}}
+ */
+export function runDailyAbsenceSweep(db, date = new Date().toISOString().split('T')[0], options = {}) {
+  const { when = 'scheduled' } = options
+  if (when === 'scheduled') {
+    const now = new Date()
+    if (now.getHours() < 19) {
+      return { classesSwept: 0, studentsMarked: 0, skippedClasses: 0, skipped: 'before-cutoff' }
+    }
+  }
+
+  let classesSwept = 0
+  let studentsMarked = 0
+  let skippedClasses = 0
+
+  for (const cls of getAll(db, 'classes')) {
+    const students = getAll(db, 'students', 'class_id = ?', cls.id)
+    if (!students.length) continue
+    const existing = attendanceRowsForDay(db, cls.id, date)
+    if (existing.length > 0) { skippedClasses++; continue }
+
+    for (const s of students) {
+      insert(db, 'attendance_log', {
+        id: genId('att-'),
+        student_id: s.id, class_id: cls.id, school_id: cls.school_id || s.school_id || '',
+        date, status: 'Absent', recorded_by: 'system-auto', course: cls.program || '',
+      })
+      studentsMarked++
+    }
+    classesSwept++
+  }
+
+  if (classesSwept > 0) {
+    console.log(`[attendance] Auto-absent sweep for ${date}: ${classesSwept} class(es), ${studentsMarked} student(s) marked absent`)
+  }
+  return { classesSwept, studentsMarked, skippedClasses }
 }
 
 /**
@@ -1306,22 +1416,26 @@ function mobileGetAttendanceHistory(db, params, user) {
   const nameById = new Map(students.map(s => [s.id, s.name]))
   const rollById = new Map(students.map(s => [s.id, s.roll_number ?? null]))
 
+  // Compare by calendar day: legacy rows hold a full ISO timestamp, and
+  // '2026-10-07T09:00:00Z' > '2026-10-07' would silently drop them from the
+  // range even though the teacher recorded that day.
   const all = getAll(db, 'attendance_log', 'class_id = ?', cls.id)
-    .filter(r => r.date >= from && r.date <= to)
-    .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+    .map(r => ({ ...r, day: dayKey(r.date) }))
+    .filter(r => r.day >= from && r.day <= to)
+    .sort((a, b) => String(b.day).localeCompare(String(a.day)))
 
   const records = all.map(r => ({
     id: r.id,
     student: r.student_id,
     student_name: nameById.get(r.student_id) || 'Unknown student',
     roll_number: rollById.get(r.student_id) ?? null,
-    student_attendance_date: r.date,
-    date: r.date,
+    student_attendance_date: r.day,
+    date: r.day,
     status: r.status,
     course: r.course || null,
   }))
 
-  const days = [...new Set(all.map(r => r.date))].sort((a, b) => b.localeCompare(a))
+  const days = [...new Set(all.map(r => r.day))].sort((a, b) => b.localeCompare(a))
   const perStudent = students.map(s => {
     const recs = all.filter(r => r.student_id === s.id)
     const present = recs.filter(r => r.status === 'Present').length
@@ -1354,7 +1468,7 @@ function mobileGetAttendanceHistory(db, params, user) {
       percentage: all.length ? Math.round(totalPresent / all.length * 100) : 0,
     },
     days: days.map(d => {
-      const dayRecs = all.filter(r => r.date === d)
+      const dayRecs = all.filter(r => r.day === d)
       const present = dayRecs.filter(r => r.status === 'Present').length
       return {
         date: d,
@@ -1931,6 +2045,7 @@ const SA_HANDLERS = {
   'school_connect.api.mobile.get_student_assignments': mobileGetStudentAssignments,
   'school_connect.api.mobile.get_my_attendance': mobileGetMyAttendance,
   'school_connect.api.mobile.mark_attendance': mobileMarkAttendance,
+  'school_connect.api.mobile.clear_attendance': mobileClearAttendance,
   'school_connect.api.mobile.get_attendance_history': mobileGetAttendanceHistory,
   'school_connect.api.auth.change_password': mobileChangePassword,
   'school_connect.api.mobile.change_password': mobileChangePassword,

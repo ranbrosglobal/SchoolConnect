@@ -30,6 +30,17 @@ import '../models/school_model.dart';
 /// Data: All reads/writes go to the Node.js + SQLite backend.
 ///
 /// No more Google Sheets API — the backend is the single source of truth.
+
+/// Calendar-day key in the device's LOCAL timezone.
+///
+/// `DateTime.toIso8601String()` emits UTC — for a user in India (UTC+5:30) an
+/// 8 PM local mark becomes the NEXT calendar day, so a teacher marking
+/// "Absent" at night wrote it to tomorrow's register and the day they were
+/// looking at still showed unmarked. Always use this for attendance dates.
+String localDateKey(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-'
+    '${d.month.toString().padLeft(2, '0')}-'
+    '${d.day.toString().padLeft(2, '0')}';
 class GoogleSheetsService {
   static final GoogleSheetsService _instance = GoogleSheetsService._internal();
   factory GoogleSheetsService() => _instance;
@@ -453,15 +464,27 @@ class GoogleSheetsService {
     required List<AttendanceRecord> records,
     String? courseName,
   }) async {
-    final dateStr = date.toIso8601String().split('T')[0];
+    final classId = studentGroup.trim().isNotEmpty ? studentGroup.trim() : courseSchedule;
+    final dateStr = localDateKey(date);
     await _post('school_connect.api.mobile.mark_attendance', {
-      'class_id': studentGroup,
+      'class_id': classId,
       'date': dateStr,
       'course': courseName ?? courseSchedule,
       'records': records.map((r) => {
         'student_id': r.studentId,
         'status': r.statusString,
       }).toList(),
+    });
+  }
+
+  /// Clear every attendance record for a class on [date] (teacher fix-up).
+  Future<void> clearAttendance({
+    required String classId,
+    required DateTime date,
+  }) async {
+    await _post('school_connect.api.mobile.clear_attendance', {
+      'class_id': classId.trim(),
+      'date': localDateKey(date),
     });
   }
 
@@ -476,7 +499,7 @@ class GoogleSheetsService {
     final d = date ?? DateTime.now();
     final result = await _get('school_connect.api.mobile.get_class_attendance', {
       'class_id': classId,
-      'date': d.toIso8601String().split('T')[0],
+      'date': localDateKey(d),
       if (course != null && course.isNotEmpty) 'course': course,
     });
     final roster = (result is Map && result['roster'] is List)
@@ -497,6 +520,46 @@ class GoogleSheetsService {
         .toList();
   }
 
+  /// Attendance for ONE calendar day, read from the class-wide record list.
+  ///
+  /// Safety net for legacy rows: older app builds saved the date as a full ISO
+  /// timestamp, so the day roster (`date = ?`) never matches them and a saved
+  /// register reads back as unmarked. This walks every student's records and
+  /// keeps the ones whose date starts with the requested calendar day, so the
+  /// teacher sees what they saved no matter how it was stored.
+  Future<List<AttendanceModel>> getClassAttendanceForDayFromRecords(
+    String classId, {
+    required DateTime date,
+  }) async {
+    final result = await _get('school_connect.api.mobile.get_course_attendance', {
+      'schedule_id': classId,
+      'class_id': classId,
+    });
+    final dayKey = localDateKey(date);
+    final students =
+        (result is Map && result['students'] is List) ? result['students'] as List : const [];
+    final out = <AttendanceModel>[];
+    for (final raw in students.whereType<Map>()) {
+      final studentId = raw['student']?.toString();
+      if (studentId == null || studentId.isEmpty) continue;
+      final records = raw['records'] is List ? raw['records'] as List : const [];
+      for (final rec in records.whereType<Map>()) {
+        final rawDate = (rec['student_attendance_date'] ?? rec['date'] ?? '').toString();
+        if (!rawDate.startsWith(dayKey)) continue;
+        out.add(AttendanceModel(
+          id: (rec['name'] ?? rec['id'] ?? '$classId-$studentId').toString(),
+          student: studentId,
+          studentName: (raw['student_name'] ?? '').toString(),
+          studentGroup: classId,
+          date: date,
+          status: AttendanceModel.statusFromString(rec['status']?.toString()),
+        ));
+        break; // one record per student per day
+      }
+    }
+    return out;
+  }
+
   /// Full class roster with each student's status and running percentage.
   Future<List<Map<String, dynamic>>> getClassAttendanceRosterDetailed(
     String classId, {
@@ -505,7 +568,7 @@ class GoogleSheetsService {
     final d = date ?? DateTime.now();
     final result = await _get('school_connect.api.mobile.get_class_attendance', {
       'class_id': classId,
-      'date': d.toIso8601String().split('T')[0],
+      'date': localDateKey(d),
     });
     final roster = (result is Map && result['roster'] is List)
         ? result['roster'] as List
@@ -577,8 +640,8 @@ class GoogleSheetsService {
   }) async {
     final result = await _get('school_connect.api.mobile.get_attendance_history', {
       'class_id': classId,
-      'from': from.toIso8601String().split('T')[0],
-      'to': to.toIso8601String().split('T')[0],
+      'from': localDateKey(from),
+      'to': localDateKey(to),
     });
     return AttendanceHistory.fromJson(
       result is Map ? Map<String, dynamic>.from(result) : const {},

@@ -38,6 +38,7 @@
     "school_connect.api.mobile.get_student_assignments",
     "school_connect.api.mobile.get_my_attendance",
     "school_connect.api.mobile.mark_attendance",
+    "school_connect.api.mobile.clear_attendance",
     "school_connect.api.mobile.get_attendance_history",
     "school_connect.api.mobile.change_password",
     "school_connect.api.mobile.create_assignment",

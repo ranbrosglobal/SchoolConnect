@@ -7,6 +7,7 @@ import '../state/teacher_provider.dart';
 import '../state/auth_provider.dart';
 import '../models/course_schedule_model.dart';
 import '../widgets/school_header.dart';
+import 'teacher/attendance_marking_screen.dart';
 
 class TeacherDashboardMyClasses extends ConsumerStatefulWidget {
   const TeacherDashboardMyClasses({super.key});
@@ -245,9 +246,9 @@ class _TeacherDashboardMyClassesState extends ConsumerState<TeacherDashboardMyCl
                     icon: Icons.checklist,
                     label: 'Attendance',
                     onPressed: () {
-                      ref.read(teacherProvider.notifier).selectClass(schedule).then((_) {
-                        Navigator.pushNamed(context, '/MarkAttendance');
-                      });
+                      Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => AttendanceMarkingScreen(courseSchedule: schedule),
+                      ));
                     },
                   ),
                 ),
