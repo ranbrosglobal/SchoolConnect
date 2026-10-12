@@ -76,7 +76,15 @@ class AppBottomNav extends StatelessWidget {
                 for (int i = 0; i < items.length; i++)
                   Expanded(
                     child: i == aiIndex
-                        ? Center(
+                        // `heightFactor: 1` keeps this slot exactly as tall as
+                        // the orb. A bare `Center`/`Align` expands to the
+                        // tallest constraint it is handed, so inside this Row
+                        // it grew the bar to the full height of the screen and
+                        // `crossAxisAlignment: center` then parked every tab in
+                        // the middle of the display. Keep the factor.
+                        ? Align(
+                            alignment: Alignment.center,
+                            heightFactor: 1,
                             child: NavAiAction(
                               busy: aiBusy,
                               selected: index == i,
