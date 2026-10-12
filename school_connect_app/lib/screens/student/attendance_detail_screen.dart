@@ -5,11 +5,12 @@ import '../../state/student_provider.dart';
 import '../../models/attendance_model.dart';
 
 class AttendanceDetailScreen extends ConsumerStatefulWidget {
-  final String course;
+  /// Course name to filter by, or null for every subject.
+  final String? course;
 
   const AttendanceDetailScreen({
     super.key,
-    required this.course,
+    this.course,
   });
 
   @override
@@ -32,7 +33,7 @@ class _AttendanceDetailScreenState extends ConsumerState<AttendanceDetailScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.course),
+        title: Text(widget.course ?? 'Attendance history'),
       ),
       body: _buildBody(studentState),
     );

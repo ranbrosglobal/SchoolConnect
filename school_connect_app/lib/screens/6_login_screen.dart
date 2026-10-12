@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/api_config.dart';
-import '../theme/colors.dart';
-import '../state/auth_provider.dart';
-import '../models/user_model.dart';
 
+import '../config/api_config.dart';
+import '../models/user_model.dart';
+import '../state/auth_provider.dart';
+import '../theme/colors.dart';
+import '../theme/tokens.dart';
+import '../widgets/kit/kit.dart';
+
+/// Sign-in screen.
+///
+/// One screen for every role: the backend auto-detects the school, and the
+/// role lands on the matching app. The role switch is a *hint* that tailors the
+/// copy and demo accounts — it never blocks a valid sign-in.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -13,83 +22,50 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen>
-    with SingleTickerProviderStateMixin {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _passwordFocus = FocusNode();
+
   bool _isTeacherSelected = false;
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _showDemoPanel = false;
   String? _errorMessage;
 
-  late AnimationController _animController;
-  late Animation<double> _fadeAnim;
-  late Animation<Offset> _slideAnim;
-
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    );
-    _fadeAnim = CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-    );
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.0, 0.8, curve: Curves.easeOutCubic),
-    ));
-    _animController.forward();
-
-    // If a session was restored from storage, navigate straight to role dashboard
     ref.listenManual(authProvider, (previous, next) {
       if (previous?.isLoading == true && !next.isLoading) {
         final user = next.user;
-        if (next.isAuthenticated && user != null) {
-          _navigateToRole(user.role);
-        }
+        if (next.isAuthenticated && user != null) _navigateToRole(user.role);
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final user = ref.read(authProvider).user;
-      if (!ref.read(authProvider).isLoading &&
-          ref.read(authProvider).isAuthenticated &&
-          user != null) {
-        _navigateToRole(user.role);
+      final auth = ref.read(authProvider);
+      if (!auth.isLoading && auth.isAuthenticated && auth.user != null) {
+        _navigateToRole(auth.user!.role);
       }
     });
-  }
-
-  void _navigateToRole(UserRole? role) {
-    switch (role) {
-      case UserRole.superAdmin:
-        Navigator.pushReplacementNamed(context, '/SuperAdminPortal');
-      case UserRole.admin:
-      case UserRole.schoolAdmin:
-        Navigator.pushReplacementNamed(context, '/SchoolAdminDashboard');
-      case UserRole.instructor:
-        Navigator.pushReplacementNamed(context, '/TeacherDashboard');
-      default:
-        Navigator.pushReplacementNamed(context, '/StudentDashboard');
-    }
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _animController.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
-  void _setError(String? msg) {
-    setState(() => _errorMessage = msg);
+  void _navigateToRole(UserRole? role) {
+    final route = switch (role) {
+      UserRole.superAdmin => '/SuperAdminPortal',
+      UserRole.admin || UserRole.schoolAdmin => '/SchoolAdminDashboard',
+      UserRole.instructor => '/TeacherDashboard',
+      _ => '/StudentDashboard',
+    };
+    Navigator.pushReplacementNamed(context, route);
   }
 
   Future<void> _login() async {
@@ -97,12 +73,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
-      _setError('Please enter your email and password.');
+      setState(() => _errorMessage = 'Enter your email and password to continue.');
+      HapticFeedback.heavyImpact();
       return;
     }
 
-    _setError(null);
-    setState(() => _isLoading = true);
+    setState(() {
+      _errorMessage = null;
+      _isLoading = true;
+    });
     HapticFeedback.lightImpact();
 
     final success = await ref.read(authProvider.notifier).loginAuto(email, password);
@@ -112,7 +91,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (success) {
       _navigateToRole(ref.read(authProvider).user?.role);
     } else {
-      _setError(ref.read(authProvider).error ?? 'Invalid credentials');
+      setState(() =>
+          _errorMessage = ref.read(authProvider).error ?? 'Invalid credentials');
+      HapticFeedback.heavyImpact();
     }
   }
 
@@ -122,517 +103,390 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       _passwordController.text = password;
       _isTeacherSelected = isTeacher;
       _showDemoPanel = false;
+      _errorMessage = null;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: FadeTransition(
-        opacity: _fadeAnim,
-        child: SlideTransition(
-          position: _slideAnim,
-          child: SizedBox(
-            height: size.height,
-            child: Column(
-              children: [
-                _buildHeader(),
-                Expanded(
-                  child: _buildLoginCard(),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ─── Header ─────────────────────────────────────────────────────────
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 14,
-        bottom: 20,
-      ),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFE0F7EF), Color(0xFFF5F7FA)],
-        ),
-      ),
-      child: Column(
-        children: [
-          // App icon
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.primary, AppColors.darkTeal],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.35),
-                  blurRadius: 12,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.school_rounded, color: Colors.white, size: 26),
-          ),
-          const SizedBox(height: 10),
-          // Brand name
-          const Text(
-            'School Connect',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppColors.primary,
-              letterSpacing: -0.3,
-            ),
-          ),
-          const SizedBox(height: 3),
-          // Tagline
-          RichText(
-            text: TextSpan(
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppColors.outline,
-                letterSpacing: 0.2,
-              ),
-              children: [
-                const TextSpan(text: 'Learn. Teach. Grow. '),
-                TextSpan(
-                  text: 'Together.',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          // Greeting
-          const Text(
-            'Welcome back! 👋',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF1A1C1E),
-              letterSpacing: -0.4,
-            ),
-          ),
-          const SizedBox(height: 3),
-          const Text(
-            'Sign in to continue your journey',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.outline,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Login Card ─────────────────────────────────────────────────────
-  Widget _buildLoginCard() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 24,
-            spreadRadius: 2,
-            offset: const Offset(0, -6),
-          ),
-        ],
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 18),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Role toggle
-            _buildPremiumToggle(),
-            const SizedBox(height: 18),
-
-            // Email field
-            _buildCompactInput(
-              label: 'Email / ID',
-              controller: _emailController,
-              icon: Icons.email_outlined,
-              hint: 'Enter your email or ID',
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 12),
-
-            // Password field
-            _buildCompactInput(
-              label: 'Password',
-              controller: _passwordController,
-              icon: Icons.lock_outline,
-              hint: 'Enter your password',
-              obscure: _obscurePassword,
-              suffix: IconButton(
-                icon: Icon(
-                  _obscurePassword
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  color: AppColors.outline,
-                  size: 18,
-                ),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-              ),
-            ),
-            const SizedBox(height: 2),
-
-            // Forgot password
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {},
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  'Forgot Password?',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Error message
-            if (_errorMessage != null)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                margin: const EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFFECACA)),
-                ),
-                child: Row(
+      backgroundColor: AppColors.background,
+      resizeToAvoidBottomInset: true,
+      body: AuroraBackground(
+        tint: _isTeacherSelected ? AppColors.teacherAccent : AppColors.studentAccent,
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(22, 18, 22, 26),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(
-                          color: Color(0xFFDC2626),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => _setError(null),
-                      child: const Icon(Icons.close, color: Color(0xFFDC2626), size: 14),
-                    ),
+                    _brand(),
+                    const SizedBox(height: AppSpace.xl),
+                    _card(),
+                    const SizedBox(height: AppSpace.lg),
+                    _footer(),
                   ],
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-            // Login button
-            _buildLoginButton(),
-            const SizedBox(height: 14),
+  // ─── Brand block ─────────────────────────────────────────────────────────
 
-            // Sign up link
-            _buildSignUpLink(),
-            const SizedBox(height: 12),
-
-            // Demo button — only when demo credentials were configured at
-            // build time, so we never offer accounts the server does not have.
-            if (ApiConfig.hasDemoAccounts) _buildDemoButton(),
-            if (_showDemoPanel && ApiConfig.hasDemoAccounts) ...[
-              const SizedBox(height: 12),
-              _buildDemoPanel(),
-            ],
+  Widget _brand() {
+    final accent =
+        _isTeacherSelected ? AppColors.teacherAccent : AppColors.studentAccent;
+    return Column(
+      children: [
+        Container(
+          width: 62,
+          height: 62,
+          decoration: BoxDecoration(
+            gradient: AppGradients.brand,
+            borderRadius: AppRadius.brLg,
+            boxShadow: AppShadows.glow(AppColors.primary, strength: 0.38),
+          ),
+          child: const Icon(Icons.school_rounded, color: Colors.white, size: 30),
+        )
+            .animate()
+            .scale(
+              begin: const Offset(0.7, 0.7),
+              end: const Offset(1, 1),
+              duration: 520.ms,
+              curve: Curves.easeOutBack,
+            )
+            .fadeIn(duration: 380.ms),
+        const SizedBox(height: AppSpace.md),
+        Text('School Connect', style: AppText.title.copyWith(fontSize: 22)),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Learn. Teach. Grow. ', style: AppText.body.copyWith(fontSize: 12.5)),
+            Text(
+              'Together.',
+              style: AppText.body.copyWith(
+                fontSize: 12.5,
+                color: accent,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ],
         ),
-      ),
-    );
+      ],
+    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.12, end: 0, duration: 460.ms, curve: Curves.easeOutCubic);
   }
 
-  // ─── Role Toggle ────────────────────────────────────────────────────
-  Widget _buildPremiumToggle() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final toggleWidth = screenWidth - 88;
-    final halfWidth = toggleWidth / 2;
+  // ─── Card ────────────────────────────────────────────────────────────────
 
-    Widget roleButton({required bool teacher}) {
-      final selected = _isTeacherSelected == teacher;
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            setState(() => _isTeacherSelected = teacher);
-          },
-          child: SizedBox.expand(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  teacher ? Icons.person_rounded : Icons.school_rounded,
-                  size: 15,
-                  color: selected ? Colors.white : AppColors.outline,
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  teacher ? 'Teacher' : 'Student',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: selected ? Colors.white : AppColors.outline,
-                  ),
-                ),
-              ],
+  Widget _card() {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpace.lg),
+      radius: AppRadius.xl,
+      shadow: AppShadows.lifted(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Welcome back 👋', style: AppText.title.copyWith(fontSize: 20)),
+          const SizedBox(height: 4),
+          Text(
+            'Sign in to pick up where you left off.',
+            style: AppText.body.copyWith(fontSize: 13),
+          ),
+          const SizedBox(height: AppSpace.lg),
+          _roleToggle(),
+          const SizedBox(height: AppSpace.lg),
+          _field(
+            label: 'Email or ID',
+            controller: _emailController,
+            hint: _isTeacherSelected
+                ? 'teacher@school.com'
+                : 'student@school.com',
+            icon: Icons.alternate_email_rounded,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => _passwordFocus.requestFocus(),
+          ),
+          const SizedBox(height: AppSpace.sm),
+          _field(
+            label: 'Password',
+            controller: _passwordController,
+            focusNode: _passwordFocus,
+            hint: 'Your password',
+            icon: Icons.lock_outline_rounded,
+            obscure: _obscurePassword,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _login(),
+            suffix: IconButton(
+              icon: Icon(
+                _obscurePassword
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                size: 18,
+                color: AppColors.inkFaint,
+              ),
+              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              tooltip: _obscurePassword ? 'Show password' : 'Hide password',
             ),
           ),
-        ),
-      );
-    }
-
-    return Container(
-      height: 44,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(22),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => _toast('Ask your school office to reset your password'),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                'Forgot password?',
+                style: AppText.caption.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11.5,
+                ),
+              ),
+            ),
+          ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: AppSpace.sm),
+            _errorBanner(_errorMessage!),
+          ],
+          const SizedBox(height: AppSpace.md),
+          _submitButton(),
+          if (ApiConfig.hasDemoAccounts) ...[
+            const SizedBox(height: AppSpace.md),
+            _demoToggle(),
+            if (_showDemoPanel) ...[
+              const SizedBox(height: AppSpace.sm),
+              _demoPanel(),
+            ],
+          ],
+        ],
       ),
-      child: Stack(
-        children: [
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 260),
-            curve: Curves.easeInOut,
-            left: _isTeacherSelected ? 3 : halfWidth,
-            top: 3,
-            bottom: 3,
-            width: halfWidth - 3,
-            child: IgnorePointer(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: _isTeacherSelected
-                        ? [AppColors.primary, AppColors.darkTeal]
-                        : [AppColors.secondary, const Color(0xFF5C6BC0)],
-                  ),
-                  borderRadius: BorderRadius.circular(19),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (_isTeacherSelected
-                              ? AppColors.primary
-                              : AppColors.secondary)
-                          .withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+    ).animate(delay: 90.ms).fadeIn(duration: 420.ms).slideY(begin: 0.10, end: 0, duration: 480.ms, curve: Curves.easeOutCubic);
+  }
+
+  Widget _roleToggle() {
+    final accent =
+        _isTeacherSelected ? AppColors.teacherAccent : AppColors.studentAccent;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final half = constraints.maxWidth / 2;
+        Widget role(bool teacher) {
+          final selected = _isTeacherSelected == teacher;
+          return Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _isTeacherSelected = teacher);
+              },
+              child: SizedBox(
+                height: 46,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      teacher ? Icons.cast_for_education_rounded : Icons.school_rounded,
+                      size: 15,
+                      color: selected ? Colors.white : AppColors.inkFaint,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      teacher ? 'Teacher' : 'Student',
+                      style: AppText.caption.copyWith(
+                        fontSize: 12.5,
+                        color: selected ? Colors.white : AppColors.inkFaint,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
+          );
+        }
+
+        return Container(
+          height: 52,
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainer,
+            borderRadius: AppRadius.brPill,
           ),
-          Positioned(left: 0, top: 0, bottom: 0, width: halfWidth, child: roleButton(teacher: true)),
-          Positioned(right: 0, top: 0, bottom: 0, width: halfWidth, child: roleButton(teacher: false)),
-        ],
-      ),
+          child: Stack(
+            children: [
+              AnimatedPositioned(
+                duration: AppMotion.base,
+                curve: AppMotion.emphasized,
+                left: _isTeacherSelected ? 3 : half,
+                top: 3,
+                bottom: 3,
+                width: half - 3,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: _isTeacherSelected
+                        ? AppGradients.teacher
+                        : AppGradients.student,
+                    borderRadius: AppRadius.brPill,
+                    boxShadow: AppShadows.glow(accent, strength: 0.30),
+                  ),
+                ),
+              ),
+              Row(children: [role(true), role(false)]),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  // ─── Text Input ─────────────────────────────────────────────────────
-  Widget _buildCompactInput({
+  Widget _field({
     required String label,
     required TextEditingController controller,
-    required IconData icon,
     required String hint,
+    required IconData icon,
+    FocusNode? focusNode,
     bool obscure = false,
     TextInputType? keyboardType,
+    TextInputAction? textInputAction,
+    ValueChanged<String>? onSubmitted,
     Widget? suffix,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF374151),
-          ),
-        ),
-        const SizedBox(height: 5),
+        Text(label.toUpperCase(), style: AppText.eyebrow.copyWith(fontSize: 10)),
+        const SizedBox(height: 6),
         TextField(
           controller: controller,
+          focusNode: focusNode,
           obscureText: obscure,
           keyboardType: keyboardType,
-          style: const TextStyle(fontSize: 13, color: Color(0xFF1F2937)),
+          textInputAction: textInputAction,
+          onSubmitted: onSubmitted,
+          style: AppText.body.copyWith(fontSize: 14, color: AppColors.ink),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-            prefixIcon: Icon(icon, color: AppColors.primary, size: 18),
+            prefixIcon: Icon(icon, size: 18, color: AppColors.primary),
             suffixIcon: suffix,
-            filled: true,
-            fillColor: const Color(0xFFF8FAFC),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           ),
         ),
       ],
     );
   }
 
-  // ─── Login Button ───────────────────────────────────────────────────
-  Widget _buildLoginButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 44,
-      child: DecoratedBox(
+  Widget _errorBanner(String message) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: AppColors.dangerSoft,
+        borderRadius: AppRadius.brSm,
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline_rounded, size: 16, color: AppColors.dangerDark),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              message,
+              style: AppText.caption.copyWith(
+                color: AppColors.dangerDark,
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => setState(() => _errorMessage = null),
+            child: const Icon(Icons.close_rounded, size: 15, color: AppColors.dangerDark),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 220.ms).slideX(begin: -0.04);
+  }
+
+  Widget _submitButton() {
+    final accent =
+        _isTeacherSelected ? AppColors.teacherAccent : AppColors.studentAccent;
+    return Pressable(
+      onTap: () {
+        if (!_isLoading) _login();
+      },
+      borderRadius: AppRadius.brMd,
+      child: AnimatedContainer(
+        duration: AppMotion.base,
+        height: 52,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary, AppColors.darkTeal],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.35),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          gradient: _isTeacherSelected ? AppGradients.teacher : AppGradients.student,
+          borderRadius: AppRadius.brMd,
+          boxShadow: AppShadows.glow(accent, strength: 0.34),
         ),
-        child: ElevatedButton(
-          onPressed: _isLoading ? null : _login,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: Colors.transparent,
-            disabledForegroundColor: Colors.white.withValues(alpha: 0.6),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 0,
-          ),
-          child: _isLoading
-              ? const SizedBox(
-                  height: 18,
-                  width: 18,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white),
-                )
-              : const Text(
-                  'Login',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
+        alignment: Alignment.center,
+        child: _isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _isTeacherSelected ? 'Sign in to teach' : 'Sign in to learn',
+                    style: AppText.cardTitle.copyWith(
+                      color: Colors.white,
+                      fontSize: 15,
+                    ),
                   ),
-                ),
-        ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.arrow_forward_rounded,
+                      size: 17, color: Colors.white),
+                ],
+              ),
       ),
     );
   }
 
-  // ─── Sign Up Link ───────────────────────────────────────────────────
-  Widget _buildSignUpLink() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text(
-          "Don't have an account? ",
-          style: TextStyle(
-            color: AppColors.outline,
-            fontSize: 11,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-        GestureDetector(
-          onTap: () => Navigator.pushNamed(context, '/SignupStep1'),
-          child: const Text(
-            'Sign up as Student →',
-            style: TextStyle(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w700,
-              fontSize: 11,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ─── Demo Button ────────────────────────────────────────────────────
-  Widget _buildDemoButton() {
-    return GestureDetector(
+  Widget _demoToggle() {
+    return Pressable(
       onTap: () => setState(() => _showDemoPanel = !_showDemoPanel),
+      borderRadius: AppRadius.brSm,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
           color: AppColors.primary.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.15),
-          ),
+          borderRadius: AppRadius.brSm,
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.16)),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.rocket_launch_rounded,
-              size: 13,
-              color: AppColors.primary,
-            ),
-            const SizedBox(width: 6),
+            const Icon(Icons.rocket_launch_rounded, size: 14, color: AppColors.primary),
+            const SizedBox(width: 7),
             Text(
-              'Try Demo Account',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+              'Try a demo account',
+              style: AppText.caption.copyWith(
                 color: AppColors.primary,
+                fontWeight: FontWeight.w800,
+                fontSize: 11.5,
               ),
             ),
             const SizedBox(width: 4),
             Icon(
               _showDemoPanel
-                  ? Icons.keyboard_arrow_up
-                  : Icons.keyboard_arrow_down,
+                  ? Icons.keyboard_arrow_up_rounded
+                  : Icons.keyboard_arrow_down_rounded,
               size: 16,
               color: AppColors.primary,
             ),
@@ -642,93 +496,120 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
-  // ─── Demo Panel ─────────────────────────────────────────────────────
-  Widget _buildDemoPanel() {
+  Widget _demoPanel() {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.surfaceContainerLow,
+        borderRadius: AppRadius.brMd,
         border: Border.all(color: AppColors.hairlineBorder),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          const Text(
-            'Quick Demo Access',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF374151),
+          if (ApiConfig.hasDemoStudent)
+            Expanded(
+              child: _demoChip(
+                label: 'Student',
+                icon: Icons.school_rounded,
+                accent: AppColors.studentAccent,
+                onTap: () => _fillDemo(
+                  ApiConfig.demoStudentEmail,
+                  ApiConfig.demoStudentPassword,
+                  false,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              if (ApiConfig.hasDemoStudent)
-                Expanded(
-                  child: _demoAccountChip(
-                    label: 'Student',
-                    icon: Icons.school_rounded,
-                    color: AppColors.secondary,
-                    onTap: () => _fillDemo(
-                        ApiConfig.demoStudentEmail,
-                        ApiConfig.demoStudentPassword,
-                        false),
-                  ),
+          if (ApiConfig.hasDemoStudent && ApiConfig.hasDemoTeacher)
+            const SizedBox(width: 8),
+          if (ApiConfig.hasDemoTeacher)
+            Expanded(
+              child: _demoChip(
+                label: 'Teacher',
+                icon: Icons.cast_for_education_rounded,
+                accent: AppColors.teacherAccent,
+                onTap: () => _fillDemo(
+                  ApiConfig.demoTeacherEmail,
+                  ApiConfig.demoTeacherPassword,
+                  true,
                 ),
-              if (ApiConfig.hasDemoStudent && ApiConfig.hasDemoTeacher)
-                const SizedBox(width: 8),
-              if (ApiConfig.hasDemoTeacher)
-                Expanded(
-                  child: _demoAccountChip(
-                    label: 'Teacher',
-                    icon: Icons.person_rounded,
-                    color: AppColors.primary,
-                    onTap: () => _fillDemo(
-                        ApiConfig.demoTeacherEmail,
-                        ApiConfig.demoTeacherPassword,
-                        true),
-                  ),
-                ),
-            ],
-          ),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _demoAccountChip({
+  Widget _demoChip({
     required String label,
     required IconData icon,
-    required Color color,
+    required Color accent,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
+      borderRadius: AppRadius.brSm,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          color: accent.withValues(alpha: 0.08),
+          borderRadius: AppRadius.brSm,
+          border: Border.all(color: accent.withValues(alpha: 0.28)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 14, color: color),
+            Icon(icon, size: 14, color: accent),
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: color,
+              style: AppText.caption.copyWith(
+                fontSize: 11.5,
+                color: accent,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _footer() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              "Don't have an account? ",
+              style: AppText.caption.copyWith(fontSize: 12),
+            ),
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, '/SignupStep1'),
+              child: Text(
+                'Sign up as a student →',
+                style: AppText.caption.copyWith(
+                  fontSize: 12,
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'Teachers and admins are created by the school office.',
+          textAlign: TextAlign.center,
+          style: AppText.caption.copyWith(fontSize: 10.5, color: AppColors.inkFaint),
+        ),
+      ],
+    ).animate(delay: 180.ms).fadeIn(duration: 420.ms);
+  }
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }

@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'student_home_tab.dart';
-import 'student_classes_tab.dart';
-import 'student_timetable_tab.dart';
-import 'student_messages_tab.dart';
-import 'student_profile_tab.dart';
 
+import '../../state/assistant_provider.dart';
+import '../../theme/colors.dart';
+import '../../theme/tokens.dart';
+import '../../widgets/kit/kit.dart';
+import '../assistant/assistant_screen.dart';
+import 'student_classes_tab.dart';
+import 'student_home_tab.dart';
+import 'student_profile_tab.dart';
+import 'student_timetable_tab.dart';
+
+/// Student shell: four tabs with the AI copilot as the center destination.
+///
+/// The assistant sits in the middle of the bar because it is the one thing a
+/// student reaches for between screens — it is a destination, not a utility.
 class StudentDashboard extends ConsumerStatefulWidget {
   const StudentDashboard({super.key});
 
@@ -14,99 +23,40 @@ class StudentDashboard extends ConsumerStatefulWidget {
 }
 
 class _StudentDashboardState extends ConsumerState<StudentDashboard> {
-  int _selectedIndex = 0;
+  static const int _aiIndex = 2;
+  int _index = 0;
 
-  final List<Widget> _tabs = const [
+  static const List<AppNavItem> _items = [
+    AppNavItem(icon: Icons.home_outlined, selectedIcon: Icons.home_rounded, label: 'Home'),
+    AppNavItem(icon: Icons.grid_view_outlined, selectedIcon: Icons.grid_view_rounded, label: 'Classes'),
+    AppNavItem(icon: Icons.auto_awesome_outlined, selectedIcon: Icons.auto_awesome_rounded, label: 'Ask AI'),
+    AppNavItem(icon: Icons.calendar_today_outlined, selectedIcon: Icons.calendar_today_rounded, label: 'Calendar'),
+    AppNavItem(icon: Icons.person_outline_rounded, selectedIcon: Icons.person_rounded, label: 'Profile'),
+  ];
+
+  static const List<Widget> _tabs = [
     StudentHomeTab(),
     StudentClassesTab(),
+    AssistantScreen(),
     StudentTimetableTab(),
-    StudentMessagesTab(),
     StudentProfileTab(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final thinking = ref.watch(assistantProvider.select((s) => s.thinking));
+
     return Scaffold(
-      body: _tabs[_selectedIndex],
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: (index) => setState(() => _selectedIndex = index),
-          backgroundColor: Colors.white,
-          elevation: 0,
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: const Color(0xFF673AB7), // Purple matching the design
-          unselectedItemColor: Colors.grey[400],
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.home_outlined),
-              ),
-              activeIcon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.home),
-              ),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.grid_view_outlined),
-              ),
-              activeIcon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.grid_view_rounded),
-              ),
-              label: 'Classes',
-            ),
-            BottomNavigationBarItem(
-              icon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.calendar_today_outlined),
-              ),
-              activeIcon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.calendar_today),
-              ),
-              label: 'Calendar',
-            ),
-            BottomNavigationBarItem(
-              icon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.chat_bubble_outline),
-              ),
-              activeIcon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.chat_bubble),
-              ),
-              label: 'Messages',
-            ),
-            BottomNavigationBarItem(
-              icon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.person_outline),
-              ),
-              activeIcon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.person),
-              ),
-              label: 'Profile',
-            ),
-          ],
-        ),
+      backgroundColor: AppColors.background,
+      extendBody: true,
+      body: IndexedStack(index: _index, children: _tabs),
+      bottomNavigationBar: AppBottomNav(
+        index: _index,
+        role: AppRoleStyle.student,
+        items: _items,
+        aiIndex: _aiIndex,
+        aiBusy: thinking,
+        onChanged: (i) => setState(() => _index = i),
       ),
     );
   }

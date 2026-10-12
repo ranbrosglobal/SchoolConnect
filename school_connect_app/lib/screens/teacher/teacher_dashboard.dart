@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'teacher_home_tab.dart';
-import 'teacher_classes_tab.dart';
+
+import '../../state/assistant_provider.dart';
+import '../../theme/colors.dart';
+import '../../theme/tokens.dart';
+import '../../widgets/kit/kit.dart';
+import '../assistant/assistant_screen.dart';
 import 'teacher_calendar_tab.dart';
-import 'teacher_messages_tab.dart';
+import 'teacher_classes_tab.dart';
+import 'teacher_home_tab.dart';
 import 'teacher_profile_tab.dart';
 
+/// Teacher shell: the same structure as the student app with the teacher's
+/// accent — consistent muscle memory across roles, distinct identity.
 class TeacherDashboard extends ConsumerStatefulWidget {
   const TeacherDashboard({super.key});
 
@@ -14,99 +21,40 @@ class TeacherDashboard extends ConsumerStatefulWidget {
 }
 
 class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
-  int _selectedIndex = 0;
+  static const int _aiIndex = 2;
+  int _index = 0;
 
-  final List<Widget> _tabs = const [
+  static const List<AppNavItem> _items = [
+    AppNavItem(icon: Icons.space_dashboard_outlined, selectedIcon: Icons.space_dashboard_rounded, label: 'Home'),
+    AppNavItem(icon: Icons.class_outlined, selectedIcon: Icons.class_rounded, label: 'Classes'),
+    AppNavItem(icon: Icons.auto_awesome_outlined, selectedIcon: Icons.auto_awesome_rounded, label: 'Ask AI'),
+    AppNavItem(icon: Icons.calendar_month_outlined, selectedIcon: Icons.calendar_month_rounded, label: 'Calendar'),
+    AppNavItem(icon: Icons.person_outline_rounded, selectedIcon: Icons.person_rounded, label: 'Profile'),
+  ];
+
+  static const List<Widget> _tabs = [
     TeacherHomeTab(),
     TeacherClassesTab(),
+    AssistantScreen(),
     TeacherCalendarTab(),
-    TeacherMessagesTab(),
     TeacherProfileTab(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final thinking = ref.watch(assistantProvider.select((s) => s.thinking));
+
     return Scaffold(
-      body: _tabs[_selectedIndex],
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: (index) => setState(() => _selectedIndex = index),
-          backgroundColor: Colors.white,
-          elevation: 0,
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: const Color(0xFF1976D2),
-          unselectedItemColor: Colors.grey[400],
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.home_outlined),
-              ),
-              activeIcon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.home),
-              ),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.class_outlined),
-              ),
-              activeIcon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.class_),
-              ),
-              label: 'Classes',
-            ),
-            BottomNavigationBarItem(
-              icon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.calendar_today_outlined),
-              ),
-              activeIcon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.calendar_today),
-              ),
-              label: 'Calendar',
-            ),
-            BottomNavigationBarItem(
-              icon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.chat_bubble_outline),
-              ),
-              activeIcon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.chat_bubble),
-              ),
-              label: 'Messages',
-            ),
-            BottomNavigationBarItem(
-              icon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.person_outline),
-              ),
-              activeIcon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.person),
-              ),
-              label: 'Profile',
-            ),
-          ],
-        ),
+      backgroundColor: AppColors.background,
+      extendBody: true,
+      body: IndexedStack(index: _index, children: _tabs),
+      bottomNavigationBar: AppBottomNav(
+        index: _index,
+        role: AppRoleStyle.teacher,
+        items: _items,
+        aiIndex: _aiIndex,
+        aiBusy: thinking,
+        onChanged: (i) => setState(() => _index = i),
       ),
     );
   }
