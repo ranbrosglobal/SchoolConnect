@@ -6,6 +6,7 @@ import '../state/auth_provider.dart';
 import '../theme/colors.dart';
 import '../theme/tokens.dart';
 import '../widgets/kit/kit.dart';
+import 'admin/executive_reports.dart';
 
 /// Super Admin portal — runs against the dedicated super-admin site (its own
 /// database). Lets the super admin register schools (each school lives on its
@@ -23,6 +24,8 @@ class _SuperAdminPortalState extends ConsumerState<SuperAdminPortal> {
   String? _error;
   List<SuperSchoolModel> _schools = [];
   final _search = TextEditingController();
+  /// Executive reports are the main view; the school list is one tap away.
+  bool _showReports = true;
 
   @override
   void initState() {
@@ -341,6 +344,56 @@ class _SuperAdminPortalState extends ConsumerState<SuperAdminPortal> {
 
   // ─── Form pieces ─────────────────────────────────────────────────────────
 
+  Widget _viewToggle() {
+    Widget segment(bool reports, String label, IconData icon) {
+      final selected = _showReports == reports;
+      return Expanded(
+        child: Pressable(
+          onTap: () => setState(() => _showReports = reports),
+          borderRadius: AppRadius.brPill,
+          child: AnimatedContainer(
+            duration: AppMotion.base,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: selected ? AppColors.superAccent : Colors.transparent,
+              borderRadius: AppRadius.brPill,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 16,
+                    color: selected ? Colors.white : AppColors.inkSoft),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: AppText.cardTitle.copyWith(
+                    fontSize: 13,
+                    color: selected ? Colors.white : AppColors.inkSoft,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.brPill,
+        border: Border.all(color: AppColors.hairlineBorder),
+      ),
+      child: Row(
+        children: [
+          segment(true, 'Reports', Icons.insights_rounded),
+          segment(false, 'Schools', Icons.apartment_rounded),
+        ],
+      ),
+    );
+  }
+
   Widget _field(
     TextEditingController controller,
     String label,
@@ -491,6 +544,11 @@ class _SuperAdminPortalState extends ConsumerState<SuperAdminPortal> {
                       icon: Icons.dns_outlined,
                     )
                   else ...[
+                    _viewToggle(),
+                    const SizedBox(height: AppSpace.lg),
+                    if (_showReports)
+                      SuperExecutiveReports(schools: _schools)
+                    else ...[
                     Row(
                       children: [
                         Expanded(
@@ -611,6 +669,7 @@ class _SuperAdminPortalState extends ConsumerState<SuperAdminPortal> {
                           child: _schoolCard(schools[i]),
                         ),
                       ),
+                    ],
                   ],
                 ]),
               ),

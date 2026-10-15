@@ -1,251 +1,257 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
-class TeacherCalendarTab extends StatelessWidget {
+import '../../models/course_schedule_model.dart';
+import '../../models/timetable_model.dart';
+import '../../state/auth_provider.dart';
+import '../../theme/colors.dart';
+import '../../theme/tokens.dart';
+import '../../widgets/kit/kit.dart';
+import 'teacher_class_hub_screen.dart';
+
+/// Teacher calendar: the real weekly timetable, one day at a time.
+/// Tapping a lesson opens that class.
+class TeacherCalendarTab extends ConsumerStatefulWidget {
   const TeacherCalendarTab({super.key});
 
   @override
+  ConsumerState<TeacherCalendarTab> createState() => _TeacherCalendarTabState();
+}
+
+class _TeacherCalendarTabState extends ConsumerState<TeacherCalendarTab> {
+  TimetableModel? _timetable;
+  bool _loading = true;
+  String? _error;
+  DateTime _selected = _dayOnly(DateTime.now());
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  static DateTime _dayOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  /// Monday of the current week.
+  DateTime get _weekStart {
+    final today = _dayOnly(DateTime.now());
+    return today.subtract(Duration(days: today.weekday - 1));
+  }
+
+  Future<void> _load() async {
+    if (mounted) setState(() => _error = null);
+    try {
+      final timetable = await ref.read(apiServiceProvider).getMyTimetable();
+      if (mounted) setState(() => _timetable = timetable);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  List<ScheduleRow> _rowsFor(DateTime day) {
+    final rows = (_timetable?.timetable ?? const <ScheduleRow>[])
+        .where((r) => _dayOnly(r.date) == day)
+        .toList();
+    rows.sort((a, b) => (a.fromTime ?? '').compareTo(b.fromTime ?? ''));
+    return rows;
+  }
+
+  CourseScheduleModel _scheduleFor(ScheduleRow r) => CourseScheduleModel(
+        id: r.classId ?? r.name,
+        course: r.course,
+        courseName: r.courseName,
+        studentGroup: r.classId,
+        studentGroupName: r.studentGroupName,
+        instructorName: r.instructorName,
+        scheduleDate: r.date,
+        startTime: r.fromTime,
+        endTime: r.toTime,
+        room: r.room,
+      );
+
+  @override
   Widget build(BuildContext context) {
+    final rows = _rowsFor(_selected);
+    final isToday = _selected == _dayOnly(DateTime.now());
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Today\'s Schedule',
-          style: TextStyle(
-            color: Color(0xFF1E3A8A),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_month_outlined, color: Color(0xFF1976D2)),
-            onPressed: () {},
-          ),
-        ],
-      ),
+      backgroundColor: AppColors.background,
       body: Column(
-        children: [
-          _buildDateSelector(),
-          const SizedBox(height: 16),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  _buildTimelineItem(
-                    time: '08:00 AM',
-                    title: 'Class 8A',
-                    subtitle: 'Mathematics\nRoom 201',
-                    icon: Icons.calculate_outlined,
-                    color: const Color(0xFF1976D2),
-                    bgColor: const Color(0xFFE3F2FD),
-                    isFirst: true,
-                  ),
-                  _buildTimelineItem(
-                    time: '09:15 AM',
-                    title: 'Class 8B',
-                    subtitle: 'Science\nRoom 203',
-                    icon: Icons.science_outlined,
-                    color: const Color(0xFF4CAF50),
-                    bgColor: const Color(0xFFE8F5E9),
-                  ),
-                  _buildTimelineItem(
-                    time: '11:00 AM',
-                    title: 'Class 9A',
-                    subtitle: 'Mathematics\nRoom 202',
-                    icon: Icons.functions,
-                    color: const Color(0xFF9C27B0),
-                    bgColor: const Color(0xFFF3E5F5),
-                  ),
-                  _buildTimelineItem(
-                    time: '01:00 PM',
-                    title: 'Staff Meeting',
-                    subtitle: 'Room 101',
-                    icon: Icons.people_outline,
-                    color: const Color(0xFFFF9800),
-                    bgColor: const Color(0xFFFFF3E0),
-                    isLast: true,
-                  ),
-                  const SizedBox(height: 24),
-                  Image.asset(
-                    'assets/images/teacher_working.png', // Placeholder
-                    height: 150,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      height: 150,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.computer, size: 60, color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateSelector() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildDateNode('Mon', '20', isSelected: true),
-          _buildDateNode('Tue', '21'),
-          _buildDateNode('Wed', '22'),
-          _buildDateNode('Thu', '23'),
-          _buildDateNode('Fri', '24'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateNode(String day, String date, {bool isSelected = false}) {
-    return Column(
-      children: [
-        Text(
-          day,
-          style: TextStyle(
-            color: isSelected ? const Color(0xFF1976D2) : Colors.grey.shade500,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF1976D2) : Colors.transparent,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              date,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.black87,
-                fontSize: 16,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTimelineItem({
-    required String time,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required Color bgColor,
-    bool isFirst = false,
-    bool isLast = false,
-  }) {
-    return IntrinsicHeight(
-      child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            width: 70,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                time,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade600,
-                ),
-                textAlign: TextAlign.right,
-              ),
-            ),
+          GradientHeader(
+            role: AppRoleStyle.teacher,
+            eyebrow: 'Your timetable',
+            title: 'Calendar',
+            subtitle: DateFormat('MMMM y').format(DateTime.now()),
           ),
-          const SizedBox(width: 16),
-          Column(
-            children: [
-              Container(
-                width: 2,
-                height: 16,
-                color: isFirst ? Colors.transparent : Colors.grey.shade300,
-              ),
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withOpacity(0.3),
-                      blurRadius: 4,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Container(
-                  width: 2,
-                  color: isLast ? Colors.transparent : Colors.grey.shade300,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 16),
+          _weekStrip(),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 32),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            child: RefreshIndicator(
+              onRefresh: _load,
+              color: AppColors.teacherAccent,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics()),
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E3A8A),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade600,
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
-                    ),
+                  SectionHeader(
+                    eyebrow: DateFormat('EEEE, d MMM').format(_selected),
+                    title: isToday ? 'Today' : 'Lessons',
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: bgColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(icon, color: color, size: 24),
-                  ),
+                  const SizedBox(height: AppSpace.md),
+                  if (_loading && _timetable == null)
+                    const SkeletonCard(lines: 3)
+                  else if (_error != null && _timetable == null)
+                    ErrorState(message: _error!, onRetry: _load)
+                  else if (rows.isEmpty)
+                    const EmptyState(
+                      icon: Icons.event_available_rounded,
+                      title: 'No lessons this day',
+                      message:
+                          'Lessons from your timetable will show up here.',
+                    )
+                  else
+                    for (final r in rows)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _lessonCard(r),
+                      ),
                 ],
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _weekStrip() {
+    final start = _weekStart;
+    return SizedBox(
+      height: 84,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        itemCount: 7,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final day = start.add(Duration(days: i));
+          final selected = day == _selected;
+          final hasLessons = _rowsFor(day).isNotEmpty;
+          return Pressable(
+            onTap: () => setState(() => _selected = day),
+            borderRadius: AppRadius.brLg,
+            child: AnimatedContainer(
+              duration: AppMotion.base,
+              width: 52,
+              decoration: BoxDecoration(
+                color: selected ? AppColors.teacherAccent : AppColors.surface,
+                borderRadius: AppRadius.brLg,
+                border: Border.all(
+                  color: selected
+                      ? AppColors.teacherAccent
+                      : AppColors.hairlineBorder,
+                ),
+                boxShadow:
+                    selected ? AppShadows.glow(AppColors.teacherAccent) : null,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    DateFormat('E').format(day).toUpperCase(),
+                    style: AppText.eyebrow.copyWith(
+                      fontSize: 10,
+                      color: selected ? Colors.white70 : AppColors.inkFaint,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${day.day}',
+                    style: AppText.cardTitle.copyWith(
+                      fontSize: 16,
+                      color: selected ? Colors.white : AppColors.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: hasLessons
+                          ? (selected ? Colors.white : AppColors.teacherAccent)
+                          : Colors.transparent,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _lessonCard(ScheduleRow r) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpace.md),
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => TeacherClassHubScreen(courseSchedule: _scheduleFor(r)),
+      )),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.teacherAccentSoft,
+              borderRadius: AppRadius.brMd,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  r.fromTime ?? '—',
+                  style: AppText.cardTitle.copyWith(
+                    fontSize: 12,
+                    color: AppColors.teacherAccent,
+                  ),
+                ),
+                if (r.toTime != null)
+                  Text(r.toTime!,
+                      style: AppText.caption.copyWith(fontSize: 10)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  r.courseName,
+                  style: AppText.cardTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  [
+                    if (r.studentGroupName != null) r.studentGroupName!,
+                    if (r.room != null) 'Room ${r.room}',
+                  ].join('  ·  '),
+                  style: AppText.caption.copyWith(fontSize: 11.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: AppColors.inkFaint),
         ],
       ),
     );

@@ -25,15 +25,15 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
   int _index = 0;
 
   static const List<AppNavItem> _items = [
-    AppNavItem(icon: Icons.space_dashboard_outlined, selectedIcon: Icons.space_dashboard_rounded, label: 'Home'),
-    AppNavItem(icon: Icons.class_outlined, selectedIcon: Icons.class_rounded, label: 'Classes'),
-    AppNavItem(icon: Icons.auto_awesome_outlined, selectedIcon: Icons.auto_awesome_rounded, label: 'Ask AI'),
-    AppNavItem(icon: Icons.calendar_month_outlined, selectedIcon: Icons.calendar_month_rounded, label: 'Calendar'),
-    AppNavItem(icon: Icons.person_outline_rounded, selectedIcon: Icons.person_rounded, label: 'Profile'),
+    AppNavItem(icon: Icons.space_dashboard_outlined, selectedIcon: Icons.space_dashboard_rounded, label: 'Home', doodle: DoodleKind.home),
+    AppNavItem(icon: Icons.class_outlined, selectedIcon: Icons.class_rounded, label: 'Classes', doodle: DoodleKind.classes),
+    AppNavItem(icon: Icons.auto_awesome_outlined, selectedIcon: Icons.auto_awesome_rounded, label: 'Ask AI', doodle: DoodleKind.sparkle),
+    AppNavItem(icon: Icons.calendar_month_outlined, selectedIcon: Icons.calendar_month_rounded, label: 'Calendar', doodle: DoodleKind.calendar),
+    AppNavItem(icon: Icons.person_outline_rounded, selectedIcon: Icons.person_rounded, label: 'Profile', doodle: DoodleKind.profile),
   ];
 
-  static const List<Widget> _tabs = [
-    TeacherHomeTab(),
+  List<Widget> get _tabs => [
+    TeacherHomeTab(onOpenTab: (i) => setState(() => _index = i)),
     TeacherClassesTab(),
     AssistantScreen(),
     TeacherCalendarTab(),

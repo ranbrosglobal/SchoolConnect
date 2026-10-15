@@ -12,6 +12,7 @@ import '../../theme/tokens.dart';
 import '../../widgets/info_sheets.dart';
 import '../../widgets/kit/kit.dart';
 import '../auth/login_screen.dart';
+import 'teacher_assignments_screen.dart';
 import 'teacher_settings_screen.dart';
 
 /// Teacher profile: identity, teaching workload, then settings.
@@ -112,7 +113,7 @@ class TeacherProfileTab extends ConsumerWidget {
                             : '${ctx.assignmentsNeedingGrades.length} assignment(s) awaiting grades',
                         onTap: () {
                           HapticFeedback.selectionClick();
-                          _showWorkloadSheet(context, ctx);
+                          _push(context, const TeacherAssignmentsScreen(startWithToGrade: true));
                         },
                       ),
                       _Tile(
@@ -122,7 +123,7 @@ class TeacherProfileTab extends ConsumerWidget {
                         subtitle: '${ctx.assignments.length} set in total',
                         onTap: () {
                           HapticFeedback.selectionClick();
-                          _showWorkloadSheet(context, ctx);
+                          _push(context, const TeacherAssignmentsScreen());
                         },
                       ),
                     ],
@@ -357,65 +358,6 @@ class TeacherProfileTab extends ConsumerWidget {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
-    );
-  }
-
-  void _showWorkloadSheet(BuildContext context, AssistantContext ctx) {
-    final backlog = ctx.gradingBacklog.where((r) => r.pending > 0).toList();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SectionHeader(title: 'Grading workload'),
-            const SizedBox(height: AppSpace.md),
-            if (backlog.isEmpty)
-              const EmptyState(
-                icon: Icons.done_all_rounded,
-                accent: AppColors.success,
-                title: 'Everything is graded',
-                message: 'No submissions are waiting on you right now.',
-              )
-            else
-              for (final r in backlog.take(6))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              r.assignment.title,
-                              style: AppText.cardTitle.copyWith(fontSize: 13.5),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${r.assignment.studentGroupName ?? 'Class'} · '
-                              '${r.assignment.submittedCount}/${r.assignment.totalStudents} submitted',
-                              style: AppText.caption.copyWith(fontSize: 11.5),
-                            ),
-                          ],
-                        ),
-                      ),
-                      StatusPill(
-                        label: '${r.pending} to grade',
-                        tone: r.pending > 10 ? PillTone.danger : PillTone.warning,
-                        dense: true,
-                      ),
-                    ],
-                  ),
-                ),
-          ],
-        ),
-      ),
     );
   }
 

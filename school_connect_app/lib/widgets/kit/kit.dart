@@ -12,6 +12,7 @@ library;
 
 export 'ai_visuals.dart';
 export 'data_viz.dart';
+export 'doodle_icons.dart';
 export 'foundation.dart';
 export 'headers.dart';
 export 'nav.dart';

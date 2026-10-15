@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/colors.dart';
 import '../../theme/tokens.dart';
+import 'doodle_icons.dart';
 import 'foundation.dart';
 
 class AppNavItem {
@@ -9,10 +10,14 @@ class AppNavItem {
   final IconData selectedIcon;
   final String label;
 
+  /// Optional doodle glyph. When set it replaces the Material icons.
+  final DoodleKind? doodle;
+
   const AppNavItem({
     required this.icon,
     required this.selectedIcon,
     required this.label,
+    this.doodle,
   });
 }
 
@@ -156,12 +161,22 @@ class _NavTile extends StatelessWidget {
                     curve: AppMotion.springy,
                     child: AnimatedSwitcher(
                       duration: AppMotion.fast,
-                      child: Icon(
-                        selected ? item.selectedIcon : item.icon,
-                        key: ValueKey(selected),
-                        size: 22,
-                        color: selected ? role.accent : AppColors.inkFaint,
-                      ),
+                      child: item.doodle != null
+                          ? DoodleIcon(
+                              key: ValueKey(selected),
+                              kind: item.doodle!,
+                              size: 26,
+                              color:
+                                  selected ? role.accent : AppColors.inkFaint,
+                              filled: selected,
+                            )
+                          : Icon(
+                              selected ? item.selectedIcon : item.icon,
+                              key: ValueKey(selected),
+                              size: 22,
+                              color:
+                                  selected ? role.accent : AppColors.inkFaint,
+                            ),
                     ),
                   ),
                   if (selected)

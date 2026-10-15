@@ -1,224 +1,254 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
-class TeacherAssignmentsScreen extends StatelessWidget {
-  const TeacherAssignmentsScreen({super.key});
+import '../../models/assignment_model.dart';
+import '../../state/teacher_provider.dart';
+import '../../theme/colors.dart';
+import '../../theme/tokens.dart';
+import '../../widgets/kit/kit.dart';
+import 'assignment_detail_screen.dart';
+
+enum _Filter { all, toGrade, graded, upcoming }
+
+/// Every assignment the teacher has set, filterable by what needs them.
+/// Opening one goes to its submissions and grading screen.
+class TeacherAssignmentsScreen extends ConsumerStatefulWidget {
+  final bool startWithToGrade;
+
+  const TeacherAssignmentsScreen({super.key, this.startWithToGrade = false});
+
+  @override
+  ConsumerState<TeacherAssignmentsScreen> createState() =>
+      _TeacherAssignmentsScreenState();
+}
+
+class _TeacherAssignmentsScreenState
+    extends ConsumerState<TeacherAssignmentsScreen> {
+  late _Filter _filter =
+      widget.startWithToGrade ? _Filter.toGrade : _Filter.all;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    if (mounted) setState(() => _error = null);
+    try {
+      await ref.read(teacherProvider.notifier).loadAssignments();
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  static int _pending(AssignmentModel a) =>
+      (a.submittedCount - a.gradedCount).clamp(0, 999999).toInt();
+
+  bool _matches(AssignmentModel a) {
+    switch (_filter) {
+      case _Filter.all:
+        return true;
+      case _Filter.toGrade:
+        return _pending(a) > 0;
+      case _Filter.graded:
+        return a.submittedCount > 0 && _pending(a) == 0;
+      case _Filter.upcoming:
+        return a.dueDate != null && a.dueDate!.isAfter(DateTime.now());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 4,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1E3A8A), size: 20),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          title: const Text(
-            'Assignments',
-            style: TextStyle(
-              color: Color(0xFF1E3A8A),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          centerTitle: true,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.more_vert, color: Color(0xFF1E3A8A)),
-              onPressed: () {},
-            ),
-          ],
-          bottom: const TabBar(
-            isScrollable: true,
-            labelColor: Color(0xFF1976D2),
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: Color(0xFF1976D2),
-            indicatorWeight: 3,
-            labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-            tabs: [
-              Tab(text: 'All'),
-              Tab(text: 'Active'),
-              Tab(text: 'Upcoming'),
-              Tab(text: 'Completed'),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          children: [
-            _buildAssignmentsList(),
-            _buildAssignmentsList(),
-            _buildAssignmentsList(),
-            _buildAssignmentsList(),
-          ],
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {},
-          backgroundColor: const Color(0xFF1976D2),
-          child: const Icon(Icons.add, color: Colors.white),
-        ),
-      ),
-    );
-  }
+    final assignments = ref.watch(teacherProvider).assignments;
+    final toGrade = assignments.where((a) => _pending(a) > 0).length;
+    final visible = assignments.where(_matches).toList()
+      ..sort((a, b) => _pending(b).compareTo(_pending(a)));
 
-  Widget _buildAssignmentsList() {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        _buildAssignmentItem(
-          title: 'Algebra Basics Worksheet',
-          className: 'Class 8A',
-          dueDate: '20 May, 2024',
-          submitted: 12,
-          total: 28,
-          status: 'Submitted',
-          iconColor: const Color(0xFF1976D2),
-        ),
-        _buildAssignmentItem(
-          title: 'Linear Equations Assignment',
-          className: 'Class 9A',
-          dueDate: '22 May, 2024',
-          submitted: 18,
-          total: 30,
-          status: 'Submitted',
-          iconColor: const Color(0xFFE53935),
-        ),
-        _buildAssignmentItem(
-          title: 'Quiz: Real Numbers',
-          className: 'Class 8B',
-          dueDate: '25 May, 2024',
-          submitted: 0,
-          total: 26,
-          status: 'Upcoming',
-          iconColor: const Color(0xFF4CAF50),
-        ),
-        _buildAssignmentItem(
-          title: 'Chapter 2: Polynomials',
-          className: 'Class 10A',
-          dueDate: '28 May, 2024',
-          submitted: 0,
-          total: 32,
-          status: 'Upcoming',
-          iconColor: const Color(0xFF1976D2),
-        ),
-        _buildAssignmentItem(
-          title: 'Integers Worksheet',
-          className: 'Class 8A',
-          dueDate: '15 May, 2024',
-          submitted: 28,
-          total: 28,
-          status: 'Submitted',
-          iconColor: Colors.grey.shade500,
-          isCompleted: true,
-        ),
-        const SizedBox(height: 80), // Fab spacing
-      ],
-    );
-  }
-
-  Widget _buildAssignmentItem({
-    required String title,
-    required String className,
-    required String dueDate,
-    required int submitted,
-    required int total,
-    required String status,
-    required Color iconColor,
-    bool isCompleted = false,
-  }) {
-    final isUpcoming = status == 'Upcoming';
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GradientHeader(
+            role: AppRoleStyle.teacher,
+            showBack: true,
+            eyebrow: 'Grading',
+            title: 'Assignments',
+            subtitle: toGrade == 0
+                ? 'Everything is graded'
+                : '$toGrade assignment${toGrade == 1 ? '' : 's'} need grading',
+          ),
+          _filterRow(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _load,
+              color: AppColors.teacherAccent,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics()),
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 40),
+                children: [
+                  if (_loading && assignments.isEmpty)
+                    const SkeletonCard(lines: 3)
+                  else if (_error != null && assignments.isEmpty)
+                    ErrorState(message: _error!, onRetry: _load)
+                  else if (visible.isEmpty)
+                    EmptyState(
+                      icon: Icons.assignment_outlined,
+                      title: assignments.isEmpty
+                          ? 'No assignments yet'
+                          : 'Nothing in this view',
+                      message: assignments.isEmpty
+                          ? 'Assignments you set for your classes will appear here.'
+                          : 'Try another filter to see more assignments.',
+                    )
+                  else
+                    for (final a in visible)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _card(a),
+                      ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Widget _filterRow() {
+    const items = <(_Filter, String)>[
+      (_Filter.all, 'All'),
+      (_Filter.toGrade, 'To grade'),
+      (_Filter.graded, 'Graded'),
+      (_Filter.upcoming, 'Upcoming'),
+    ];
+    return SizedBox(
+      height: 56,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final (filter, label) = items[i];
+          final selected = _filter == filter;
+          return Pressable(
+            onTap: () => setState(() => _filter = filter),
+            borderRadius: AppRadius.brPill,
+            child: AnimatedContainer(
+              duration: AppMotion.base,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: selected ? AppColors.teacherAccent : AppColors.surface,
+                borderRadius: AppRadius.brPill,
+                border: Border.all(
+                  color: selected
+                      ? AppColors.teacherAccent
+                      : AppColors.hairlineBorder,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                label,
+                style: AppText.cardTitle.copyWith(
+                  fontSize: 13,
+                  color: selected ? Colors.white : AppColors.inkSoft,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _card(AssignmentModel a) {
+    final rate = a.submissionRate * 100;
+    final pending = _pending(a);
+    final due = a.dueDate == null
+        ? 'No due date'
+        : 'Due ${DateFormat('d MMM').format(a.dueDate!)}';
+
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => TeacherAssignmentDetailScreen(assignment: a),
+      )),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: isCompleted ? Colors.grey.shade100 : iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              isCompleted ? Icons.check_circle_outline : Icons.description_outlined,
-              color: isCompleted ? Colors.grey.shade500 : iconColor,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E3A8A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  className,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Due: $dueDate',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!isUpcoming)
-                Text(
-                  '$submitted/$total',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: isCompleted ? Colors.grey.shade500 : const Color(0xFF4CAF50),
-                  ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      a.title,
+                      style: AppText.cardTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${a.studentGroupName ?? 'Class'}  ·  $due',
+                      style: AppText.caption.copyWith(fontSize: 11.5),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-              if (!isUpcoming) const SizedBox(height: 4),
+              ),
+              const SizedBox(width: 10),
+              if (pending > 0)
+                StatusPill(
+                  label: '$pending to grade',
+                  tone: pending > 10 ? PillTone.danger : PillTone.warning,
+                  dense: true,
+                )
+              else
+                const StatusPill(
+                  label: 'Graded',
+                  tone: PillTone.success,
+                  dense: true,
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${a.submittedCount} of ${a.totalStudents} submitted',
+                  style: AppText.caption.copyWith(fontSize: 11.5),
+                ),
+              ),
               Text(
-                status,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: isCompleted
-                      ? Colors.grey.shade500
-                      : isUpcoming
-                          ? const Color(0xFF1976D2)
-                          : const Color(0xFF4CAF50),
+                '${rate.toStringAsFixed(0)}%',
+                style: AppText.caption.copyWith(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 6),
+          GradientBar(
+            percent: rate,
+            height: 6,
+            gradient: rate >= 80
+                ? AppGradients.mint
+                : rate >= 60
+                    ? AppGradients.amber
+                    : AppGradients.rose,
           ),
         ],
       ),

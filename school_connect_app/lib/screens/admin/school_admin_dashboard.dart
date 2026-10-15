@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/colors.dart';
 import '../../state/auth_provider.dart';
 import '../../models/user_model.dart';
+import '../../services/google_sheets_service.dart' show AdminDashboardData;
+import 'executive_reports.dart';
 
 /// Full School Admin dashboard — replaces the old "go to web" redirect.
 /// Provides overview stats, teacher/student/class management, and school
@@ -20,6 +22,7 @@ class _SchoolAdminDashboardState extends ConsumerState<SchoolAdminDashboard>
   late TabController _tabController;
 
   // Stats
+  AdminDashboardData? _dashboard;
   bool _loading = true;
   int _teacherCount = 0;
   int _studentCount = 0;
@@ -31,7 +34,7 @@ class _SchoolAdminDashboardState extends ConsumerState<SchoolAdminDashboard>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadStats();
   }
 
@@ -51,16 +54,15 @@ class _SchoolAdminDashboardState extends ConsumerState<SchoolAdminDashboard>
       final user = ref.read(authProvider).user;
       _schoolName = user?.schoolName ?? 'School';
 
-      final teachers = await service.getAdminTeachers();
-      final students = await service.getAdminStudents();
-      final classes = await service.getAdminClasses();
+      final dashboard = await service.getAdminDashboard();
       final assignments = await service.getMyTeacherAssignments();
 
       if (!mounted) return;
       setState(() {
-        _teacherCount = teachers.length;
-        _studentCount = students.length;
-        _classCount = classes.length;
+        _dashboard = dashboard;
+        _teacherCount = dashboard.teachers.length;
+        _studentCount = dashboard.students.length;
+        _classCount = dashboard.classes.length;
         _assignmentCount = assignments.length;
         _loading = false;
       });
@@ -89,6 +91,12 @@ class _SchoolAdminDashboardState extends ConsumerState<SchoolAdminDashboard>
               child: TabBarView(
                 controller: _tabController,
                 children: [
+                  SchoolExecutiveReports(
+                    data: _dashboard,
+                    loading: _loading,
+                    error: _error,
+                    onRefresh: _loadStats,
+                  ),
                   _OverviewTab(
                     loading: _loading,
                     teacherCount: _teacherCount,
@@ -184,6 +192,7 @@ class _SchoolAdminDashboardState extends ConsumerState<SchoolAdminDashboard>
         labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
         unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
         tabs: const [
+          Tab(icon: Icon(Icons.insights_rounded, size: 20), text: 'Reports'),
           Tab(icon: Icon(Icons.dashboard_outlined, size: 20), text: 'Overview'),
           Tab(icon: Icon(Icons.people_outline, size: 20), text: 'Teachers'),
           Tab(icon: Icon(Icons.school_outlined, size: 20), text: 'Students'),

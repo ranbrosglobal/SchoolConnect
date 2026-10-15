@@ -24,7 +24,10 @@ import 'teacher_class_hub_screen.dart';
 /// Leads with the two things a teacher actually opens the app for: what is
 /// happening *now*, and what still needs grading.
 class TeacherHomeTab extends ConsumerStatefulWidget {
-  const TeacherHomeTab({super.key});
+  /// Switches the shell to another bottom-nav tab (0 Home, 1 Classes, 3 Calendar).
+  final ValueChanged<int>? onOpenTab;
+
+  const TeacherHomeTab({super.key, this.onOpenTab});
 
   @override
   ConsumerState<TeacherHomeTab> createState() => _TeacherHomeTabState();
@@ -257,6 +260,7 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
                 value: '${ctx.classNamesFromClasses.isEmpty ? ctx.classes.length : ctx.classNamesFromClasses.length}',
                 icon: Icons.groups_2_outlined,
                 accent: AppColors.teacherAccent,
+                onTap: () => _openTab(1),
               ),
             ),
             const SizedBox(width: 12),
@@ -266,6 +270,7 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
                 value: students == 0 ? '—' : '$students',
                 icon: Icons.people_alt_outlined,
                 accent: AppColors.tertiary,
+                onTap: () => _openTab(1),
               ),
             ),
           ],
@@ -283,6 +288,8 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
                     : AppColors.warning,
                 delta: ctx.assignmentsNeedingGrades.isEmpty ? null : 'action',
                 deltaPositive: false,
+                onTap: () => _push(
+                    const TeacherAssignmentsScreen(startWithToGrade: true)),
               ),
             ),
             const SizedBox(width: 12),
@@ -296,6 +303,7 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
                     : avgRate >= 60
                         ? AppColors.warning
                         : AppColors.danger,
+                onTap: () => _push(const TeacherAssignmentsScreen()),
               ),
             ),
           ],
@@ -454,7 +462,7 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
           eyebrow: DateFormat('EEEE d MMMM').format(DateTime.now()),
           title: 'Today',
           action: 'Calendar',
-          onAction: () => _push(const TeacherAssignmentsScreen()),
+          onAction: () => _openTab(3),
         ),
         const SizedBox(height: AppSpace.md),
         if (ctx.classes.isEmpty && rows.isEmpty)
@@ -785,4 +793,6 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
   void _push(Widget page) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
   }
+
+  void _openTab(int index) => widget.onOpenTab?.call(index);
 }

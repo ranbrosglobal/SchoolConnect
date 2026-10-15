@@ -27,11 +27,11 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
   int _index = 0;
 
   static const List<AppNavItem> _items = [
-    AppNavItem(icon: Icons.home_outlined, selectedIcon: Icons.home_rounded, label: 'Home'),
-    AppNavItem(icon: Icons.grid_view_outlined, selectedIcon: Icons.grid_view_rounded, label: 'Classes'),
-    AppNavItem(icon: Icons.auto_awesome_outlined, selectedIcon: Icons.auto_awesome_rounded, label: 'Ask AI'),
-    AppNavItem(icon: Icons.calendar_today_outlined, selectedIcon: Icons.calendar_today_rounded, label: 'Calendar'),
-    AppNavItem(icon: Icons.person_outline_rounded, selectedIcon: Icons.person_rounded, label: 'Profile'),
+    AppNavItem(icon: Icons.home_outlined, selectedIcon: Icons.home_rounded, label: 'Home', doodle: DoodleKind.home),
+    AppNavItem(icon: Icons.grid_view_outlined, selectedIcon: Icons.grid_view_rounded, label: 'Classes', doodle: DoodleKind.classes),
+    AppNavItem(icon: Icons.auto_awesome_outlined, selectedIcon: Icons.auto_awesome_rounded, label: 'Ask AI', doodle: DoodleKind.sparkle),
+    AppNavItem(icon: Icons.calendar_today_outlined, selectedIcon: Icons.calendar_today_rounded, label: 'Calendar', doodle: DoodleKind.calendar),
+    AppNavItem(icon: Icons.person_outline_rounded, selectedIcon: Icons.person_rounded, label: 'Profile', doodle: DoodleKind.profile),
   ];
 
   static const List<Widget> _tabs = [
