@@ -5,6 +5,7 @@ import AppShell from './components/AppShell'
 import LoginPage from './pages/LoginPage'
 import OverviewPage from './pages/OverviewPage'
 import SchoolsPage from './pages/SchoolsPage'
+import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
 
 function FullPageLoader() {
@@ -47,6 +48,7 @@ export default function App() {
       >
         <Route index element={<OverviewPage />} />
         <Route path="schools" element={<SchoolsPage />} />
+        <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
 

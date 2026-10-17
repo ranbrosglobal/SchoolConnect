@@ -10,6 +10,7 @@ import ClassDetailPage from './pages/ClassDetailPage'
 import StudentsPage from './pages/StudentsPage'
 import StudentDetailPage from './pages/StudentDetailPage'
 import TimetablePage from './pages/TimetablePage'
+import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
 import { NotFoundPage } from './pages/placeholders'
 
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="timetable" element={<TimetablePage />} />
         <Route path="students" element={<StudentsPage />} />
         <Route path="students/:id" element={<StudentDetailPage />} />
+        <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
 

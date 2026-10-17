@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, ChevronRight, GraduationCap, Plus, Sparkles, Users } from 'lucide-react'
+import { BarChart3, BookOpen, ChevronRight, GraduationCap, Plus, Sparkles, Users } from 'lucide-react'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { useFetch } from '../lib/useFetch'
@@ -50,18 +50,19 @@ export default function OverviewPage() {
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-soft">Quick actions</h2>
           <div className="space-y-2">
             {[
-              { to: '/teachers', label: 'Add teacher' },
-              { to: '/classes', label: 'Create class' },
-              { to: '/students', label: 'Add student' },
-            ].map((a) => (
+              { to: '/teachers', label: 'Add teacher', icon: Plus },
+              { to: '/classes', label: 'Create class', icon: Plus },
+              { to: '/students', label: 'Add student', icon: Plus },
+              { to: '/reports', label: 'Executive reports', icon: BarChart3 },
+            ].map(({ to, label, icon: Icon }) => (
               <Link
-                key={a.label}
-                to={a.to}
+                key={label}
+                to={to}
                 className="group flex items-center justify-between rounded-btn border border-outline-soft bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:border-primary/40 hover:bg-primary-soft"
               >
                 <span className="flex items-center gap-2.5">
-                  <Plus className="h-4 w-4 text-primary" />
-                  {a.label}
+                  <Icon className="h-4 w-4 text-primary" />
+                  {label}
                 </span>
                 <ChevronRight className="h-4 w-4 text-ink-soft transition group-hover:translate-x-0.5" />
               </Link>

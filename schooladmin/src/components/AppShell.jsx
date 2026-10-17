@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
+  BarChart3,
   BookOpen,
   CalendarDays,
   GraduationCap,
@@ -21,6 +22,7 @@ const NAV = [
   { to: '/classes', label: 'Classes', icon: BookOpen },
   { to: '/timetable', label: 'Timetable', icon: CalendarDays },
   { to: '/students', label: 'Students', icon: Users },
+  { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Building2, ChevronRight, GraduationCap, Plus, ShieldCheck, Users } from 'lucide-react'
+import { BarChart3, BookOpen, Building2, ChevronRight, GraduationCap, Plus, ShieldCheck, Users } from 'lucide-react'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { useFetch } from '../lib/useFetch'
@@ -74,6 +74,16 @@ export default function OverviewPage() {
                 <span className="flex items-center gap-2.5">
                   <ShieldCheck className="h-4 w-4 text-primary" />
                   Manage school admins
+                </span>
+                <ChevronRight className="h-4 w-4 text-ink-soft transition group-hover:translate-x-0.5" />
+              </Link>
+              <Link
+                to="/reports"
+                className="group flex items-center justify-between rounded-btn border border-outline-soft bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:border-primary/40 hover:bg-primary-soft"
+              >
+                <span className="flex items-center gap-2.5">
+                  <BarChart3 className="h-4 w-4 text-primary" />
+                  Network reports
                 </span>
                 <ChevronRight className="h-4 w-4 text-ink-soft transition group-hover:translate-x-0.5" />
               </Link>

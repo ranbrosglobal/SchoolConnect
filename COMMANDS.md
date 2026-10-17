@@ -2,8 +2,8 @@
 
 Commands for running the two **web admin consoles** (React + Vite apps):
 
-- `schooladmin/` — **School Admin Console** (teachers, classes, students, timetable)
-- `superadmin/` — **Super Admin Console** (schools + school admins, network overview)
+- `schooladmin/` — **School Admin Console** (teachers, classes, students, timetable, reports)
+- `superadmin/` — **Super Admin Console** (schools + school admins, network overview + reports)
 
 > Terminal: PowerShell or Git Bash on Windows. Everything below runs from the project root (`C:\Users\dell\Desktop\Ranbros`) — the root `package.json` wires up both consoles.
 
@@ -175,3 +175,29 @@ git push origin master:main
 - `fastapi_backend/` — a FastAPI bridge app (Python). Check its own `README` for run steps.
 
 The web console's mock mode means you can build and demo **without** any of these running.
+
+---
+
+## 10. Executive reports (both consoles)
+
+Both consoles ship an **Executive reports** page at `/reports` — linked from the
+sidebar and from the Overview quick actions.
+
+- **School Admin → Reports:** attendance distribution (click a band for the students in
+  it), enrolment by class, class scorecard, teacher workload, program roll-up, and a
+  “needs attention” panel (low or never-recorded attendance, unstaffed classes, empty
+  classes, teachers without a class). The class scope selector refilters the whole report.
+- **Super Admin → Reports:** school status donut, network totals, enrolment ranking,
+  setup completeness per school (admin / teachers / classes / students / location) and a
+  network-wide “needs attention” panel.
+
+Both pages export a multi-section CSV of the figures on screen. Reports are computed in
+the browser from the existing endpoints (`get_admin_teachers` / `get_admin_classes` /
+`get_admin_students`, `overview`, `get_schools`) — no new API is required.
+
+Tests for the report maths and CSV output:
+
+```powershell
+cd schooladmin && node --test test/reports.test.mjs
+cd superadmin  && node --test test/reports.test.mjs
+```

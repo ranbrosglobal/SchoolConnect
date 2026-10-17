@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Building2, LayoutDashboard, LogOut, Menu, Settings, X } from 'lucide-react'
+import { BarChart3, Building2, LayoutDashboard, LogOut, Menu, Settings, X } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { useInactivityLogout } from '../lib/useInactivityLogout'
 import { Avatar, Badge, Logo } from './ui'
@@ -8,6 +8,7 @@ import { Avatar, Badge, Logo } from './ui'
 const NAV = [
   { to: '/', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/schools', label: 'Schools', icon: Building2 },
+  { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 

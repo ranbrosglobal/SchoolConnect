@@ -14,6 +14,7 @@
     "dev:live": "concurrently -n db,schooladmin,superadmin -c yellow,blue,magenta \"npm:dev:db\" \"npm:dev:schooladmin:live\" \"npm:dev:superadmin:live\"",
     "info": "echo 'SchoolAdmin UI/API: localhost:5173 | SuperAdmin UI/API: localhost:5175'",
     "db:reset": "npm --prefix sc_backend run reset",
+    "test:reports": "node --test schooladmin/test/reports.test.mjs superadmin/test/reports.test.mjs",
     "lint:schooladmin": "npm --prefix schooladmin run lint",
     "lint:superadmin": "npm --prefix superadmin run lint",
     "build:schooladmin": "npm --prefix schooladmin run build",
