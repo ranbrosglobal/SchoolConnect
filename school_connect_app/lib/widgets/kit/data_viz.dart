@@ -485,10 +485,12 @@ class StatTile extends StatelessWidget {
             ),
             const Spacer(),
             if (delta != null)
-              StatusPill(
-                label: delta!,
-                tone: deltaPositive ? PillToneFor.up : PillToneFor.down,
-                dense: true,
+              Flexible(
+                child: StatusPill(
+                  label: delta!,
+                  tone: deltaPositive ? PillToneFor.up : PillToneFor.down,
+                  dense: true,
+                ),
               ),
           ],
         ),

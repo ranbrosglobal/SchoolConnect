@@ -547,7 +547,7 @@ class _SuperAdminPortalState extends ConsumerState<SuperAdminPortal> {
                     _viewToggle(),
                     const SizedBox(height: AppSpace.lg),
                     if (_showReports)
-                      SuperExecutiveReports(schools: _schools)
+                      SuperExecutiveReports(schools: _schools, onRefresh: _load)
                     else ...[
                     Row(
                       children: [

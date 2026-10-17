@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/colors.dart';
 import '../../state/auth_provider.dart';
 import '../../models/user_model.dart';
+import '../../models/assignment_model.dart';
 import '../../services/google_sheets_service.dart' show AdminDashboardData;
 import 'executive_reports.dart';
 
@@ -28,6 +29,7 @@ class _SchoolAdminDashboardState extends ConsumerState<SchoolAdminDashboard>
   int _studentCount = 0;
   int _classCount = 0;
   int _assignmentCount = 0;
+  List<AssignmentModel> _assignments = const [];
   String _schoolName = 'School';
   String? _error;
 
@@ -64,6 +66,7 @@ class _SchoolAdminDashboardState extends ConsumerState<SchoolAdminDashboard>
         _studentCount = dashboard.students.length;
         _classCount = dashboard.classes.length;
         _assignmentCount = assignments.length;
+        _assignments = assignments;
         _loading = false;
       });
     } catch (e) {
@@ -96,6 +99,8 @@ class _SchoolAdminDashboardState extends ConsumerState<SchoolAdminDashboard>
                     loading: _loading,
                     error: _error,
                     onRefresh: _loadStats,
+                    assignments: _assignments,
+                    schoolName: _schoolName,
                   ),
                   _OverviewTab(
                     loading: _loading,
