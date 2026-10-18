@@ -12,6 +12,7 @@
     "school_connect.api.admin.delete_class",
     "school_connect.api.admin.delete_student",
     "school_connect.api.admin.get_admin_class",
+    "school_connect.api.admin.get_admin_attendance",
     "school_connect.api.admin.get_admin_classes",
     "school_connect.api.admin.get_admin_dashboard",
     "school_connect.api.admin.get_admin_student",

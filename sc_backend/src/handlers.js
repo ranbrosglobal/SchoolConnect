@@ -529,6 +529,126 @@ function schoolAdminSetStudentStatus(db, params) {
   return { ...s, status }
 }
 
+/** Inclusive day count between two YYYY-MM-DD stamps. */
+function dayCount(from, to) {
+  const a = new Date(`${from}T00:00:00Z`).getTime()
+  const b = new Date(`${to}T00:00:00Z`).getTime()
+  if (Number.isNaN(a) || Number.isNaN(b)) return 0
+  return Math.round((b - a) / 86400000) + 1
+}
+
+/**
+ * School Admin: attendance over a date range, aggregated for reporting.
+ *
+ * Returns one row per recorded day, a daily series per class and per-student
+ * totals — enough for the executive report's timeline and windowed attendance
+ * figures without shipping every raw register row to the browser.
+ *
+ * Query params: school, from, to (YYYY-MM-DD), classes (comma-separated ids).
+ */
+function schoolAdminAttendance(db, params, user) {
+  if (!user || (user.role !== 'School Admin' && user.role !== 'Teacher')) {
+    throw { status: 403, message: 'Access denied' }
+  }
+  // Always scope to the caller's own school — the query string must not be able
+  // to point the report at another school.
+  const school = user.school_id
+  const classes = getAll(db, 'classes', 'school_id = ?', school)
+
+  const requested = Array.isArray(params.classes)
+    ? params.classes
+    : String(params.classes || '').split(',').map(s => s.trim()).filter(Boolean)
+  const scope = requested.length ? classes.filter(c => requested.includes(c.id)) : classes
+  const scopeIds = new Set(scope.map(c => c.id))
+
+  const today = dayKey(new Date().toISOString())
+  const to = dayKey(params.to || params.end_date || today)
+  const from = dayKey(
+    params.from || params.start_date || new Date(Date.now() - 29 * 86400000).toISOString(),
+  )
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
+    throw { status: 400, message: 'from and to (YYYY-MM-DD) are required and must be a valid range' }
+  }
+  if (dayCount(from, to) > 366) {
+    throw { status: 400, message: 'Choose a date range of 366 days or less' }
+  }
+
+  const dayMap = new Map()
+  const classMap = new Map(
+    scope.map(c => [c.id, { class_id: c.id, name: c.name, days: new Map(), present: 0, total: 0 }]),
+  )
+  const studentMap = new Map()
+
+  for (const row of getAll(db, 'attendance_log')) {
+    if (!scopeIds.has(row.class_id)) continue
+    const day = dayKey(row.date)
+    if (!day || day < from || day > to) continue
+
+    // "Late" and "Half Day" still count as attendance; only Absent/Leave miss it.
+    const present = row.status !== 'Absent' && row.status !== 'Leave'
+
+    const dayEntry = dayMap.get(day) || { date: day, present: 0, absent: 0, late: 0, total: 0 }
+    dayEntry.total += 1
+    if (present) dayEntry.present += 1
+    else dayEntry.absent += 1
+    if (row.status === 'Late') dayEntry.late += 1
+    dayMap.set(day, dayEntry)
+
+    const classEntry = classMap.get(row.class_id)
+    const classDay = classEntry.days.get(day) || { date: day, present: 0, total: 0 }
+    classDay.total += 1
+    if (present) classDay.present += 1
+    classEntry.days.set(day, classDay)
+    classEntry.total += 1
+    if (present) classEntry.present += 1
+
+    if (!row.student_id) continue
+    const studentEntry = studentMap.get(row.student_id) || {
+      student_id: row.student_id,
+      class_id: row.class_id,
+      present: 0,
+      total: 0,
+    }
+    studentEntry.total += 1
+    if (present) studentEntry.present += 1
+    studentMap.set(row.student_id, studentEntry)
+  }
+
+  const days = [...dayMap.values()]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(d => ({ ...d, percentage: d.total ? Math.round((d.present / d.total) * 100) : 0 }))
+
+  const classRows = [...classMap.values()].map(c => ({
+    class_id: c.class_id,
+    name: c.name,
+    present: c.present,
+    total: c.total,
+    percentage: c.total ? Math.round((c.present / c.total) * 100) : 0,
+    days: [...c.days.values()].sort((a, b) => a.date.localeCompare(b.date)),
+  }))
+
+  const students = [...studentMap.values()].sort((a, b) => a.student_id.localeCompare(b.student_id))
+  const present = days.reduce((a, d) => a + d.present, 0)
+  const total = days.reduce((a, d) => a + d.total, 0)
+
+  return {
+    from,
+    to,
+    days,
+    classes: classRows,
+    students,
+    totals: {
+      present,
+      absent: days.reduce((a, d) => a + d.absent, 0),
+      late: days.reduce((a, d) => a + d.late, 0),
+      total,
+      percentage: total ? Math.round((present / total) * 100) : 0,
+      students_marked: students.length,
+      sessions: days.length,
+    },
+  }
+}
+
 function schoolAdminTimetable(db, params, user) {
   const school = params.school || user?.school_id
   const classId = params.class
@@ -2042,6 +2162,7 @@ const SA_HANDLERS = {
   'school_connect.api.admin.update_student': schoolAdminUpdateStudent,
   'school_connect.api.admin.delete_student': schoolAdminDeleteStudent,
   'school_connect.api.admin.set_student_status': schoolAdminSetStudentStatus,
+  'school_connect.api.admin.get_admin_attendance': schoolAdminAttendance,
   'school_connect.api.admin.get_timetable': schoolAdminTimetable,
   'school_connect.api.admin.set_timetable_entry': schoolAdminSetTimetableEntry,
   'school_connect.api.admin.update_timetable_periods': schoolAdminUpdateTimetablePeriods,

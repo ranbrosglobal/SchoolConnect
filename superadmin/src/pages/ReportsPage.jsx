@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
   Building2,
+  ChevronDown,
   ChevronRight,
   Download,
   GraduationCap,
+  Layers,
   RefreshCw,
   ShieldCheck,
   Users,
@@ -16,17 +18,20 @@ import {
   buildNetworkReport,
   buildNetworkReportCsv,
   downloadCsv,
-  reportFileName,
+  exportFileName,
 } from '../lib/reports'
+import ExportModal, { SchoolPicker } from '../components/ExportModal'
 import {
   Badge,
   Card,
   EmptyState,
   Modal,
   PageHeader,
+  PrimaryButton,
   SecondaryButton,
   Spinner,
   StatCard,
+  inputClass,
 } from '../components/ui'
 
 const BAR_TONE = {
@@ -201,15 +206,80 @@ export default function ReportsPage() {
     [],
   )
   const [detail, setDetail] = useState(null)
-  const [exported, setExported] = useState(false)
+  const [scopeIds, setScopeIds] = useState([])
+  const [scopeOpen, setScopeOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState('')
+  const [notice, setNotice] = useState('')
 
   const [overview, schools] = data || [{}, []]
-  const report = useMemo(() => buildNetworkReport({ overview, schools }), [overview, schools])
 
-  function exportCsv() {
-    downloadCsv(reportFileName('network'), buildNetworkReportCsv(report))
-    setExported(true)
-    window.setTimeout(() => setExported(false), 2200)
+  const scopedSchools = useMemo(
+    () => (scopeIds.length ? schools.filter((s) => scopeIds.includes(s.id)) : schools),
+    [scopeIds, schools],
+  )
+  const report = useMemo(
+    () =>
+      buildNetworkReport({
+        overview,
+        schools: scopedSchools,
+        useOverviewTotals: scopeIds.length === 0,
+      }),
+    [overview, scopedSchools, scopeIds.length],
+  )
+
+  const scopeLabel =
+    scopeIds.length === 0
+      ? 'All schools'
+      : scopeIds.length === 1
+        ? schools.find((s) => s.id === scopeIds[0])?.name || '1 school'
+        : `${scopeIds.length} selected schools`
+
+  function flash(message) {
+    setNotice(message)
+    window.setTimeout(() => setNotice(''), 2600)
+  }
+
+  async function handleExport({ scopeIds: exportIds, format }) {
+    setExporting(true)
+    setExportError('')
+    try {
+      const exportSchools = exportIds.length ? schools.filter((s) => exportIds.includes(s.id)) : schools
+      const exportReport = buildNetworkReport({
+        overview,
+        schools: exportSchools,
+        useOverviewTotals: exportIds.length === 0,
+      })
+      const exportScopeLabel =
+        exportIds.length === 0
+          ? 'Full network'
+          : exportIds.length === 1
+            ? exportSchools[0]?.name || '1 school'
+            : `${exportIds.length} selected schools`
+
+      const meta = {
+        scopeLabel: exportScopeLabel,
+        preparedBy: 'Super Admin',
+        orgName: 'School Connect network',
+      }
+      const fileName = exportFileName({ scopeLabel: exportScopeLabel, extension: format })
+
+      if (format === 'pdf') {
+        // Loaded on demand: the PDF engine is heavy and only needed here.
+        const { downloadNetworkReportPdf } = await import('../lib/report-pdf')
+        downloadNetworkReportPdf(fileName, exportReport, meta)
+      } else {
+        downloadCsv(fileName, buildNetworkReportCsv(exportReport, meta))
+      }
+
+      setExportOpen(false)
+      flash(`${format === 'pdf' ? 'PDF' : 'CSV'} exported — ${fileName}`)
+    } catch (e) {
+      setExportError(e?.message || 'Export failed')
+    } finally {
+      setExporting(false)
+    }
   }
 
   const exportButton = (
@@ -218,10 +288,10 @@ export default function ReportsPage() {
         <RefreshCw className="h-4 w-4" />
         <span className="hidden sm:inline">Refresh</span>
       </SecondaryButton>
-      <SecondaryButton onClick={exportCsv} disabled={loading || Boolean(error)}>
+      <PrimaryButton onClick={() => setExportOpen(true)} disabled={loading || Boolean(error)}>
         <Download className="h-4 w-4" />
-        {exported ? 'Exported' : 'Export CSV'}
-      </SecondaryButton>
+        Export
+      </PrimaryButton>
     </div>
   )
 
@@ -272,9 +342,36 @@ export default function ReportsPage() {
     <>
       <PageHeader
         title="Network reports"
-        subtitle={`All schools · generated ${report.generatedAt.toLocaleString()}`}
+        subtitle={`${scopeLabel} · generated ${report.generatedAt.toLocaleString()}`}
         actions={exportButton}
       />
+
+      <div className="mb-5 flex flex-wrap items-end gap-3">
+        <div>
+          <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-ink-soft">Scope</span>
+          <button
+            type="button"
+            onClick={() => setScopeOpen(true)}
+            className={`${inputClass} flex min-w-64 items-center justify-between gap-2 text-left`}
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <Layers className="h-4 w-4 shrink-0 text-ink-soft" />
+              <span className="truncate">{scopeLabel}</span>
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-ink-soft" />
+          </button>
+        </div>
+        <p className="pb-3 text-xs text-ink-soft">
+          Showing <span className="font-semibold text-ink">{plural(t.schools, 'school', 'schools')}</span> ·{' '}
+          {t.students} students · {t.teachers} teachers
+        </p>
+      </div>
+
+      {notice && (
+        <div className="mb-4 rounded-btn border border-success/30 bg-success-soft px-4 py-2.5 text-sm font-semibold text-success">
+          {notice}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
@@ -496,6 +593,49 @@ export default function ReportsPage() {
           </div>
         )}
       </SectionCard>
+
+      {scopeOpen && (
+        <Modal
+          title="Report scope"
+          subtitle="Report on the whole network or pick schools — the export dialog can use a different scope."
+          onClose={() => setScopeOpen(false)}
+        >
+          <SchoolPicker schools={schools} selected={scopeIds} onChange={setScopeIds} />
+          <div className="mt-4 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setScopeIds([])}
+              className="text-xs font-semibold text-ink-soft underline-offset-2 hover:text-primary hover:underline"
+            >
+              Reset to full network
+            </button>
+            <PrimaryButton onClick={() => setScopeOpen(false)}>Apply</PrimaryButton>
+          </div>
+        </Modal>
+      )}
+
+      {exportOpen && (
+        <ExportModal
+          orgName="School Connect network"
+          schools={schools}
+          defaultScopeIds={scopeIds}
+          busy={exporting}
+          onClose={() => {
+            if (!exporting) {
+              setExportOpen(false)
+              setExportError('')
+            }
+          }}
+          onExport={handleExport}
+        />
+      )}
+
+      {exportOpen && exportError && (
+        <div className="fixed bottom-5 left-1/2 z-[60] flex max-w-lg -translate-x-1/2 items-start gap-2 rounded-btn border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger shadow-pop">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>Export failed: {exportError}</span>
+        </div>
+      )}
 
       {detail?.kind === 'school' && (
         <DrillModal

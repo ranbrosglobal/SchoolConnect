@@ -40,11 +40,20 @@ function checksFor(school) {
 }
 
 /**
- * Build the whole network report.
+ * Build the network report.
  *
- * @param {{ overview?: object, schools?: object[], generatedAt?: Date }} input
+ * `schools` may be the whole network or a selected subset; pass
+ * `useOverviewTotals: false` for a subset so the admin count is summed from the
+ * selected schools instead of the network-wide dashboard figure.
+ *
+ * @param {{ overview?: object, schools?: object[], generatedAt?: Date, useOverviewTotals?: boolean }} input
  */
-export function buildNetworkReport({ overview = {}, schools = [], generatedAt = new Date() } = {}) {
+export function buildNetworkReport({
+  overview = {},
+  schools = [],
+  generatedAt = new Date(),
+  useOverviewTotals = true,
+} = {}) {
   const list = schools.map((s) => {
     const students = num(s.student_count)
     const teachers = num(s.teacher_count)
@@ -129,7 +138,10 @@ export function buildNetworkReport({ overview = {}, schools = [], generatedAt = 
       schools: list.length,
       activeSchools: active.length,
       disabledSchools: disabled.length,
-      admins: overview.school_admin_count !== undefined ? num(overview.school_admin_count) : totalAdmins,
+      admins:
+        useOverviewTotals && overview.school_admin_count !== undefined
+          ? num(overview.school_admin_count)
+          : totalAdmins,
       teachers: totalTeachers,
       classes: totalClasses,
       students: totalStudents,
@@ -157,10 +169,10 @@ export function csvEscape(value) {
  * Multi-section CSV so one export covers the whole network report.
  * @param {ReturnType<typeof buildNetworkReport>} report
  */
-export function buildNetworkReportCsv(report) {
+export function buildNetworkReportCsv(report, meta = {}) {
   const rows = [
     ['School Connect — Network report'],
-    ['Scope', 'All schools'],
+    ['Scope', meta.scopeLabel || 'All schools'],
     ['Generated', report.generatedAt.toISOString()],
     [],
     ['Summary'],
@@ -227,11 +239,22 @@ export function downloadCsv(filename, csv) {
 }
 
 /** Filesystem-safe file name for exports. */
-export function reportFileName(prefix = 'network', date = new Date()) {
+export function reportFileName(prefix = 'network', date = new Date(), extension = 'csv') {
   const stamp = date.toISOString().slice(0, 10)
   const slug = String(prefix)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
-  return `${slug || 'network'}-report-${stamp}.csv`
+  return `${slug || 'network'}-report-${stamp}.${extension}`
+}
+
+/** Export file name that names the scope, e.g. network-3-schools-2026-10-18.pdf */
+export function exportFileName({ scopeLabel, extension = 'pdf', date = new Date() }) {
+  const slug = (value) =>
+    String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+  const stamp = date.toISOString().slice(0, 10)
+  return `${slug(scopeLabel) || 'network'}-report-${stamp}.${extension}`
 }

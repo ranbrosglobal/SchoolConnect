@@ -156,6 +156,12 @@ export const api = {
   async getStudents(school, klass) {
     return request('school_connect.api.admin.get_admin_students', { params: { school, class: klass } })
   },
+  /** Native attendance over a date window, aggregated for the report timeline. */
+  async getAttendance(school, { classes = [], from, to } = {}) {
+    return request('school_connect.api.admin.get_admin_attendance', {
+      params: { school, classes: classes.join(','), from, to },
+    })
+  },
   async getStudent(id) {
     return request('school_connect.api.admin.get_admin_student', { params: { id } })
   },

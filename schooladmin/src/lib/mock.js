@@ -319,6 +319,122 @@ function overview(scopeSchool) {
   }
 }
 
+/* ---------- attendance history (report timeline) ---------- */
+
+const DAY_MS = 86400000
+
+/** Stable 32-bit hash so generated registers never change between reloads. */
+function hash32(text) {
+  let h = 2166136261
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+function stampOf(date) {
+  return date.toISOString().slice(0, 10)
+}
+
+/**
+ * Deterministic daily registers for the mock backend.
+ *
+ * The real backend has an `attendance_log`; the mock has none, so this derives
+ * school-day rows from each student's attendance percentage. The same student
+ * and day always produce the same status, which keeps mock reports and PDFs
+ * reproducible.
+ */
+function attendanceHistory({ classes, from, to }) {
+  const scopeIds = new Set(classes.map((c) => c.id))
+  const students = DB.students.filter((s) => scopeIds.has(s.class_id))
+
+  const dayMap = new Map()
+  const classMap = new Map(
+    classes.map((c) => [c.id, { class_id: c.id, name: c.name, days: new Map(), present: 0, total: 0 }]),
+  )
+  const studentMap = new Map()
+
+  const start = new Date(`${from}T00:00:00Z`)
+  const end = new Date(`${to}T00:00:00Z`)
+  const span = Math.min(366, Math.round((end - start) / DAY_MS) + 1)
+
+  for (let i = 0; i < span; i += 1) {
+    const date = new Date(start.getTime() + i * DAY_MS)
+    const weekday = date.getUTCDay()
+    if (weekday === 0 || weekday === 6) continue
+    const stamp = stampOf(date)
+
+    for (const student of students) {
+      const pct = Number(student.attendance_pct) || 0
+      // A student with no stored percentage has no register rows at all, so
+      // the report shows them as “not recorded” rather than 0%.
+      if (pct <= 0) continue
+
+      const roll = (hash32(`${student.id}|${stamp}`) % 1000) / 10
+      const present = roll < pct
+      const late = !present && roll < pct + 1.5
+
+      const dayEntry = dayMap.get(stamp) || { date: stamp, present: 0, absent: 0, late: 0, total: 0 }
+      dayEntry.total += 1
+      if (present) dayEntry.present += 1
+      else dayEntry.absent += 1
+      if (late) dayEntry.late += 1
+      dayMap.set(stamp, dayEntry)
+
+      const classEntry = classMap.get(student.class_id)
+      const classDay = classEntry.days.get(stamp) || { date: stamp, present: 0, total: 0 }
+      classDay.total += 1
+      if (present) classDay.present += 1
+      classEntry.days.set(stamp, classDay)
+      classEntry.total += 1
+      if (present) classEntry.present += 1
+
+      const studentEntry = studentMap.get(student.id) || {
+        student_id: student.id,
+        class_id: student.class_id,
+        present: 0,
+        total: 0,
+      }
+      studentEntry.total += 1
+      if (present) studentEntry.present += 1
+      studentMap.set(student.id, studentEntry)
+    }
+  }
+
+  const days = [...dayMap.values()]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((d) => ({ ...d, percentage: d.total ? Math.round((d.present / d.total) * 100) : 0 }))
+  const classRows = [...classMap.values()].map((c) => ({
+    class_id: c.class_id,
+    name: c.name,
+    present: c.present,
+    total: c.total,
+    percentage: c.total ? Math.round((c.present / c.total) * 100) : 0,
+    days: [...c.days.values()].sort((a, b) => a.date.localeCompare(b.date)),
+  }))
+  const studentsOut = [...studentMap.values()]
+  const present = days.reduce((a, d) => a + d.present, 0)
+  const total = days.reduce((a, d) => a + d.total, 0)
+
+  return {
+    from,
+    to,
+    days,
+    classes: classRows,
+    students: studentsOut,
+    totals: {
+      present,
+      absent: days.reduce((a, d) => a + d.absent, 0),
+      late: days.reduce((a, d) => a + d.late, 0),
+      total,
+      percentage: total ? Math.round((present / total) * 100) : 0,
+      students_marked: studentsOut.length,
+      sessions: days.length,
+    },
+  }
+}
+
 /* ---------- handlers ---------- */
 
 const HANDLERS = {
@@ -500,6 +616,25 @@ const HANDLERS = {
         return { ...s, class_name: cls?.name, school_name: withSchoolName(s).school_name }
       }),
   }),
+
+  'school_connect.api.admin.get_admin_attendance': (params) => {
+    const from = String(params.from || '').slice(0, 10)
+    const to = String(params.to || '').slice(0, 10)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
+      throw { status: 400, message: 'from and to (YYYY-MM-DD) are required and must be a valid range' }
+    }
+    if (Math.round((new Date(`${to}T00:00:00Z`) - new Date(`${from}T00:00:00Z`)) / 86400000) + 1 > 366) {
+      throw { status: 400, message: 'Choose a date range of 366 days or less' }
+    }
+    const ids = String(params.classes || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    const classes = DB.classes.filter(
+      (c) => (!params.school || c.school_id === params.school) && (ids.length === 0 || ids.includes(c.id)),
+    )
+    return { data: attendanceHistory({ classes, from, to }) }
+  },
 
   'school_connect.api.admin.get_admin_student': (params) => {
     const s = DB.students.find((st) => st.id === params.id)

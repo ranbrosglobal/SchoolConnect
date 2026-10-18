@@ -5,6 +5,7 @@ import {
   buildNetworkReport,
   buildNetworkReportCsv,
   csvEscape,
+  exportFileName,
   reportFileName,
 } from '../src/lib/reports.js'
 
@@ -151,4 +152,31 @@ test('csv export contains every report section', () => {
 test('export file names are filesystem safe', () => {
   assert.equal(reportFileName('Network', new Date('2026-10-18T00:00:00Z')), 'network-report-2026-10-18.csv')
   assert.equal(reportFileName('', new Date('2026-01-02T00:00:00Z')), 'network-report-2026-01-02.csv')
+  assert.equal(reportFileName('Network', new Date('2026-10-18T00:00:00Z'), 'pdf'), 'network-report-2026-10-18.pdf')
+  assert.equal(
+    exportFileName({ scopeLabel: '3 selected schools', date: new Date('2026-10-18T00:00:00Z') }),
+    '3-selected-schools-report-2026-10-18.pdf',
+  )
+})
+
+test('a school subset reports its own totals, not the network dashboard figures', () => {
+  const subset = buildNetworkReport({
+    overview: { school_admin_count: 99 },
+    schools: [SCHOOLS[0], SCHOOLS[2]],
+    useOverviewTotals: false,
+  })
+  assert.equal(subset.totals.schools, 2)
+  assert.equal(subset.totals.students, 160)
+  // Summed from the selected schools (1 + 2), never the network dashboard's 99.
+  assert.equal(subset.totals.admins, 3)
+  assert.equal(subset.ranking.length, 2)
+  assert.equal(subset.statusSlices.find((s) => s.key === 'disabled').count, 1)
+
+  const all = buildNetworkReport({ overview: { school_admin_count: 99 }, schools: SCHOOLS })
+  assert.equal(all.totals.admins, 99)
+})
+
+test('csv names the exported scope', () => {
+  const csv = buildNetworkReportCsv(report, { scopeLabel: '2 selected schools' })
+  assert.ok(csv.includes('Scope,2 selected schools'))
 })

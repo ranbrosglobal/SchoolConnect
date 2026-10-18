@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
   BookOpen,
+  ChevronDown,
   Download,
   GraduationCap,
+  Layers,
   RefreshCw,
   Target,
   Users,
@@ -14,18 +16,27 @@ import { useAuth } from '../lib/auth'
 import { useFetch } from '../lib/useFetch'
 import {
   LOW_ATTENDANCE,
+  RANGE_PRESETS,
+  applyRangeAttendance,
+  buildAttendanceWindow,
   buildReportCsv,
   buildSchoolReport,
+  dayStamp,
   downloadCsv,
+  exportFileName,
+  formatDay,
   rankClasses,
-  reportFileName,
+  resolveRange,
+  timelineSummary,
 } from '../lib/reports'
+import ExportModal, { ClassPicker } from '../components/ExportModal'
 import {
   Badge,
   Card,
   EmptyState,
   Modal,
   PageHeader,
+  PrimaryButton,
   SecondaryButton,
   Spinner,
   StatCard,
@@ -147,6 +158,94 @@ function DrillModal({ title, subtitle, onClose, children }) {
   )
 }
 
+const rateTone = (pct) =>
+  pct >= 85 ? 'green' : pct >= LOW_ATTENDANCE ? 'blue' : pct >= 50 ? 'amber' : 'red'
+
+const rateBar = (pct) =>
+  pct >= 85 ? 'bg-success' : pct >= LOW_ATTENDANCE ? 'bg-info' : pct >= 50 ? 'bg-warning-bright' : 'bg-danger'
+
+/** Daily attendance chart for the selected period. */
+function Timeline({ attendanceWindow, loading, error, onRetry }) {
+  const rows = attendanceWindow?.days || []
+  const totals = attendanceWindow?.totals
+
+  return (
+    <SectionCard
+      title="Daily attendance"
+      hint={
+        attendanceWindow
+          ? `${formatDay(attendanceWindow.from)} – ${formatDay(attendanceWindow.to)} · rate for each recorded day`
+          : 'Rate for each recorded day'
+      }
+      action={
+        <Badge tone={rows.length ? rateTone(totals?.percentage || 0) : 'neutral'}>
+          {rows.length ? `${rows.length} days` : 'No data'}
+        </Badge>
+      }
+      className="mt-6"
+    >
+      {loading && <p className="py-8 text-center text-sm text-ink-soft">Loading the register…</p>}
+
+      {!loading && error && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-btn border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
+          <span className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>Timeline unavailable: {error}</span>
+          </span>
+          <SecondaryButton onClick={onRetry} className="!px-3 !py-1.5">
+            <RefreshCw className="h-3.5 w-3.5" /> Retry
+          </SecondaryButton>
+        </div>
+      )}
+
+      {!loading && !error && rows.length === 0 && (
+        <p className="py-8 text-center text-sm text-ink-soft">
+          No attendance was recorded in this period. Teachers mark attendance from the mobile app.
+        </p>
+      )}
+
+      {!loading && !error && rows.length > 0 && (
+        <>
+          <div className="flex h-36 items-end gap-[2px] sm:h-44">
+            {rows.map((day) => (
+              <div
+                key={day.date}
+                className="group relative flex h-full flex-1 items-end"
+                title={`${formatDay(day.date)} · ${day.percentage}% · ${day.present}/${day.total} present`}
+              >
+                <div
+                  className={`w-full rounded-t-[3px] transition-all group-hover:opacity-80 ${rateBar(day.percentage)}`}
+                  style={{ height: `${Math.max(2, day.percentage)}%` }}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex justify-between text-[11px] font-medium text-ink-soft">
+            <span>{formatDay(rows[0].date)}</span>
+            <span>{formatDay(rows[rows.length - 1].date)}</span>
+          </div>
+
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-btn bg-success-soft py-2.5">
+              <p className="text-lg font-extrabold text-success">{totals.present}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">Present</p>
+            </div>
+            <div className="rounded-btn bg-danger-soft py-2.5">
+              <p className="text-lg font-extrabold text-danger">{totals.absent}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">Absent</p>
+            </div>
+            <div className="rounded-btn bg-primary-soft py-2.5">
+              <p className="text-lg font-extrabold text-primary">{totals.percentage}%</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">Rate</p>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-ink-soft">{timelineSummary(attendanceWindow)}</p>
+        </>
+      )}
+    </SectionCard>
+  )
+}
+
 export default function ReportsPage() {
   const { user } = useAuth()
   const scope = user.school
@@ -154,39 +253,166 @@ export default function ReportsPage() {
     () => Promise.all([api.getTeachers(scope), api.getClasses(scope), api.getStudents(scope)]),
     [scope],
   )
-  const [classFilter, setClassFilter] = useState('all')
+
+  const [scopeIds, setScopeIds] = useState([])
+  const [scopeOpen, setScopeOpen] = useState(false)
+  const [preset, setPreset] = useState('all')
+  const today = dayStamp()
+  const [customFrom, setCustomFrom] = useState(today)
+  const [customTo, setCustomTo] = useState(today)
   const [detail, setDetail] = useState(null)
-  const [exported, setExported] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState('')
+  const [notice, setNotice] = useState('')
 
   const [teachers, classes, students] = data || [[], [], []]
 
-  const scoped = useMemo(() => {
-    if (classFilter === 'all') return { teachers, classes, students }
-    const picked = classes.filter((c) => c.id === classFilter)
-    const teacherIds = new Set(picked.flatMap((c) => c.teacher_ids || []))
-    return {
-      teachers: teachers.filter((t) => teacherIds.has(t.id)),
-      classes: picked,
-      students: students.filter((s) => s.class_id === classFilter),
-    }
-  }, [classFilter, teachers, classes, students])
+  const range = useMemo(() => resolveRange(preset, { from: customFrom, to: customTo }), [preset, customFrom, customTo])
+  const scopeKey = scopeIds.join(',')
 
-  const report = useMemo(() => buildSchoolReport(scoped), [scoped])
+  const {
+    data: history,
+    loading: historyLoading,
+    error: historyError,
+    reload: reloadHistory,
+  } = useFetch(
+    () => (range.from ? api.getAttendance(scope, { classes: scopeIds, from: range.from, to: range.to }) : Promise.resolve(null)),
+    [scope, range.from, range.to, scopeKey],
+  )
+
+  const attendanceWindow = useMemo(
+    () => (range.from ? buildAttendanceWindow(history, range) : null),
+    [history, range],
+  )
+
+  const selectedClasses = useMemo(
+    () => (scopeIds.length ? classes.filter((c) => scopeIds.includes(c.id)) : classes),
+    [scopeIds, classes],
+  )
+  const classIds = useMemo(() => new Set(selectedClasses.map((c) => c.id)), [selectedClasses])
+  const selectedStudents = useMemo(
+    () => students.filter((s) => classIds.has(s.class_id)),
+    [students, classIds],
+  )
+  const selectedTeachers = useMemo(
+    () =>
+      scopeIds.length
+        ? teachers.filter((t) => (t.class_ids || []).some((id) => classIds.has(id)))
+        : teachers,
+    [scopeIds, teachers, classIds],
+  )
+
+  const report = useMemo(
+    () =>
+      buildSchoolReport({
+        teachers: selectedTeachers,
+        classes: selectedClasses,
+        students: attendanceWindow ? applyRangeAttendance(selectedStudents, attendanceWindow) : selectedStudents,
+        range: range.from ? range : null,
+        timeline: attendanceWindow?.days || null,
+      }),
+    [selectedTeachers, selectedClasses, selectedStudents, attendanceWindow, range],
+  )
+
   const ranked = useMemo(() => rankClasses(report.byClass), [report])
 
-  function exportCsv() {
-    downloadCsv(
-      reportFileName(user.school_name || 'school'),
-      buildReportCsv(report, { schoolName: user.school_name }),
-    )
-    setExported(true)
-    window.setTimeout(() => setExported(false), 2200)
+  const scopeLabel =
+    scopeIds.length === 0
+      ? 'Full school'
+      : scopeIds.length === 1
+        ? classes.find((c) => c.id === scopeIds[0])?.name || '1 class'
+        : `${scopeIds.length} classes`
+
+  function flash(message) {
+    setNotice(message)
+    window.setTimeout(() => setNotice(''), 2600)
   }
 
-  const scopeLabel =
-    classFilter === 'all'
-      ? 'All classes'
-      : classes.find((c) => c.id === classFilter)?.name || 'Selected class'
+  async function handleExport({ scopeIds: exportIds, range: exportRange, format }) {
+    setExporting(true)
+    setExportError('')
+    try {
+      const exportClasses = exportIds.length ? classes.filter((c) => exportIds.includes(c.id)) : classes
+      const exportClassIds = new Set(exportClasses.map((c) => c.id))
+      let attendance = null
+
+      if (exportRange.from) {
+        const reuse =
+          attendanceWindow &&
+          exportRange.from === range.from &&
+          exportRange.to === range.to &&
+          exportIds.join(',') === scopeIds.join(',')
+        const historyData = reuse
+          ? history
+          : await api.getAttendance(scope, { classes: exportIds, from: exportRange.from, to: exportRange.to })
+        attendance = buildAttendanceWindow(historyData, exportRange)
+      }
+
+      const exportStudents = students.filter((s) => exportClassIds.has(s.class_id))
+      const exportTeachers = exportIds.length
+        ? teachers.filter((t) => (t.class_ids || []).some((id) => exportClassIds.has(id)))
+        : teachers
+
+      const exportReport = buildSchoolReport({
+        teachers: exportTeachers,
+        classes: exportClasses,
+        students: attendance ? applyRangeAttendance(exportStudents, attendance) : exportStudents,
+        range: attendance ? exportRange : null,
+        timeline: attendance?.days || null,
+      })
+
+      const exportScopeLabel = attendance
+        ? exportIds.length === 0
+          ? 'Full school'
+          : exportIds.length === 1
+            ? exportClasses[0]?.name || '1 class'
+            : `${exportIds.length} selected classes`
+        : scopeLabel
+
+      const rosters =
+        exportIds.length > 0 && exportClasses.length <= 3
+          ? exportReport.byClass.map((c) => ({
+              name: c.name,
+              program: c.program,
+              room: c.room,
+              teachers: c.teachers,
+              students: c.students,
+            }))
+          : []
+
+      const fileName = exportFileName({
+        schoolName: user.school_name,
+        scopeLabel: exportScopeLabel,
+        from: exportRange.from,
+        to: exportRange.to,
+        extension: format,
+      })
+
+      const meta = {
+        schoolName: user.school_name,
+        scopeLabel: exportScopeLabel,
+        periodLabel: exportRange.period,
+        preparedBy: user.full_name || user.name || '',
+        rosters,
+      }
+
+      if (format === 'pdf') {
+        // Loaded on demand: the PDF engine is heavy and only needed here.
+        const { downloadSchoolReportPdf } = await import('../lib/report-pdf')
+        downloadSchoolReportPdf(fileName, exportReport, meta)
+      } else {
+        downloadCsv(fileName, buildReportCsv(exportReport, meta))
+      }
+
+      setExportOpen(false)
+      flash(`${format === 'pdf' ? 'PDF' : 'CSV'} exported — ${fileName}`)
+    } catch (e) {
+      setExportError(e?.message || 'Export failed')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const exportButton = (
     <div className="flex items-center gap-2">
@@ -194,10 +420,10 @@ export default function ReportsPage() {
         <RefreshCw className="h-4 w-4" />
         <span className="hidden sm:inline">Refresh</span>
       </SecondaryButton>
-      <SecondaryButton onClick={exportCsv} disabled={loading || Boolean(error)}>
+      <PrimaryButton onClick={() => setExportOpen(true)} disabled={loading || Boolean(error)}>
         <Download className="h-4 w-4" />
-        {exported ? 'Exported' : 'Export CSV'}
-      </SecondaryButton>
+        Export
+      </PrimaryButton>
     </div>
   )
 
@@ -243,6 +469,14 @@ export default function ReportsPage() {
 
   const t = report.totals
   const noAttendance = t.students > 0 && t.recordedCount === 0
+  const rangeEmpty = Boolean(range.from) && !historyLoading && !historyError && (attendanceWindow?.totals.total || 0) === 0
+
+  const attendanceHint = (student) => {
+    if (student.range_total !== undefined && student.range_total > 0) {
+      return `${student.range_present}/${student.range_total} sessions`
+    }
+    return undefined
+  }
 
   return (
     <>
@@ -253,23 +487,82 @@ export default function ReportsPage() {
       />
 
       <div className="mb-5 flex flex-wrap items-end gap-3">
-        <label className="block">
+        <div>
           <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-ink-soft">Scope</span>
-          <select value={classFilter} onChange={(e) => setClassFilter(e.target.value)} className={`${inputClass} min-w-56`}>
-            <option value="all">All classes</option>
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-                {c.program ? ` · ${c.program}` : ''}
+          <button
+            type="button"
+            onClick={() => setScopeOpen(true)}
+            className={`${inputClass} flex min-w-56 items-center justify-between gap-2 text-left`}
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <Layers className="h-4 w-4 shrink-0 text-ink-soft" />
+              <span className="truncate">{scopeLabel}</span>
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-ink-soft" />
+          </button>
+        </div>
+
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-ink-soft">Period</span>
+          <select
+            value={preset}
+            onChange={(e) => setPreset(e.target.value)}
+            className={`${inputClass} min-w-52`}
+          >
+            {RANGE_PRESETS.map((p) => (
+              <option key={p.key} value={p.key}>
+                {p.label}
               </option>
             ))}
           </select>
         </label>
+
+        {preset === 'custom' && (
+          <>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-ink-soft">From</span>
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className={`${inputClass} w-40`}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-ink-soft">To</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className={`${inputClass} w-40`}
+              />
+            </label>
+          </>
+        )}
+
         <p className="pb-3 text-xs text-ink-soft">
-          Showing <span className="font-semibold text-ink">{scopeLabel}</span> —{' '}
+          Showing <span className="font-semibold text-ink">{scopeLabel}</span> ·{' '}
+          <span className="font-semibold text-ink">{range.period}</span>
+          {preset !== 'all' && range.label !== range.period && (
+            <span className="ml-2 text-ink-soft">({range.label})</span>
+          )}
+          <br />
           {t.students} students · {t.teachers} teachers · {t.classes} classes
         </p>
       </div>
+
+      {range.error && (
+        <div className="mb-4 flex items-start gap-3 rounded-btn border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>{range.error} The report keeps the last valid period.</p>
+        </div>
+      )}
+
+      {notice && (
+        <div className="mb-4 rounded-btn border border-success/30 bg-success-soft px-4 py-2.5 text-sm font-semibold text-success">
+          {notice}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
@@ -298,7 +591,11 @@ export default function ReportsPage() {
           label="Avg attendance"
           value={t.recordedCount ? `${t.attendanceAvg}%` : '—'}
           accent="indigo"
-          hint={`${t.recordedCount}/${t.students} students recorded`}
+          hint={
+            range.from
+              ? `${t.recordedCount}/${t.students} students · ${t.sessions || 0} days`
+              : `${t.recordedCount}/${t.students} students recorded`
+          }
         />
       </div>
 
@@ -306,10 +603,31 @@ export default function ReportsPage() {
         <div className="mt-4 flex items-start gap-3 rounded-btn border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            Attendance has not been recorded for any student yet, so attendance figures are shown as “—”. Teachers
-            mark attendance from the mobile app; it will appear here automatically.
+            {range.from
+              ? `No attendance was recorded between ${formatDay(range.from)} and ${formatDay(range.to)} for this selection, so attendance shows as “—”.`
+              : 'Attendance has not been recorded for any student yet, so attendance figures are shown as “—”.'}{' '}
+            Teachers mark attendance from the mobile app; it will appear here automatically.
           </p>
         </div>
+      )}
+
+      {rangeEmpty && !noAttendance && (
+        <div className="mt-4 flex items-start gap-3 rounded-btn border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            The register has no entries between {formatDay(range.from)} and {formatDay(range.to)}. Pick a wider
+            period or “All time” to see cumulative attendance.
+          </p>
+        </div>
+      )}
+
+      {range.from && (
+        <Timeline
+          attendanceWindow={attendanceWindow}
+          loading={historyLoading}
+          error={historyError}
+          onRetry={reloadHistory}
+        />
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -359,7 +677,7 @@ export default function ReportsPage() {
 
       <SectionCard
         title="Class scorecard"
-        hint={classFilter === 'all' ? 'Ranked by recorded attendance.' : 'Selected class only.'}
+        hint="Ranked by recorded attendance."
         className="mt-6"
       >
         <div className="-mx-2 overflow-x-auto">
@@ -462,6 +780,53 @@ export default function ReportsPage() {
         )}
       </SectionCard>
 
+      {scopeOpen && (
+        <Modal
+          title="Report scope"
+          subtitle="Report on the whole school or pick classes — the export dialog can use a different scope."
+          onClose={() => setScopeOpen(false)}
+        >
+          <ClassPicker classes={classes} selected={scopeIds} onChange={setScopeIds} />
+          <div className="mt-4 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setScopeIds([])}
+              className="text-xs font-semibold text-ink-soft underline-offset-2 hover:text-primary hover:underline"
+            >
+              Reset to full school
+            </button>
+            <PrimaryButton onClick={() => setScopeOpen(false)}>Apply</PrimaryButton>
+          </div>
+        </Modal>
+      )}
+
+      {exportOpen && (
+        <ExportModal
+          schoolName={user.school_name}
+          classes={classes}
+          students={students}
+          defaultScopeIds={scopeIds}
+          defaultPreset={preset}
+          defaultFrom={customFrom}
+          defaultTo={customTo}
+          busy={exporting}
+          onClose={() => {
+            if (!exporting) {
+              setExportOpen(false)
+              setExportError('')
+            }
+          }}
+          onExport={handleExport}
+        />
+      )}
+
+      {exportOpen && exportError && (
+        <div className="fixed bottom-5 left-1/2 z-[60] flex max-w-lg -translate-x-1/2 items-start gap-2 rounded-btn border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger shadow-pop">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>Export failed: {exportError}</span>
+        </div>
+      )}
+
       {detail?.kind === 'bucket' && (
         <DrillModal
           title={`Attendance ${detail.bucket.label}`}
@@ -471,7 +836,9 @@ export default function ReportsPage() {
           <RowList
             items={detail.bucket.students.map((s) => ({
               title: s.name,
-              subtitle: [s.class_name, s.roll_number ? `Roll ${s.roll_number}` : ''].filter(Boolean).join(' · ') || 'No class',
+              subtitle: [s.class_name, s.roll_number ? `Roll ${s.roll_number}` : '', attendanceHint(s)]
+                .filter(Boolean)
+                .join(' · ') || 'No class',
               value: s.attendance_pct > 0 ? `${s.attendance_pct}%` : 'Not recorded',
               to: s.id ? `/students/${s.id}` : undefined,
             }))}
@@ -504,7 +871,9 @@ export default function ReportsPage() {
           <RowList
             items={detail.cls.students.map((s) => ({
               title: s.name,
-              subtitle: `Roll ${s.roll_number || '—'}${s.status === 'Inactive' ? ' · Inactive' : ''}`,
+              subtitle: [`Roll ${s.roll_number || '—'}${s.status === 'Inactive' ? ' · Inactive' : ''}`, attendanceHint(s)]
+                .filter(Boolean)
+                .join(' · '),
               value: s.attendance_pct > 0 ? `${s.attendance_pct}%` : 'Not recorded',
               to: `/students/${s.id}`,
             }))}

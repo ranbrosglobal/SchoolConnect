@@ -184,20 +184,62 @@ Both consoles ship an **Executive reports** page at `/reports` — linked from t
 sidebar and from the Overview quick actions.
 
 - **School Admin → Reports:** attendance distribution (click a band for the students in
-  it), enrolment by class, class scorecard, teacher workload, program roll-up, and a
-  “needs attention” panel (low or never-recorded attendance, unstaffed classes, empty
-  classes, teachers without a class). The class scope selector refilters the whole report.
+  it), a daily attendance timeline, enrolment by class, class scorecard, teacher
+  workload, program roll-up, and a “needs attention” panel (low or never-recorded
+  attendance, unstaffed classes, empty classes, teachers without a class).
 - **Super Admin → Reports:** school status donut, network totals, enrolment ranking,
   setup completeness per school (admin / teachers / classes / students / location) and a
   network-wide “needs attention” panel.
 
-Both pages export a multi-section CSV of the figures on screen. Reports are computed in
-the browser from the existing endpoints (`get_admin_teachers` / `get_admin_classes` /
-`get_admin_students`, `overview`, `get_schools`) — no new API is required.
+### Scope and period
 
-Tests for the report maths and CSV output:
+The toolbar filters the whole report, and the export dialog can use a different
+selection than the page:
 
-```powershell
-cd schooladmin && node --test test/reports.test.mjs
-cd superadmin  && node --test test/reports.test.mjs
+| Console | Scope options | Period options |
+|---|---|---|
+| School Admin | Full school, one class, or any set of classes | All time, last 7 / 15 / 30 days, month to date, term to date (90 days), custom dates |
+| Super Admin | Full network, one school, or any set of schools | — (network figures are a point-in-time snapshot) |
+
+- **All time** uses the cumulative attendance percentage stored on each student.
+- **Any date period** is calculated from the daily register. The console calls
+  `school_connect.api.admin.get_admin_attendance`, which aggregates per day,
+  per class and per student on the server (`from`/`to`, optional `classes`,
+  max 366 days, always scoped to the caller's school).
+- Students with no sessions in the window report as **not recorded**, never a
+  misleading 0%; a student who was present for none of their recorded sessions
+  is still reported (in the lowest band).
+- Days a class was never marked are closed as absent by the automatic
+  end-of-day sweep; the PDF notes this.
+
+### Exporting
+
+Every export opens an **Export report** dialog with the scope, the period and the
+format. Two formats:
+
+- **PDF** — A4 with a cover band (school, scope, period, student count), KPI tiles,
+  attendance bars, a daily attendance chart, scorecards, workload tables and class
+  registers when one to three classes are selected, then notes and page numbers.
+  The engine is [`shared/report-pdf.js`](shared/report-pdf.js) (jsPDF + autoTable,
+  installed once at the repo root and loaded on demand by both consoles).
+- **CSV** — the same sections as rows, including the daily timeline.
+
+File names carry the selection and period, e.g.
+`springfield-elementary-grade-8-a-2026-09-19_to_2026-10-18-2026-10-18.pdf`.
+
+### Tests
+
+```bash
+npm run test:reports             # report maths, periods, PDF text, CSV (both consoles)
+npm run verify:report-attendance # the report endpoint against the dev database
 ```
+
+The PDF tests render real documents and extract their text (`pdf-parse`), so a
+missing section, a blank page or a broken table is a failure. The backend script
+checks the endpoint against the dev database: range validation, totals matching
+the raw register, class scoping, and rejection of anonymous requests.
+
+Reports reuse the existing endpoints (`get_admin_teachers` / `get_admin_classes` /
+`get_admin_students`, `overview`, `get_schools`) plus `get_admin_attendance` for
+periods. Deploying to a server therefore needs both the console build and the
+updated backend.
