@@ -170,7 +170,9 @@ Future<void> showExportSheet(BuildContext context, AttendanceExportData data) {
               '${data.className} • ${DateFormat('dd MMM yyyy').format(data.date)} • ${data.rows.length} students',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
+            _saveNote(),
+            const SizedBox(height: 4),
             const _SectionLabel('Signed PDF'),
             _exportTile(
               icon: Icons.draw_rounded,
@@ -185,15 +187,19 @@ Future<void> showExportSheet(BuildContext context, AttendanceExportData data) {
               }),
             ),
             _exportTile(
-              icon: Icons.download_rounded,
+              icon: Icons.save_alt_rounded,
               color: const Color(0xFF2E7D32),
-              title: 'Download Signed PDF',
-              subtitle: 'Sign, then save to Downloads',
+              title: 'Save or Share Signed PDF',
+              subtitle: 'Downloads on desktop · share sheet on mobile',
               onTap: _signedJob(context, (sig) async {
                 final bytes = await ExportService.instance
                     .buildPdf(data, signatureBytes: sig, signedByName: data.teacher);
-                return ExportService.instance
-                    .saveToDownloads(bytes, _signedFileName(_fileName(data, 'pdf')));
+                return ExportService.instance.exportToDevice(
+                  bytes,
+                  _signedFileName(_fileName(data, 'pdf')),
+                  mimeType: 'application/pdf',
+                  text: 'Signed report ${data.subject} ${data.className}',
+                );
               }),
             ),
             _exportTile(
@@ -217,13 +223,16 @@ Future<void> showExportSheet(BuildContext context, AttendanceExportData data) {
             _exportTile(
               icon: Icons.picture_as_pdf,
               color: const Color(0xFFE53935),
-              title: 'Download PDF',
-              subtitle: 'Saved to your Downloads folder',
+              title: 'Save or Share PDF',
+              subtitle: 'Downloads on desktop · share sheet on mobile',
               onTap: () => _runExport(sheetCtx, () async {
                 final bytes = await ExportService.instance.buildPdf(data);
-                final msg = await ExportService.instance
-                    .saveToDownloads(bytes, _fileName(data, 'pdf'));
-                return msg;
+                return ExportService.instance.exportToDevice(
+                  bytes,
+                  _fileName(data, 'pdf'),
+                  mimeType: 'application/pdf',
+                  text: 'Report ${data.subject} ${data.className}',
+                );
               }),
             ),
             _exportTile(
@@ -256,28 +265,31 @@ Future<void> showExportSheet(BuildContext context, AttendanceExportData data) {
             _exportTile(
               icon: Icons.table_chart,
               color: const Color(0xFF7C4DFF),
-              title: 'Share Excel (.xlsx)',
-              subtitle: 'Editable spreadsheet for records',
+              title: 'Save or Share Excel (.xlsx)',
+              subtitle: 'Downloads on desktop · share sheet on mobile',
               onTap: () => _runExport(sheetCtx, () async {
                 final bytes = await ExportService.instance.buildExcel(data);
-                await ExportService.instance.shareBytes(
+                return ExportService.instance.exportToDevice(
                   bytes,
                   _fileName(data, 'xlsx'),
-                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  mimeType:
+                      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  text: 'Attendance report ${data.className}',
                 );
-                return 'Sharing…';
               }),
             ),
             _exportTile(
               icon: Icons.insert_drive_file,
               color: const Color(0xFF00897B),
-              title: 'Share CSV',
-              subtitle: 'Plain text table for any app',
+              title: 'Save or Share CSV',
+              subtitle: 'Downloads on desktop · share sheet on mobile',
               onTap: () => _runExport(sheetCtx, () async {
                 final csv = await ExportService.instance.buildCsv(data);
-                await ExportService.instance
-                    .shareTextFile(csv, _fileName(data, 'csv'));
-                return 'Sharing…';
+                return ExportService.instance.shareTextFile(
+                  csv,
+                  _fileName(data, 'csv'),
+                  text: 'Attendance report ${data.className}',
+                );
               }),
             ),
           ],
@@ -353,7 +365,9 @@ Future<void> showHistoryExportSheet(
               '${data.className} • $rangeLabel • ${data.days.length} marked day${data.days.length == 1 ? '' : 's'}',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
+            _saveNote(),
+            const SizedBox(height: 4),
             const _SectionLabel('Signed PDF'),
             _exportTile(
               icon: Icons.draw_rounded,
@@ -370,17 +384,22 @@ Future<void> showHistoryExportSheet(
               }),
             ),
             _exportTile(
-              icon: Icons.download_rounded,
+              icon: Icons.save_alt_rounded,
               color: const Color(0xFF2E7D32),
-              title: 'Download Signed PDF',
-              subtitle: 'Sign, then save to Downloads',
+              title: 'Save or Share Signed PDF',
+              subtitle: 'Downloads on desktop · share sheet on mobile',
               onTap: _signedJob(context, (sig) async {
                 final bytes = await ExportService.instance.buildHistoryPdf(
                     data,
                     signatureBytes: sig,
                     signedByName: data.teacher);
-                return ExportService.instance.saveToDownloads(
-                    bytes, _signedFileName(_historyFileName(data, 'pdf')));
+                return ExportService.instance.exportToDevice(
+                  bytes,
+                  _signedFileName(_historyFileName(data, 'pdf')),
+                  mimeType: 'application/pdf',
+                  text:
+                      'Signed attendance report ${data.className} ($rangeLabel)',
+                );
               }),
             ),
             _exportTile(
@@ -407,14 +426,18 @@ Future<void> showHistoryExportSheet(
             _exportTile(
               icon: Icons.picture_as_pdf,
               color: const Color(0xFFE53935),
-              title: 'Download PDF',
-              subtitle: 'Saved to your Downloads folder',
+              title: 'Save or Share PDF',
+              subtitle: 'Downloads on desktop · share sheet on mobile',
               onTap: () => _runExport(sheetCtx, () async {
                 final bytes =
                     await ExportService.instance.buildHistoryPdf(data);
-                final msg = await ExportService.instance
-                    .saveToDownloads(bytes, _historyFileName(data, 'pdf'));
-                return msg;
+                return ExportService.instance.exportToDevice(
+                  bytes,
+                  _historyFileName(data, 'pdf'),
+                  mimeType: 'application/pdf',
+                  text:
+                      'Attendance report ${data.className} ($rangeLabel)',
+                );
               }),
             ),
             _exportTile(
@@ -475,6 +498,37 @@ void Function() _signedJob(
 
 String _signedFileName(String baseName) =>
     'Signed_${baseName.replaceAll(' ', '_')}';
+
+/// Tells the teacher where the file goes without ever printing a sandbox path.
+Widget _saveNote() {
+  return Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: const Color(0xFFEFF6FF),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: const Color(0xFFBFDBFE)),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.save_alt_rounded, size: 16, color: Colors.blue.shade700),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'On phones the share sheet opens after export — pick Files → '
+            'Downloads, or send it to WhatsApp, Drive, mail or any app. On '
+            'desktop the file goes straight to your Downloads folder.',
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.4,
+              color: const Color(0xFF1E40AF),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
 class _SectionLabel extends StatelessWidget {
   final String text;

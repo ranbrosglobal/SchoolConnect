@@ -16,6 +16,7 @@ import '../models/student_group_model.dart';
 import '../models/course_schedule_model.dart';
 import '../models/attendance_model.dart';
 import '../models/assignment_model.dart';
+import '../models/assignment_material.dart';
 import '../models/assignment_submission_model.dart';
 import '../models/student_detail_model.dart';
 import '../models/school_profile_model.dart';
@@ -675,10 +676,13 @@ class GoogleSheetsService {
     required String studentGroup,
     required DateTime dueDate,
     String? description,
+    List<AssignmentMaterialUpload> files = const [],
     String? filePath,
     List<int>? fileBytes,
   }) async {
-    final payload = await _filePayload(filePath, fileBytes);
+    final payload = files.isNotEmpty
+        ? _materialsPayload(files)
+        : await _filePayload(filePath, fileBytes);
     final result = await _post('school_connect.api.mobile.create_assignment', {
       'title': title,
       'course': course,
@@ -688,6 +692,17 @@ class GoogleSheetsService {
       ...payload,
     });
     return AssignmentModel.fromJson(result);
+  }
+
+  /// Base64 JSON for one or more assignment materials. Video and voice notes
+  /// travel the same path as documents; the backend derives kind and mime.
+  Map<String, dynamic> _materialsPayload(List<AssignmentMaterialUpload> files) {
+    return {
+      'files': [
+        for (final file in files)
+          {'file_name': file.name, 'file_data': base64Encode(file.bytes)},
+      ],
+    };
   }
 
   /// Builds the base64 upload fields from in-memory bytes when available,
@@ -714,11 +729,15 @@ class GoogleSheetsService {
     required String studentGroup,
     required DateTime dueDate,
     String? description,
+    List<AssignmentMaterialUpload> newFiles = const [],
+    List<String> removeFileIds = const [],
+    bool clearAttachments = false,
     String? filePath,
     List<int>? fileBytes,
-    bool clearAttachment = false,
   }) async {
-    final payload = await _filePayload(filePath, fileBytes);
+    final payload = newFiles.isNotEmpty
+        ? _materialsPayload(newFiles)
+        : await _filePayload(filePath, fileBytes);
     await _post('school_connect.api.mobile.update_assignment', {
       'id': assignmentId,
       'title': title,
@@ -727,7 +746,8 @@ class GoogleSheetsService {
       'due_date': dueDate.toIso8601String().split('T')[0],
       'description': description ?? '',
       ...payload,
-      'clear_attachment': clearAttachment,
+      if (removeFileIds.isNotEmpty) 'remove_file_ids': removeFileIds,
+      'clear_attachments': clearAttachments,
     });
   }
 
@@ -744,17 +764,37 @@ class GoogleSheetsService {
     return base64Decode(data);
   }
 
-  /// Downloads a file and opens the platform share sheet so the user can
-  /// save it anywhere (Files, Google Drive, WhatsApp, …).
-  Future<void> downloadAndShareFile(String fileId, String fileName) async {
+  /// Downloads a file and delivers it the platform-native way: straight to
+  /// Downloads on desktop, share sheet (Files, Drive, WhatsApp, …) on mobile.
+  Future<String> downloadAndShareFile(String fileId, String fileName) async {
     final bytes = await downloadFile(fileId);
-    await ExportService.instance.shareBytes(bytes, fileName, _mimeTypeFor(fileName));
+    return ExportService.instance.exportToDevice(
+      bytes,
+      fileName,
+      mimeType: _mimeTypeFor(fileName),
+    );
   }
 
   String _mimeTypeFor(String fileName) {
     final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
     return switch (ext) {
       'pdf' => 'application/pdf',
+      'mp4' || 'm4v' => 'video/mp4',
+      'mov' => 'video/quicktime',
+      'webm' => 'video/webm',
+      'avi' => 'video/x-msvideo',
+      'mkv' => 'video/x-matroska',
+      '3gp' => 'video/3gpp',
+      'mp3' => 'audio/mpeg',
+      'm4a' => 'audio/mp4',
+      'aac' => 'audio/aac',
+      'wav' => 'audio/wav',
+      'ogg' || 'oga' => 'audio/ogg',
+      'opus' => 'audio/opus',
+      'amr' => 'audio/amr',
+      'flac' => 'audio/flac',
+      'heic' => 'image/heic',
+      'webp' => 'image/webp',
       'png' => 'image/png',
       'jpg' || 'jpeg' => 'image/jpeg',
       'gif' => 'image/gif',

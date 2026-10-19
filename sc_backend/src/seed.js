@@ -117,6 +117,19 @@ function createSchooladminTables(db) {
     created_by  TEXT,
     created_at  TEXT
   )`)
+  // Materials attached to one assignment: any mix of PDFs, images, video
+  // clips and voice notes. A row points at a file_blobs row so the bytes are
+  // stored once and every console/mobile client downloads them by file id.
+  db.exec(`CREATE TABLE IF NOT EXISTS assignment_files (
+    id            TEXT PRIMARY KEY,
+    assignment_id TEXT NOT NULL,
+    file_id       TEXT NOT NULL,
+    name          TEXT NOT NULL,
+    kind          TEXT NOT NULL DEFAULT 'file',
+    size          INTEGER NOT NULL DEFAULT 0,
+    uploaded_by   TEXT,
+    created_at    TEXT NOT NULL
+  )`)
   db.exec(`CREATE TABLE IF NOT EXISTS file_blobs (
     id         TEXT PRIMARY KEY,
     name       TEXT NOT NULL,
@@ -168,6 +181,8 @@ function createSchooladminTables(db) {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_students_school ON students (school_id)`)
   db.exec(`CREATE INDEX IF NOT EXISTS idx_timetable_class ON timetable (class_id, day, period)`)
   db.exec(`CREATE INDEX IF NOT EXISTS idx_users_school ON users (school_id)`)
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_assignment_files_assignment ON assignment_files (assignment_id)`)
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_assignment_files_file ON assignment_files (file_id)`)
 }
 
 /** Store a base64 file in the file_blobs table. */

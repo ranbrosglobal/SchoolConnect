@@ -5,6 +5,8 @@ import 'package:file_picker/file_picker.dart';
 import '../../state/student_provider.dart';
 import '../../state/auth_provider.dart' show sheetsServiceProvider;
 import '../../models/assignment_model.dart';
+import '../../models/assignment_material.dart';
+import '../../widgets/assignment_material_tile.dart';
 
 class AssignmentDetailScreen extends ConsumerStatefulWidget {
   final AssignmentModel assignment;
@@ -30,47 +32,71 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
   List<int>? _selectedFileBytes;
   bool _isSubmitting = false;
   bool _downloading = false;
+  String? _downloadingId;
 
-  Future<void> _downloadAttachment() async {
-    final fileId = _assignment.attachment;
-    final name = _assignment.attachmentName ?? 'attachment';
-    if (fileId == null || fileId.isEmpty) {
+  Future<void> _downloadMaterial(AssignmentMaterial material) async {
+    if (material.id.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No attachment file available')),
+        const SnackBar(content: Text('No file available')),
       );
       return;
     }
-    setState(() => _downloading = true);
+    setState(() {
+      _downloading = true;
+      _downloadingId = material.id;
+    });
     try {
       await ref
           .read(sheetsServiceProvider)
-          .downloadAndShareFile(fileId, name);
+          .downloadAndShareFile(material.id, material.name);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Opened $name — choose where to save it')),
+          SnackBar(
+            content: Text(
+              'Opened ${material.name} — choose where to save it',
+            ),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Download failed: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Download failed: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
-      if (mounted) setState(() => _downloading = false);
+      if (mounted) {
+        setState(() {
+          _downloading = false;
+          _downloadingId = null;
+        });
+      }
     }
   }
 
   Future<void> _pickFile() async {
+    // Any file type: teachers may ask for a PDF, an image, a video or a voice
+    // note. The backend accepts up to 20 MB per submission.
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'txt'],
+      type: FileType.any,
       withData: true, // loads bytes on every platform (web + native)
     );
 
     if (result != null && result.files.isNotEmpty) {
       if (!mounted) return;
       final file = result.files.first;
+      if ((file.bytes?.length ?? file.size) > kMaxMaterialBytes) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('That file is larger than 20 MB. Pick a smaller one.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
       setState(() {
         _selectedFilePath = file.path;
         _selectedFileName = file.name;
@@ -81,7 +107,7 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
   }
 
   Future<void> _confirmSubmit() async {
-    if (_selectedFilePath == null) return;
+    if (_selectedFilePath == null && _selectedFileBytes == null) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -388,33 +414,39 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
               const SizedBox(height: 16),
             ],
 
-            // Attachment
-            if (_assignment.attachment != null) ...[
+            // Materials shared by the teacher (PDF, image, video, voice, …)
+            if (_assignment.hasMaterials) ...[
               Text(
-                'Attachment',
+                'Class materials',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              const SizedBox(height: 4),
+              Text(
+                'Shared by your teacher — tap a file to open or save it.',
+                style: TextStyle(fontSize: 12.5, color: Colors.grey[600]),
+              ),
               const SizedBox(height: 8),
               Card(
-                child: ListTile(
-                  leading: Icon(
-                    Icons.attach_file,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  title: Text(
-                    _assignment.attachmentName ?? 'Attachment',
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                  trailing: _downloading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.download),
-                  onTap: _downloading ? null : _downloadAttachment,
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < _assignment.materials.length; i++) ...[
+                      AssignmentMaterialTile(
+                        material: _assignment.materials[i],
+                        busy: _downloading &&
+                            _downloadingId == _assignment.materials[i].id,
+                        onTap: _downloading
+                            ? null
+                            : () => _downloadMaterial(
+                                  _assignment.materials[i],
+                                ),
+                      ),
+                      if (i != _assignment.materials.length - 1)
+                        const Divider(height: 1, indent: 56),
+                    ],
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
@@ -719,7 +751,7 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'PDF, DOC, PPT or images',
+                          'Any file — PDF, image, video or voice note',
                           style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                         ),
                         const SizedBox(height: 12),

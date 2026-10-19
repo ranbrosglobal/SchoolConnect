@@ -60,10 +60,10 @@ Future<void> _shareCsv(
   required String label,
 }) async {
   try {
-    await ExportService.instance.shareBytes(
+    await ExportService.instance.exportToDevice(
       Uint8List.fromList(utf8.encode(content)),
       filename,
-      'text/csv',
+      mimeType: 'text/csv',
       text: label,
     );
   } catch (e) {

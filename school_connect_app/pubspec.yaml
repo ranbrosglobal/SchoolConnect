@@ -55,6 +55,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  # Fakes the platform path provider so download-folder tests never touch disk
+  # on the developer's machine.
+  path_provider_platform_interface: ^2.1.2
 
 flutter:
   uses-material-design: true

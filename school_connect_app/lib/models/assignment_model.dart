@@ -1,3 +1,5 @@
+import 'assignment_material.dart';
+
 class AssignmentModel {
   final String id;
   final String title;
@@ -14,6 +16,8 @@ class AssignmentModel {
   final DateTime? creation;
   final String? attachment;
   final String? attachmentName;
+  /// Everything the teacher attached: PDFs, images, video, voice notes, docs.
+  final List<AssignmentMaterial> materials;
 
   // Submission info (student view)
   final bool submitted;
@@ -45,6 +49,7 @@ class AssignmentModel {
     this.creation,
     this.attachment,
     this.attachmentName,
+    this.materials = const [],
     this.submitted = false,
     this.grade,
     this.feedback,
@@ -83,6 +88,7 @@ class AssignmentModel {
       creation: parseDate(json['creation']),
       attachment: json['attachment'],
       attachmentName: json['attachment_name'],
+      materials: _parseMaterials(json),
       submitted: json['submitted'] == true ||
           (submissionMap != null && submissionMap['status'] != 'Returned'),
       grade: parseDouble(submissionMap?['grade'] ?? json['grade']),
@@ -109,6 +115,42 @@ class AssignmentModel {
       'due_date': dueDate?.toIso8601String().split('T')[0],
       'attachment': attachment,
     };
+  }
+
+  static List<AssignmentMaterial> _parseMaterials(Map<String, dynamic> json) {
+    final raw = json['files'];
+    final materials = <AssignmentMaterial>[];
+    if (raw is List) {
+      for (final item in raw) {
+        if (item is Map) {
+          materials.add(
+            AssignmentMaterial.fromJson(Map<String, dynamic>.from(item)),
+          );
+        }
+      }
+    }
+    // Assignments created before multi-file materials only carried one
+    // attachment id. Keep that upload visible without a backend round-trip.
+    if (materials.isEmpty && json['attachment'] != null) {
+      final name = (json['attachment_name'] ?? 'Attachment').toString();
+      materials.add(AssignmentMaterial(
+        id: json['attachment'].toString(),
+        name: name,
+        kind: materialKindForName(name),
+      ));
+    }
+    return materials;
+  }
+
+  bool get hasMaterials => materials.isNotEmpty;
+
+  /// Distinct material kinds in upload order, e.g. `[pdf, audio]`.
+  List<String> get materialKinds {
+    final seen = <String>{};
+    return [
+      for (final m in materials)
+        if (seen.add(m.kind)) m.kind,
+    ];
   }
 
   bool get isOverdue {

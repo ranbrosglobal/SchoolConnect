@@ -281,6 +281,15 @@ const ALLOWED_ORIGINS = [
  * @returns {http.Server}
  */
 const MAX_BODY_BYTES = 1 * 1024 * 1024 // 1 MB for normal API requests
+// Assignment materials (PDF, images, video, voice notes) are uploaded as
+// base64 JSON, so those endpoints need a much larger body allowance. The
+// per-file limit is enforced in handlers.js.
+const UPLOAD_BODY_BYTES = 160 * 1024 * 1024
+const UPLOAD_PATHS = new Set([
+  'school_connect.api.mobile.create_assignment',
+  'school_connect.api.mobile.update_assignment',
+  'school_connect.api.mobile.submit_assignment',
+])
 const IS_SECURE = process.env.SC_SECURE === 'true' || process.env.NODE_ENV === 'production'
 
 function cookieFlags() {
@@ -497,7 +506,7 @@ export function createServer({ consoleName, port, seed, sync, staticDir }) {
       }
 
       if (req.method === 'POST') {
-        readBody(req).then(body => {
+        readBody(req, UPLOAD_PATHS.has(apiPath) ? UPLOAD_BODY_BYTES : MAX_BODY_BYTES).then(body => {
           let bodyParams = {}
           try { bodyParams = body ? JSON.parse(body) : {} } catch {}
           try {

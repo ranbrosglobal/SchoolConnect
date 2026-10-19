@@ -8,6 +8,7 @@ import '../../theme/colors.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/kit/kit.dart';
 import 'assignment_detail_screen.dart';
+import 'create_assignment_screen.dart';
 
 enum _Filter { all, toGrade, graded, upcoming }
 
@@ -46,6 +47,13 @@ class _TeacherAssignmentsScreenState
     if (mounted) setState(() => _loading = false);
   }
 
+  Future<void> _create() async {
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const CreateAssignmentScreen()),
+    );
+    if (created == true) await _load();
+  }
+
   static int _pending(AssignmentModel a) =>
       (a.submittedCount - a.gradedCount).clamp(0, 999999).toInt();
 
@@ -71,6 +79,16 @@ class _TeacherAssignmentsScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _create,
+        backgroundColor: AppColors.teacherAccent,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.upload_file_rounded),
+        label: const Text(
+          'Upload',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -91,7 +109,7 @@ class _TeacherAssignmentsScreenState
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(
                     parent: BouncingScrollPhysics()),
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 40),
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 110),
                 children: [
                   if (_loading && assignments.isEmpty)
                     const SkeletonCard(lines: 3)

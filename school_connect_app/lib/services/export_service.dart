@@ -3,7 +3,8 @@ import 'dart:typed_data';
 
 import 'package:csv/csv.dart';
 import 'package:excel/excel.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/widgets.dart' show Rect;
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -982,24 +983,74 @@ class ExportService {
   // Delivery: downloads / share / print
   // ------------------------------------------------------------------
 
-  /// Saves [bytes] to the system Downloads folder (desktop), the browser
-  /// download (web) or the app documents (mobile fallback).
-  /// Returns a human-readable location message.
+  /// MIME type used when handing an export to the OS (share sheet, Files, …).
+  String mimeTypeForFile(String filename) {
+    final ext = filename.contains('.')
+        ? filename.split('.').last.toLowerCase()
+        : '';
+    return switch (ext) {
+      'pdf' => 'application/pdf',
+      'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'csv' => 'text/csv',
+      'txt' => 'text/plain',
+      _ => 'application/octet-stream',
+    };
+  }
+
+  /// Saves [bytes] to the real system Downloads folder on desktop and the
+  /// browser's Downloads folder on web. Mobile cannot write to the public
+  /// Downloads folder without a scoped-storage plugin, so callers should use
+  /// [exportToDevice], which opens the share sheet there instead.
   Future<String> saveToDownloads(Uint8List bytes, String filename) async {
     if (kIsWeb) {
       webdl.triggerDownload(bytes, filename);
-      return 'Downloading $filename…';
+      return 'Saved to Downloads';
     }
     try {
       final dir = await getDownloadsDirectory();
       if (dir != null) {
-        final path = await fileio.writeBytesToDir(dir.path, filename, bytes);
-        return 'Saved to $path';
+        await fileio.writeBytesToDir(dir.path, filename, bytes);
+        return 'Saved to Downloads';
       }
     } catch (_) {}
     final docs = await getApplicationDocumentsDirectory();
-    final path = await fileio.writeBytesToDir(docs.path, filename, bytes);
-    return 'Saved to $path';
+    await fileio.writeBytesToDir(docs.path, filename, bytes);
+    return 'Saved to app files';
+  }
+
+  /// Delivers an exported file the way the platform expects:
+  /// - desktop: writes it to the real Downloads folder, then opens the share
+  ///   sheet so it can also go to mail/Slack/etc.
+  /// - web: browser download (lands in the browser's Downloads folder).
+  /// - Android/iOS: opens the system share sheet immediately, where the teacher
+  ///   can choose **Files → Downloads**, WhatsApp, Drive, mail or any app.
+  ///
+  /// This never reports an internal sandbox path to the user.
+  Future<String> exportToDevice(
+    Uint8List bytes,
+    String filename, {
+    String? mimeType,
+    String? text,
+  }) async {
+    final mime = mimeType ?? mimeTypeForFile(filename);
+    if (kIsWeb) {
+      webdl.triggerDownload(bytes, filename);
+      return 'Saved to Downloads';
+    }
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS)) {
+      await shareBytes(bytes, filename, mime, text: text);
+      return 'Choose Files, WhatsApp or another app to save/share';
+    }
+    final saved = await saveToDownloads(bytes, filename);
+    try {
+      await shareBytes(bytes, filename, mime, text: text);
+      return '$saved — share sheet opened';
+    } catch (_) {
+      // Sharing is a bonus on desktop; the file is already in Downloads.
+      return saved;
+    }
   }
 
   /// Shares [bytes] via the platform share sheet — on mobile this opens the
@@ -1033,23 +1084,17 @@ class ExportService {
 
   /// Shares a plain-text file (e.g. CSV) — same share-sheet behaviour as
   /// [shareBytes].
-  Future<void> shareTextFile(String content, String filename) async {
-    final bytes = Uint8List.fromList(utf8.encode(content));
-    if (kIsWeb) {
-      final shared = await webdl.shareViaWeb(
-        bytes,
-        filename,
-        'text/csv',
-        text: 'Attendance report $filename',
-      );
-      if (!shared) webdl.triggerDownload(bytes, filename);
-      return;
-    }
-    final xfile = XFile.fromData(bytes, mimeType: 'text/csv', name: filename);
-    await Share.shareXFiles(
-      [xfile],
-      text: 'Attendance report $filename',
-      sharePositionOrigin: const Rect.fromLTWH(0, 0, 200, 200),
+  Future<String> shareTextFile(
+    String content,
+    String filename, {
+    String? text,
+    String mimeType = 'text/csv',
+  }) {
+    return exportToDevice(
+      Uint8List.fromList(utf8.encode(content)),
+      filename,
+      mimeType: mimeType,
+      text: text ?? 'Attendance report $filename',
     );
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../models/course_schedule_model.dart';
 import 'attendance_marking_screen.dart';
 import 'attendance_history_screen.dart';
+import 'class_assignments_screen.dart';
 import 'class_students_screen.dart';
 
 /// Landing screen for one class: everything the teacher can do with it —
@@ -123,6 +124,20 @@ class TeacherClassHubScreen extends StatelessWidget {
               MaterialPageRoute(
                 builder: (_) =>
                     TeacherClassStudentsScreen(courseSchedule: courseSchedule),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          _HubAction(
+            icon: Icons.assignment_add,
+            color: const Color(0xFF7C3AED),
+            title: 'Assignments & Materials',
+            subtitle:
+                'Upload PDFs, images, video or voice notes for this class',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    ClassAssignmentsScreen(courseSchedule: courseSchedule),
               ),
             ),
           ),

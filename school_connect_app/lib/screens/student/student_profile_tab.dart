@@ -12,6 +12,7 @@ import '../../theme/tokens.dart';
 import '../../widgets/kit/kit.dart';
 import '../auth/login_screen.dart';
 import 'attendance_detail_screen.dart';
+import 'student_assignments_screen.dart';
 import 'student_grades_screen.dart';
 
 /// Student profile: identity first, live academics second, settings last.
@@ -116,6 +117,19 @@ class StudentProfileTab extends ConsumerWidget {
                             '${ctx.overallAttendance.toStringAsFixed(0)}% overall · '
                             '${ctx.attendanceCounts.present} present',
                         onTap: () => _push(context, const AttendanceDetailScreen()),
+                      ),
+                      _Tile(
+                        icon: Icons.assignment_outlined,
+                        color: AppColors.studentAccent,
+                        title: 'Assignments & materials',
+                        subtitle: student.assignments.isEmpty
+                            ? 'Set work and files from your teachers will appear here'
+                            : '${student.assignments.length} assignment'
+                                '${student.assignments.length == 1 ? '' : 's'} · '
+                                '${student.assignments.where((a) => a.hasMaterials).length} '
+                                'with class materials',
+                        onTap: () =>
+                            _push(context, const StudentAssignmentsScreen()),
                       ),
                     ],
                   ),

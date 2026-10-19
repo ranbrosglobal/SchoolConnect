@@ -48,8 +48,207 @@ function publicUser(user, schoolName) {
   }
 }
 
-// Max base64 payload accepted for file uploads (~10 MB decoded)
-const MAX_UPLOAD_B64 = 14 * 1024 * 1024
+// Max base64 payload accepted for one uploaded file (~20 MB decoded). Class
+// materials can be a PDF, image, video clip or voice note, so this needs to be
+// larger than a document-only limit. The HTTP layer allows a bigger body for
+// upload endpoints (see UPLOAD_BODY_BYTES in server.js).
+const MAX_UPLOAD_B64 = 28 * 1024 * 1024
+const MAX_FILES_PER_ASSIGNMENT = 4
+const MAX_FILE_NAME = 180
+
+// ─── Assignment material helpers ────────────────────────────────────
+// One assignment can carry a mix of documents, images, video and audio. The
+// kind is derived from the extension so every client can pick the right icon
+// and preview/download behaviour without trusting a client-supplied type.
+
+const FILE_MIME_BY_EXT = {
+  pdf: 'application/pdf',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  bmp: 'image/bmp',
+  svg: 'image/svg+xml',
+  mp4: 'video/mp4',
+  m4v: 'video/mp4',
+  mov: 'video/quicktime',
+  webm: 'video/webm',
+  avi: 'video/x-msvideo',
+  mkv: 'video/x-matroska',
+  '3gp': 'video/3gpp',
+  mp3: 'audio/mpeg',
+  m4a: 'audio/mp4',
+  aac: 'audio/aac',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+  oga: 'audio/ogg',
+  opus: 'audio/opus',
+  amr: 'audio/amr',
+  flac: 'audio/flac',
+  txt: 'text/plain',
+  md: 'text/markdown',
+  csv: 'text/csv',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ppt: 'application/vnd.ms-powerpoint',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  zip: 'application/zip',
+}
+
+const FILE_KIND_BY_EXT = {
+  pdf: 'pdf',
+  png: 'image', jpg: 'image', jpeg: 'image', gif: 'image', webp: 'image',
+  heic: 'image', heif: 'image', bmp: 'image', svg: 'image',
+  mp4: 'video', m4v: 'video', mov: 'video', webm: 'video', avi: 'video',
+  mkv: 'video', '3gp': 'video',
+  mp3: 'audio', m4a: 'audio', aac: 'audio', wav: 'audio', ogg: 'audio',
+  oga: 'audio', opus: 'audio', amr: 'audio', flac: 'audio',
+  txt: 'document', md: 'document', csv: 'document', doc: 'document',
+  docx: 'document', ppt: 'document', pptx: 'document', xls: 'document',
+  xlsx: 'document',
+  zip: 'archive', rar: 'archive', '7z': 'archive',
+}
+
+function fileExtension(name) {
+  const clean = String(name || '').split(/[?#]/)[0]
+  const dot = clean.lastIndexOf('.')
+  return dot >= 0 ? clean.slice(dot + 1).toLowerCase() : ''
+}
+
+function attachmentKind(name) {
+  return FILE_KIND_BY_EXT[fileExtension(name)] || 'file'
+}
+
+function attachmentMime(name, declared) {
+  if (typeof declared === 'string' && declared.includes('/') && declared.length <= 100) {
+    return declared
+  }
+  return FILE_MIME_BY_EXT[fileExtension(name)] || 'application/octet-stream'
+}
+
+function cleanFileName(name) {
+  const base = String(name || '').split(/[\\/]/).pop().trim()
+  return (base || 'attachment').slice(0, MAX_FILE_NAME)
+}
+
+/** Decoded byte size of a base64 string (ignoring padding). */
+function base64Size(data) {
+  if (typeof data !== 'string' || !data) return 0
+  const padding = data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0
+  return Math.max(0, Math.floor(data.length * 3 / 4) - padding)
+}
+
+/**
+ * Normalize uploaded files from either the multi-file `files` array or the
+ * legacy single `file_name`/`file_data` pair. Invalid entries are rejected
+ * before anything is written.
+ */
+function uploadCandidates(params) {
+  const uploads = []
+  if (Array.isArray(params.files)) {
+    for (const file of params.files) {
+      if (!file || typeof file !== 'object') continue
+      const data = file.file_data ?? file.data
+      if (typeof data !== 'string' || !data) continue
+      uploads.push({
+        name: cleanFileName(file.file_name ?? file.name),
+        data,
+        mime: file.mime_type ?? file.mime,
+      })
+    }
+    return uploads
+  }
+  if (typeof params.file_data === 'string' && params.file_data) {
+    uploads.push({
+      name: cleanFileName(params.file_name),
+      data: params.file_data,
+      mime: params.mime_type,
+    })
+  }
+  return uploads
+}
+
+function assertUploadsAllowed(uploads) {
+  if (uploads.length > MAX_FILES_PER_ASSIGNMENT) {
+    throw { status: 400, message: `You can attach up to ${MAX_FILES_PER_ASSIGNMENT} files` }
+  }
+  for (const upload of uploads) {
+    if (upload.data.length > MAX_UPLOAD_B64) {
+      throw { status: 413, message: 'File too large (max 20 MB per file)' }
+    }
+  }
+}
+
+function insertAssignmentFile(db, assignmentId, user, upload) {
+  const mime = attachmentMime(upload.name, upload.mime)
+  const fileId = storeFileBlob(db, {
+    name: upload.name,
+    mimeType: mime,
+    data: upload.data,
+    uploadedBy: user.id,
+  })
+  const id = genId('afile-')
+  insert(db, 'assignment_files', {
+    id,
+    assignment_id: assignmentId,
+    file_id: fileId,
+    name: upload.name,
+    kind: attachmentKind(upload.name),
+    size: base64Size(upload.data),
+    uploaded_by: user.id,
+    created_at: new Date().toISOString(),
+  })
+  return id
+}
+
+function serializeAssignmentFile(db, row) {
+  const blob = getById(db, 'file_blobs', row.file_id)
+  return {
+    id: row.file_id,
+    file_id: row.file_id,
+    assignment_file_id: row.id,
+    name: row.name,
+    kind: row.kind || attachmentKind(row.name),
+    size: row.size || blob?.size || 0,
+    mime_type: blob?.mime_type || attachmentMime(row.name),
+    uploaded_at: row.created_at || null,
+  }
+}
+
+/** All materials attached to one assignment, oldest first. */
+function serializeAssignmentFiles(db, assignmentId) {
+  const rows = db
+    .prepare('SELECT * FROM assignment_files WHERE assignment_id = ? ORDER BY created_at ASC, rowid ASC')
+    .all(assignmentId)
+  return rows.map(row => serializeAssignmentFile(db, row))
+}
+
+/** Keep the legacy single-attachment columns pointing at the first material. */
+function syncLegacyAttachment(db, assignmentId) {
+  const first = db
+    .prepare('SELECT * FROM assignment_files WHERE assignment_id = ? ORDER BY created_at ASC, rowid ASC LIMIT 1')
+    .get(assignmentId)
+  updateById(db, 'assignments', assignmentId, {
+    attachment_id: first?.file_id || null,
+    attachment_name: first?.name || null,
+  })
+}
+
+/** Delete some (or all) materials of an assignment, including their blobs. */
+function removeAssignmentFiles(db, assignmentId, fileIds = null) {
+  const rows = getAll(db, 'assignment_files', 'assignment_id = ?', assignmentId)
+  const wanted = fileIds ? new Set(fileIds) : null
+  for (const row of rows) {
+    if (wanted && !wanted.has(row.file_id) && !wanted.has(row.id)) continue
+    deleteById(db, 'assignment_files', row.id)
+    deleteById(db, 'file_blobs', row.file_id)
+  }
+}
 
 // ─── Lockout & Rate Limiter ────────────────────────────────────────
 
@@ -1300,6 +1499,26 @@ function serializeSubmission(db, sub) {
 function serializeAssignment(db, row, student = null) {
   const cls = getById(db, 'classes', row.class_id)
   const teacher = row.created_by ? getById(db, 'users', row.created_by) : null
+  // Materials live in their own table, but assignments created before that
+  // table existed still carry a single attachment id. Synthesize a file entry
+  // for those so old uploads stay visible to students and teachers.
+  let files = serializeAssignmentFiles(db, row.id)
+  if (!files.length && row.attachment_id) {
+    const blob = getById(db, 'file_blobs', row.attachment_id)
+    if (blob) {
+      const name = row.attachment_name || blob.name
+      files = [{
+        id: blob.id,
+        file_id: blob.id,
+        assignment_file_id: null,
+        name,
+        kind: attachmentKind(name),
+        size: blob.size || 0,
+        mime_type: blob.mime_type || attachmentMime(name),
+        uploaded_at: null,
+      }]
+    }
+  }
   const base = {
     name: row.id,
     id: row.id,
@@ -1313,8 +1532,12 @@ function serializeAssignment(db, row, student = null) {
     instructor_name: teacher?.full_name || null,
     due_date: row.due_date || null,
     creation: row.created_at || null,
-    attachment: row.attachment_id || null,
-    attachment_name: row.attachment_name || null,
+    // Legacy single-attachment fields are kept in sync with the first file so
+    // older app builds keep working; new clients read `files`.
+    attachment: files[0]?.id || row.attachment_id || null,
+    attachment_name: files[0]?.name || row.attachment_name || null,
+    files,
+    material_count: files.length,
   }
   if (student) {
     const subs = getAll(db, 'submissions', 'assignment_id = ? AND student_id = ?', row.id, student.id)
@@ -1349,6 +1572,22 @@ function assertOwnsAssignment(db, user, assignmentId) {
   const classIds = JSON.parse(user.class_ids || '[]')
   if (!classIds.includes(row.class_id)) throw { status: 403, message: 'This assignment belongs to another class' }
   return row
+}
+
+/** A teacher may only upload to a class they teach; an admin only to their school. */
+function assertCanManageClass(db, user, classId) {
+  const cls = getById(db, 'classes', classId)
+  if (!cls) throw { status: 404, message: 'Class not found' }
+  if (user.role === 'School Admin') {
+    if (user.school_id && cls.school_id && user.school_id !== cls.school_id) {
+      throw { status: 403, message: 'This class belongs to another school' }
+    }
+    return cls
+  }
+  if (!teacherClassIds(db, user).includes(classId)) {
+    throw { status: 403, message: 'This class is not assigned to you' }
+  }
+  return cls
 }
 
 /** Mobile: get student's assignments (with their submission + grade) */
@@ -1658,31 +1897,37 @@ function mobileChangePassword(db, params, user) {
   return { message: 'Password updated successfully' }
 }
 
-/** Mobile: teacher creates assignment (optionally with an uploaded attachment) */
+/**
+ * Mobile: teacher creates an assignment with any number of materials
+ * (PDF/document, image, video, voice note). Accepts the multi-file `files`
+ * array and the legacy single `file_name`/`file_data` pair.
+ */
 function mobileCreateAssignment(db, params, user) {
   assertTeacherOrAdmin(user)
-  const { title, class_id, due_date, description, course, file_name, file_data } = params
+  const { title, class_id, due_date, description, course } = params
   if (!title || !class_id) throw { status: 400, message: 'title and class_id are required' }
+  const cls = assertCanManageClass(db, user, class_id)
 
-  let attachmentId = null
-  let attachmentName = null
-  if (file_data) {
-    if (file_data.length > MAX_UPLOAD_B64) throw { status: 413, message: 'File too large (max 10 MB)' }
-    attachmentId = storeFileBlob(db, { name: file_name, data: file_data, uploadedBy: user.id })
-    attachmentName = file_name || 'attachment'
-  }
+  const uploads = uploadCandidates(params)
+  assertUploadsAllowed(uploads)
 
   const id = genId('asgn-')
   insert(db, 'assignments', {
-    id, title, course: course || '', class_id, school_id: user.school_id || '',
+    id, title, course: course || '', class_id, school_id: cls.school_id || user.school_id || '',
     due_date: due_date || '', description: description || '',
-    attachment_id: attachmentId, attachment_name: attachmentName,
     created_by: user.id, created_at: new Date().toISOString(),
   })
-  return { id, title, course, class_id, due_date, description, attachment: attachmentId, attachment_name: attachmentName }
+  for (const upload of uploads) insertAssignmentFile(db, id, user, upload)
+  if (uploads.length) syncLegacyAttachment(db, id)
+
+  return serializeAssignment(db, getById(db, 'assignments', id))
 }
 
-/** Mobile: teacher updates an assignment */
+/**
+ * Mobile: teacher updates an assignment. New materials can be appended
+ * (`files`), individual ones removed (`remove_file_ids`), or all replaced by
+ * sending the legacy single file fields / `clear_attachments`.
+ */
 function mobileUpdateAssignment(db, params, user) {
   assertTeacherOrAdmin(user)
   const row = assertOwnsAssignment(db, user, params.id)
@@ -1690,27 +1935,48 @@ function mobileUpdateAssignment(db, params, user) {
   const updates = {}
   if (params.title) updates.title = params.title
   if (params.course != null) updates.course = params.course
-  if (params.class_id) updates.class_id = params.class_id
+  if (params.class_id && params.class_id !== row.class_id) {
+    assertCanManageClass(db, user, params.class_id)
+    updates.class_id = params.class_id
+  }
   if (params.due_date != null) updates.due_date = params.due_date
   if (params.description != null) updates.description = params.description
+  if (Object.keys(updates).length) updateById(db, 'assignments', row.id, updates)
 
-  if (params.clear_attachment) {
-    updates.attachment_id = null
-    updates.attachment_name = null
-  } else if (params.file_data) {
-    if (params.file_data.length > MAX_UPLOAD_B64) throw { status: 413, message: 'File too large (max 10 MB)' }
-    updates.attachment_id = storeFileBlob(db, { name: params.file_name, data: params.file_data, uploadedBy: user.id })
-    updates.attachment_name = params.file_name || 'attachment'
+  const clearAll = params.clear_attachments === true || params.clear_attachment === true
+  const legacyReplace = !Array.isArray(params.files) &&
+    typeof params.file_data === 'string' && params.file_data.length > 0
+  const uploads = legacyReplace
+    ? uploadCandidates(params)
+    : (Array.isArray(params.files) ? uploadCandidates(params) : [])
+  assertUploadsAllowed(uploads)
+
+  if (clearAll || legacyReplace) removeAssignmentFiles(db, row.id)
+
+  if (!clearAll && !legacyReplace && Array.isArray(params.remove_file_ids)) {
+    removeAssignmentFiles(db, row.id, params.remove_file_ids.map(String))
   }
 
-  updateById(db, 'assignments', row.id, updates)
-  return { id: row.id, ...updates }
+  if (!clearAll && uploads.length) {
+    const existing = getAll(db, 'assignment_files', 'assignment_id = ?', row.id)
+    if (existing.length + uploads.length > MAX_FILES_PER_ASSIGNMENT) {
+      throw {
+        status: 400,
+        message: `This assignment already has ${existing.length} file(s); you can attach up to ${MAX_FILES_PER_ASSIGNMENT}`,
+      }
+    }
+    for (const upload of uploads) insertAssignmentFile(db, row.id, user, upload)
+  }
+
+  syncLegacyAttachment(db, row.id)
+  return serializeAssignment(db, getById(db, 'assignments', row.id))
 }
 
-/** Mobile: teacher deletes an assignment (and its submissions) */
+/** Mobile: teacher deletes an assignment (with its materials and submissions) */
 function mobileDeleteAssignment(db, params, user) {
   assertTeacherOrAdmin(user)
   const row = assertOwnsAssignment(db, user, params.id)
+  removeAssignmentFiles(db, row.id)
   deleteWhere(db, 'submissions', 'assignment_id', row.id)
   deleteById(db, 'assignments', row.id)
   return { id: row.id, deleted: true }
@@ -1802,13 +2068,77 @@ function mobileDeleteSubmission(db, params, user) {
   return { id: sub.id, deleted: true }
 }
 
-/** Mobile: download an uploaded file (assignment attachment or submission) */
+/** Class ids a teacher may act on (stored list + classes they are assigned). */
+function teacherClassIds(db, user) {
+  let stored = []
+  try { stored = JSON.parse(user.class_ids || '[]') } catch { stored = [] }
+  const assigned = getAll(db, 'classes')
+    .filter(c => {
+      try { return JSON.parse(c.teacher_ids || '[]').includes(user.id) } catch { return false }
+    })
+    .map(c => c.id)
+  return [...new Set([...stored, ...assigned])]
+}
+
+function studentProfileFor(db, user) {
+  return getOne(db, 'students', 'email', user.email) || getById(db, 'students', user.id)
+}
+
+/** A teacher/admin/student may see materials of an assignment they belong to. */
+function canAccessAssignmentMaterial(db, user, assignment) {
+  if (!assignment) return false
+  if (user.role === 'School Admin') {
+    return !!user.school_id && user.school_id === assignment.school_id
+  }
+  if (user.role === 'Teacher') {
+    return teacherClassIds(db, user).includes(assignment.class_id)
+  }
+  if (user.role === 'Student') {
+    const student = studentProfileFor(db, user)
+    return !!student && student.class_id === assignment.class_id
+  }
+  return false
+}
+
+/**
+ * File ids are shared across assignments and submissions, so a bare id must
+ * not be enough to download any blob in the database. Only the owning student,
+ * a teacher of that class, or the school's admin may fetch it.
+ */
+function userCanAccessFile(db, user, fileId) {
+  const material = db.prepare('SELECT * FROM assignment_files WHERE file_id = ?').get(fileId)
+  if (material) {
+    const assignment = getById(db, 'assignments', material.assignment_id)
+    if (canAccessAssignmentMaterial(db, user, assignment)) return true
+  }
+
+  // Assignments created before multi-file materials existed.
+  const legacy = db.prepare('SELECT * FROM assignments WHERE attachment_id = ?').get(fileId)
+  if (legacy && canAccessAssignmentMaterial(db, user, legacy)) return true
+
+  const submission = db.prepare('SELECT * FROM submissions WHERE file_id = ?').get(fileId)
+  if (submission) {
+    if (user.role === 'Student') {
+      const student = studentProfileFor(db, user)
+      return !!student && submission.student_id === student.id
+    }
+    const assignment = getById(db, 'assignments', submission.assignment_id)
+    return canAccessAssignmentMaterial(db, user, assignment)
+  }
+
+  return false
+}
+
+/** Mobile: download an uploaded file (assignment material or submission) */
 function mobileGetFile(db, params, user) {
   if (!user) throw { status: 401, message: 'Not signed in' }
   const id = params.file_id || params.id
   if (!id) throw { status: 400, message: 'file_id is required' }
   const row = db.prepare('SELECT * FROM file_blobs WHERE id = ?').get(id)
   if (!row) throw { status: 404, message: 'File not found' }
+  if (!userCanAccessFile(db, user, id)) {
+    throw { status: 403, message: 'You do not have access to this file' }
+  }
   return { id: row.id, name: row.name, mime_type: row.mime_type, size: row.size, data: row.data }
 }
 

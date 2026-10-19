@@ -499,12 +499,15 @@ class FrappeApiService {
     return response.bodyBytes;
   }
 
-  /// Download a file and open the platform share sheet so the user can save
-  /// it anywhere (Files, Drive, WhatsApp, …). Same behaviour as
-  /// ExportService.shareBytes.
-  Future<void> downloadAndShareFile(String fileUrl, String fileName) async {
+  /// Download a file and deliver it the platform-native way: straight to
+  /// Downloads on desktop, share sheet (Files, Drive, WhatsApp, …) on mobile.
+  Future<String> downloadAndShareFile(String fileUrl, String fileName) async {
     final bytes = await downloadFile(fileUrl);
-    await ExportService.instance.shareBytes(bytes, fileName, _mimeTypeFor(fileName));
+    return ExportService.instance.exportToDevice(
+      bytes,
+      fileName,
+      mimeType: _mimeTypeFor(fileName),
+    );
   }
 
   String _mimeTypeFor(String fileName) {

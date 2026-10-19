@@ -243,3 +243,32 @@ Reports reuse the existing endpoints (`get_admin_teachers` / `get_admin_classes`
 `get_admin_students`, `overview`, `get_schools`) plus `get_admin_attendance` for
 periods. Deploying to a server therefore needs both the console build and the
 updated backend.
+
+---
+
+## 11. Mobile assignment uploads (teacher → student)
+
+A teacher can upload class material from **Classes → open a class → Assignments &
+Materials**, or from the global **Assignments** tab (Upload button). One
+assignment can carry up to **4 files of up to 20 MB each**: PDFs, documents,
+images, video clips and voice notes. Files are stored as `file_blobs` rows and
+linked through `assignment_files`, so the student app shows the same material on
+the assignment card, on the assignment detail screen (tap to download/share) and
+in **Profile → Assignments & materials**.
+
+The upload endpoints accept base64 JSON (`files: [{ file_name, file_data }]`)
+and the legacy single `file_name` / `file_data` pair:
+
+- `school_connect.api.mobile.create_assignment`
+- `school_connect.api.mobile.update_assignment` (append `files`, remove
+  `remove_file_ids`, or `clear_attachments`)
+- `school_connect.api.mobile.get_file` (scoped: the enrolled student, a teacher
+  of that class, or the school admin only)
+
+The HTTP body limit for those paths is raised separately from normal API calls
+(1 MB) so real video and voice uploads are not rejected at the transport layer.
+
+```bash
+npm run verify:assignment-materials   # backend: multi-type upload, visibility, scoping, limits
+cd school_connect_app && flutter test test/assignment_materials_test.dart
+```

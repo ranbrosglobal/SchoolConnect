@@ -3,6 +3,7 @@ import '../models/course_schedule_model.dart';
 import '../models/student_model.dart';
 import '../models/attendance_model.dart';
 import '../models/assignment_model.dart';
+import '../models/assignment_material.dart';
 import '../models/assignment_submission_model.dart';
 import '../services/google_sheets_service.dart';
 import 'auth_provider.dart';
@@ -388,6 +389,7 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
     required String studentGroup,
     required DateTime dueDate,
     String? description,
+    List<AssignmentMaterialUpload> files = const [],
     String? filePath,
     List<int>? fileBytes,
   }) async {
@@ -399,6 +401,7 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
         studentGroup: studentGroup,
         dueDate: dueDate,
         description: description,
+        files: files,
         filePath: filePath,
         fileBytes: fileBytes,
       );
@@ -419,9 +422,11 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
     required String studentGroup,
     required DateTime dueDate,
     String? description,
+    List<AssignmentMaterialUpload> newFiles = const [],
+    List<String> removeFileIds = const [],
+    bool clearAttachments = false,
     String? filePath,
     List<int>? fileBytes,
-    bool clearAttachment = false,
   }) async {
     state = state.copyWith(isSubmitting: true, error: null);
     try {
@@ -432,9 +437,11 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
         studentGroup: studentGroup,
         dueDate: dueDate,
         description: description,
+        newFiles: newFiles,
+        removeFileIds: removeFileIds,
+        clearAttachments: clearAttachments,
         filePath: filePath,
         fileBytes: fileBytes,
-        clearAttachment: clearAttachment,
       );
       await loadAssignments();
       return true;

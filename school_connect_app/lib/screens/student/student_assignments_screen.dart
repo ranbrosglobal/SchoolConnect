@@ -7,6 +7,7 @@ import '../../state/student_provider.dart';
 import '../../theme/colors.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/kit/kit.dart';
+import '../../widgets/assignment_material_tile.dart';
 import 'assignment_detail_screen.dart';
 
 /// The student's full assignment list, grouped by where the work stands.
@@ -303,6 +304,47 @@ class _StudentAssignmentsScreenState
               ],
             ),
           ),
+          if (a.hasMaterials) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(
+                  Icons.attach_file_rounded,
+                  size: 13,
+                  color: AppColors.inkFaint,
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    '${a.materials.length} class material'
+                    '${a.materials.length == 1 ? '' : 's'}',
+                    style: AppText.caption.copyWith(
+                      fontSize: 11,
+                      color: AppColors.inkSoft,
+                    ),
+                  ),
+                ),
+                Wrap(
+                  spacing: 4,
+                  children: [
+                    for (final kind in a.materialKinds.take(3))
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: materialColor(kind).withValues(alpha: 0.10),
+                          borderRadius: AppRadius.brPill,
+                        ),
+                        child: Icon(
+                          materialIcon(kind),
+                          size: 12,
+                          color: materialColor(kind),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ],
           if (a.feedback != null && a.feedback!.isNotEmpty) ...[
             const SizedBox(height: 10),
             Row(
